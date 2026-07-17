@@ -22,10 +22,11 @@ export async function POST(req: Request) {
     const userId = await getUserId();
     const b = await req.json();
     const rows = await sql()`
-      INSERT INTO tasks (user_id, title, prompt, model, effort, priority, acceptance_criteria)
+      INSERT INTO tasks (user_id, title, prompt, model, effort, priority, acceptance_criteria, repo_url, base_branch)
       VALUES (${userId}, ${String(b.title || 'Untitled').slice(0, 200)}, ${b.prompt || ''},
               ${b.model || 'default'}, ${b.effort || 'default'},
-              ${Number.isInteger(b.priority) ? b.priority : 0}, ${b.acceptanceCriteria || ''})
+              ${Number.isInteger(b.priority) ? b.priority : 0}, ${b.acceptanceCriteria || ''},
+              ${b.repoUrl || ''}, ${b.baseBranch || ''})
       RETURNING *`;
     return NextResponse.json(rows[0]);
   } catch (e) {

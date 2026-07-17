@@ -3,6 +3,7 @@ import { ensureSchema, sql } from '@/lib/db';
 import { getUserId } from '@/lib/auth';
 import { decrypt } from '@/lib/crypto';
 import { runAnthropicTask } from '@/lib/providers';
+import { runRepoTask } from '@/lib/sandbox-runner';
 import { errorResponse } from '@/lib/api';
 
 export const runtime = 'nodejs';
@@ -15,8 +16,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const { id } = await params;
     const q = sql();
 
-    const keys = await q`SELECT encrypted_key FROM provider_keys WHERE user_id = ${userId} AND provider = 'anthropic'`;
-    if (!keys.length) {
+    const keys = await q`SELECT provider, encrypted_key FROM provider_keys WHERE user_id = ${userId}`;
+    const anthropicKey = keys.find((k) => k.provider === 'anthropic');
+    const githubKey = keys.find((k) => k.provider === 'github');
+    if (!anthropicKey) {
       return NextResponse.json({ error: 'No Anthropic API key on file — add one in Settings.' }, { status: 400 });
     }
 
@@ -27,24 +30,48 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     if (!claimed.length) return NextResponse.json({ error: 'not found or already running' }, { status: 409 });
     const task = claimed[0];
 
+    const prompt = task.acceptance_criteria
+      ? `${task.prompt}\n\nAcceptance criteria:\n${task.acceptance_criteria}`
+      : task.prompt;
+
     try {
-      const result = await runAnthropicTask({
-        apiKey: decrypt(keys[0].encrypted_key),
-        model: task.model,
-        effort: task.effort,
-        prompt: task.acceptance_criteria
-          ? `${task.prompt}\n\nAcceptance criteria:\n${task.acceptance_criteria}`
-          : task.prompt,
-      });
+      let resultText: string;
+      let stats: Record<string, unknown>;
+      if (task.repo_url) {
+        if (!githubKey) {
+          throw new Error('This card targets a repo — add a GitHub token in Settings first.');
+        }
+        const result = await runRepoTask({
+          anthropicKey: decrypt(anthropicKey.encrypted_key),
+          githubToken: decrypt(githubKey.encrypted_key),
+          repoUrl: task.repo_url,
+          baseBranch: task.base_branch,
+          model: task.model,
+          effort: task.effort,
+          prompt,
+          taskId: task.id,
+          title: task.title,
+        });
+        resultText = result.text;
+        stats = { model: result.model, branch: result.branch, prUrl: result.prUrl };
+      } else {
+        const result = await runAnthropicTask({
+          apiKey: decrypt(anthropicKey.encrypted_key),
+          model: task.model,
+          effort: task.effort,
+          prompt,
+        });
+        resultText = result.text;
+        stats = {
+          model: result.model,
+          stopReason: result.stopReason,
+          inputTokens: result.inputTokens,
+          outputTokens: result.outputTokens,
+        };
+      }
       const rows = await q`
-        UPDATE tasks SET status = 'review', result_text = ${result.text},
-          stats = ${JSON.stringify({
-            model: result.model,
-            stopReason: result.stopReason,
-            inputTokens: result.inputTokens,
-            outputTokens: result.outputTokens,
-          })}::jsonb,
-          updated_at = now()
+        UPDATE tasks SET status = 'review', result_text = ${resultText},
+          stats = ${JSON.stringify(stats)}::jsonb, updated_at = now()
         WHERE id = ${id} RETURNING *`;
       return NextResponse.json(rows[0]);
     } catch (runErr) {

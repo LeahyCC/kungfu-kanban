@@ -30,6 +30,8 @@ export function ensureSchema(): Promise<void> {
         updated_at timestamptz NOT NULL DEFAULT now()
       )`;
       await q`CREATE INDEX IF NOT EXISTS tasks_user_idx ON tasks (user_id, created_at DESC)`;
+      await q`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS repo_url text NOT NULL DEFAULT ''`;
+      await q`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS base_branch text NOT NULL DEFAULT ''`;
       await q`CREATE TABLE IF NOT EXISTS provider_keys (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id text NOT NULL,

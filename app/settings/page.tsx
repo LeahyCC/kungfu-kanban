@@ -77,7 +77,7 @@ function ProviderRow({ p, onSave, onRemove }: {
         <>
           <input
             type="password"
-            placeholder="sk-ant-…"
+            placeholder={p.provider === 'anthropic' ? 'sk-ant-…' : p.provider === 'github' ? 'ghp_… (repo-scoped PAT, for coding tasks)' : 'API key'}
             value={value}
             onChange={(e) => setValue(e.target.value)}
           />

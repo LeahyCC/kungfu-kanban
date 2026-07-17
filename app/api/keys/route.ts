@@ -6,7 +6,7 @@ import { errorResponse } from '@/lib/api';
 
 export const runtime = 'nodejs';
 
-const PROVIDERS = ['anthropic', 'openai', 'google'];
+const PROVIDERS = ['anthropic', 'github', 'openai', 'google'];
 
 export async function GET() {
   try {
@@ -17,7 +17,7 @@ export async function GET() {
       providers: PROVIDERS.map((p) => ({
         provider: p,
         connected: rows.some((r) => r.provider === p),
-        supported: p === 'anthropic', // adapters for the rest land next
+        supported: p === 'anthropic' || p === 'github', // model adapters for the rest land next
       })),
     });
   } catch (e) {

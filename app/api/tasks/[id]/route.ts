@@ -22,6 +22,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         effort = COALESCE(${b.effort ?? null}, effort),
         priority = COALESCE(${Number.isInteger(b.priority) ? b.priority : null}, priority),
         acceptance_criteria = COALESCE(${b.acceptanceCriteria ?? null}, acceptance_criteria),
+        repo_url = COALESCE(${b.repoUrl ?? null}, repo_url),
+        base_branch = COALESCE(${b.baseBranch ?? null}, base_branch),
         status = COALESCE(${status}, status),
         updated_at = now()
       WHERE id = ${id} AND user_id = ${userId} AND status != 'running'
