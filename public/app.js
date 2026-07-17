@@ -219,6 +219,18 @@ $('#settingsCancelBtn').addEventListener('click', () => $('#settingsBackdrop').c
 $('#settingsBackdrop').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) $('#settingsBackdrop').classList.add('hidden');
 });
+$('#notifyTestBtn').addEventListener('click', async (e) => {
+  // Save the current topic first so the test uses what's in the field.
+  const f = $('#settingsForm');
+  config.settings = await api('/api/settings', {
+    method: 'PUT',
+    body: { defaultCwd: f.defaultCwd.value, ntfyTopic: f.ntfyTopic.value, notifyMac: f.notifyMac.checked },
+  });
+  await api('/api/notify/test', { method: 'POST' });
+  e.target.textContent = '🔔 Sent — check your phone';
+  setTimeout(() => { e.target.textContent = '🔔 Test notification'; }, 3000);
+});
+
 $('#settingsForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = e.target;

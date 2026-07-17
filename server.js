@@ -68,6 +68,12 @@ app.put('/api/settings', (req, res) => {
   res.json(state.settings);
 });
 
+// Fire both notification channels on demand, for wiring up phones.
+app.post('/api/notify/test', (req, res) => {
+  require('./lib/notify').notify('Kungfu Kanban — test 🥋', 'If you can read this, notifications work.');
+  res.json({ ok: true, topic: state.settings.ntfyTopic || null });
+});
+
 // --- Tasks ---
 const TASK_FIELDS = [
   'title', 'prompt', 'cwd', 'model', 'effort', 'permissionMode',
