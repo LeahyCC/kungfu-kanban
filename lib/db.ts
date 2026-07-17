@@ -6,7 +6,9 @@ export function sql() {
   const url =
     process.env.DATABASE_URL ||
     process.env.POSTGRES_URL ||
+    process.env.STORAGE_URL ||
     process.env.DATABASE_URL_UNPOOLED ||
+    process.env.STORAGE_URL_UNPOOLED ||
     process.env.POSTGRES_PRISMA_URL;
   if (!url) throw new Error('No database URL is set — add a Postgres (Neon) database to this project in the Vercel Storage tab.');
   return neon(url);
