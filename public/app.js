@@ -29,9 +29,9 @@ function render() {
   const board = $('#board');
   board.innerHTML = '';
   for (const col of COLUMNS) {
-    const colTasks = tasks.filter((t) =>
-      col.key === 'running' ? RUNNING_LIKE[t.status] : t.status === col.key
-    );
+    const colTasks = tasks
+      .filter((t) => (col.key === 'running' ? RUNNING_LIKE[t.status] : t.status === col.key))
+      .sort((a, b) => (b.priority || 0) - (a.priority || 0));
     const el = document.createElement('div');
     el.className = 'column';
     el.dataset.status = col.key;
@@ -70,6 +70,8 @@ function cardEl(t) {
   el.addEventListener('click', () => openDrawer(t.id));
 
   const badges = [];
+  if (t.priority >= 2) badges.push(`<span class="badge ${t.priority === 3 ? 'err' : 'effort'}">P${t.priority}</span>`);
+  if (t.createdBy === 'manager') badges.push(`<span class="badge wt">mgr</span>`);
   badges.push(`<span class="badge model">${esc(t.model || 'default')}</span>`);
   if (t.effort && t.effort !== 'default') badges.push(`<span class="badge effort">${esc(t.effort)}</span>`);
   if (t.agent) badges.push(`<span class="badge">agent:${esc(t.agent)}</span>`);
@@ -102,6 +104,8 @@ function openModal(task) {
   const agentOpts = ['', ...config.agents.map((a) => a.name)];
   fillSelect(f.agent, agentOpts, task && task.agent ? task.agent : '');
   f.worktree.checked = task ? !!task.worktree : false;
+  f.priority.value = String(task && task.priority ? task.priority : 0);
+  f.acceptanceCriteria.value = task ? task.acceptanceCriteria || '' : '';
 
   const picker = $('#skillPicker');
   picker.innerHTML = '';
@@ -142,6 +146,8 @@ $('#taskForm').addEventListener('submit', async (e) => {
     permissionMode: f.permissionMode.value,
     agent: f.agent.value || null,
     worktree: f.worktree.checked,
+    priority: parseInt(f.priority.value, 10) || 0,
+    acceptanceCriteria: f.acceptanceCriteria.value,
     skills: [...document.querySelectorAll('.skill-chip.on')].map((c) => c.dataset.name),
   };
   if (editingId) await api(`/api/tasks/${editingId}`, { method: 'PATCH', body });
@@ -227,10 +233,166 @@ function entryEl(e) {
 
 $('#drawerClose').addEventListener('click', () => { $('#drawer').classList.add('hidden'); drawerId = null; });
 
+// ---------- manager tab ----------
+let mgrState = null;
+
+function showTab(which) {
+  $('#board').classList.toggle('hidden', which !== 'board');
+  $('#managerView').classList.toggle('hidden', which !== 'manager');
+  $('#tabBoard').classList.toggle('active', which === 'board');
+  $('#tabManager').classList.toggle('active', which === 'manager');
+  if (which === 'manager') loadManager();
+}
+$('#tabBoard').addEventListener('click', () => showTab('board'));
+$('#tabManager').addEventListener('click', () => showTab('manager'));
+
+async function loadManager() {
+  mgrState = await api('/api/manager');
+  renderManager();
+}
+
+function renderManager() {
+  if (!mgrState) return;
+  const c = mgrState.config;
+  const f = $('#mgrForm');
+  f.enabled.checked = !!c.enabled;
+  fillSelect(f.model, config.models, c.model);
+  fillSelect(f.effort, config.efforts, c.effort);
+  f.autonomy.value = c.autonomy;
+  f.stylePrompt.value = c.stylePrompt || '';
+  f.onFinish.checked = !!c.triggers.onFinish;
+  f.onNewCard.checked = !!c.triggers.onNewCard;
+  f.intervalMin.value = c.triggers.intervalMin || 0;
+  f.maxLaunchesPerHour.value = c.maxLaunchesPerHour;
+  f.maxRetries.value = c.maxRetries;
+  fillSelect(f.permissionCeiling, config.permissionModes, c.permissionCeiling);
+
+  $('#mgrBusy').classList.toggle('hidden', !mgrState.busy);
+
+  // chat
+  const chat = $('#mgrChat');
+  chat.innerHTML = '';
+  for (const m of mgrState.chat) {
+    const div = document.createElement('div');
+    div.className = `chat-msg ${m.role}`;
+    div.textContent = m.text;
+    chat.appendChild(div);
+  }
+  chat.scrollTop = chat.scrollHeight;
+
+  // suggestions
+  const sug = $('#mgrSuggestions');
+  sug.innerHTML = '';
+  if (!mgrState.suggestions.length) sug.innerHTML = '<div class="empty-col">nothing pending</div>';
+  for (const s of mgrState.suggestions) {
+    const div = document.createElement('div');
+    div.className = 'suggestion';
+    const head = document.createElement('div');
+    head.className = 'sugg-head';
+    head.textContent = describeAction(s.action) + (s.guard ? ` ⚠️ ${s.guard}` : '');
+    const why = document.createElement('div');
+    why.className = 'sugg-why';
+    why.textContent = s.action.reasoning || '';
+    const actions = document.createElement('div');
+    actions.className = 'sugg-actions';
+    const ok = document.createElement('button');
+    ok.className = 'primary';
+    ok.textContent = '✓ Approve';
+    ok.addEventListener('click', async () => {
+      await api(`/api/manager/suggestions/${s.id}`, { method: 'POST', body: { approve: true } });
+      await Promise.all([loadManager(), loadTasks()]);
+    });
+    const no = document.createElement('button');
+    no.className = 'danger';
+    no.textContent = '✗ Reject';
+    no.addEventListener('click', async () => {
+      await api(`/api/manager/suggestions/${s.id}`, { method: 'POST', body: { approve: false } });
+      await loadManager();
+    });
+    actions.append(ok, no);
+    div.append(head, why, actions);
+    sug.appendChild(div);
+  }
+  const pill = $('#suggCount');
+  pill.textContent = mgrState.suggestions.length;
+  pill.classList.toggle('hidden', !mgrState.suggestions.length);
+
+  // log
+  const logBox = $('#mgrLog');
+  logBox.innerHTML = '';
+  for (const e of mgrState.log) {
+    const div = document.createElement('div');
+    div.className = `log-entry ${e.kind}`;
+    div.textContent = `${new Date(e.ts).toLocaleTimeString()} · ${e.kind} · ${e.text}`;
+    logBox.appendChild(div);
+  }
+}
+
+function describeAction(a) {
+  switch (a.type) {
+    case 'create_task': return `Create "${a.title}" [${a.model || 'default'}/${a.effort || 'default'}]${a.autoRun ? ' and run' : ''}`;
+    case 'update_task': return `Update task ${taskTitle(a.taskId)}`;
+    case 'run_task': return `Run ${taskTitle(a.taskId)}`;
+    case 'approve_task': return `Approve ${taskTitle(a.taskId)} → Done`;
+    case 'reject_task': return `Retry ${taskTitle(a.taskId)} with feedback: ${(a.feedback || '').slice(0, 100)}`;
+    default: return a.type;
+  }
+}
+function taskTitle(id) {
+  const t = tasks.find((x) => x.id === id);
+  return t ? `"${t.title}"` : (id || '?').slice(0, 8);
+}
+
+$('#mgrForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  await api('/api/manager/config', {
+    method: 'PUT',
+    body: {
+      enabled: f.enabled.checked,
+      model: f.model.value,
+      effort: f.effort.value,
+      autonomy: f.autonomy.value,
+      stylePrompt: f.stylePrompt.value,
+      triggers: {
+        onFinish: f.onFinish.checked,
+        onNewCard: f.onNewCard.checked,
+        intervalMin: parseInt(f.intervalMin.value, 10) || 0,
+      },
+      maxLaunchesPerHour: parseInt(f.maxLaunchesPerHour.value, 10) || 10,
+      maxRetries: parseInt(f.maxRetries.value, 10) || 0,
+      permissionCeiling: f.permissionCeiling.value,
+    },
+  });
+  await loadManager();
+});
+
+$('#mgrChatForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = e.target.message;
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  await api('/api/manager/chat', { method: 'POST', body: { message: msg } });
+  await loadManager();
+});
+
 // ---------- live updates ----------
 const es = new EventSource('/api/events');
 es.onmessage = (msg) => {
   const evt = JSON.parse(msg.data);
+  if (evt.type === 'manager') {
+    if (evt.event === 'busy' && mgrState) {
+      mgrState.busy = evt.busy;
+      $('#mgrBusy').classList.toggle('hidden', !evt.busy);
+      if (!evt.busy) loadManager();
+    } else if (!$('#managerView').classList.contains('hidden')) {
+      loadManager();
+    } else if (evt.event === 'suggestions') {
+      loadManager(); // keep the badge count fresh even on the board tab
+    }
+    return;
+  }
   if (evt.type === 'task') {
     const i = tasks.findIndex((t) => t.id === evt.task.id);
     if (i >= 0) tasks[i] = evt.task; else tasks.unshift(evt.task);

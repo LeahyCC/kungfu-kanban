@@ -4,6 +4,7 @@ const path = require('path');
 const { discoverSkills, discoverAgents } = require('./lib/discovery');
 const { state, save, getTask, readTranscript } = require('./lib/store');
 const runner = require('./lib/runner');
+const manager = require('./lib/manager');
 
 const PORT = process.env.PORT || 4747;
 const app = express();
@@ -28,6 +29,13 @@ function broadcast(msg) {
   for (const res of sseClients) res.write(data);
 }
 runner.setBroadcaster(broadcast);
+manager.setBroadcaster(broadcast);
+runner.setOnFinish((task) => {
+  if (manager.config().triggers.onFinish) {
+    manager.invoke(`task finished and awaits review: "${task.title}" (id ${task.id})`);
+  }
+});
+manager.applyInterval();
 
 // --- Config: models, efforts, skills, agents ---
 const MODELS = ['default', 'fable', 'opus', 'sonnet', 'haiku'];
@@ -58,7 +66,7 @@ app.put('/api/settings', (req, res) => {
 // --- Tasks ---
 const TASK_FIELDS = [
   'title', 'prompt', 'cwd', 'model', 'effort', 'permissionMode',
-  'skills', 'agent', 'worktree', 'status',
+  'skills', 'agent', 'worktree', 'status', 'priority', 'acceptanceCriteria',
 ];
 const STATUSES = ['backlog', 'queued', 'running', 'stopping', 'review', 'done'];
 
@@ -77,8 +85,12 @@ app.post('/api/tasks', (req, res) => {
     skills: Array.isArray(b.skills) ? b.skills : [],
     agent: b.agent || null,
     worktree: !!b.worktree,
+    priority: Number.isInteger(b.priority) ? b.priority : 0,
+    acceptanceCriteria: b.acceptanceCriteria || '',
     status: 'backlog',
     createdAt: new Date().toISOString(),
+    createdBy: 'user',
+    retries: 0,
     sessionId: null,
     error: null,
     resultText: null,
@@ -87,6 +99,9 @@ app.post('/api/tasks', (req, res) => {
   state.tasks.unshift(task);
   save();
   broadcast({ type: 'task', task });
+  if (manager.config().triggers.onNewCard) {
+    manager.invoke(`new card added to backlog by human: "${task.title}" (id ${task.id}) — triage it (routing, priority); do not run it unless it is trivially safe`);
+  }
   res.json(task);
 });
 
@@ -129,6 +144,32 @@ app.post('/api/tasks/:id/run', (req, res) => {
 
 app.post('/api/tasks/:id/stop', (req, res) => {
   res.json(runner.stopTask(req.params.id));
+});
+
+// --- Manager ---
+app.get('/api/manager', (req, res) => res.json(manager.publicState()));
+
+app.put('/api/manager/config', (req, res) => {
+  const c = manager.config();
+  const b = req.body || {};
+  for (const f of ['enabled', 'model', 'effort', 'autonomy', 'stylePrompt', 'maxLaunchesPerHour', 'maxRetries', 'permissionCeiling']) {
+    if (f in b) c[f] = b[f];
+  }
+  if (b.triggers) c.triggers = { ...c.triggers, ...b.triggers };
+  save();
+  manager.applyInterval();
+  res.json(c);
+});
+
+app.post('/api/manager/chat', (req, res) => {
+  const msg = (req.body && req.body.message || '').trim();
+  if (!msg) return res.status(400).json({ error: 'empty message' });
+  manager.chat(msg);
+  res.json({ ok: true });
+});
+
+app.post('/api/manager/suggestions/:sid', (req, res) => {
+  res.json(manager.resolveSuggestion(req.params.sid, !!(req.body && req.body.approve)));
 });
 
 app.listen(PORT, '127.0.0.1', () => {
