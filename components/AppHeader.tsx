@@ -39,7 +39,7 @@ export default function AppHeader() {
       } catch {}
     };
     load();
-    const iv = setInterval(load, 12000);
+    const iv = setInterval(load, 30000);
     return () => { alive = false; clearInterval(iv); };
   }, [pathname]);
 

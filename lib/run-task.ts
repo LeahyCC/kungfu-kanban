@@ -6,10 +6,10 @@ import { sql } from '@/lib/db';
 import { decrypt } from '@/lib/crypto';
 import { redactSecrets } from '@/lib/api';
 import { MODEL_PROVIDER, runAnthropicTask, runOpenAITask, runGeminiTask } from '@/lib/providers';
-import { startRepoTask, pollRepoTask } from '@/lib/sandbox-runner';
-import { checkLaunchAllowed } from '@/lib/billing';
+import { startRepoTask, pollRepoTask, SANDBOX_MINUTES } from '@/lib/sandbox-runner';
+import { checkLaunchAllowed, recordRun } from '@/lib/billing';
 
-const REPO_STALE_AFTER_MS = 50 * 60 * 1000; // sandbox hard timeout is 45 min
+const REPO_STALE_AFTER_MS = (SANDBOX_MINUTES + 5) * 60 * 1000; // sandbox hard timeout + grace
 const PLAIN_STALE_AFTER_MS = 6 * 60 * 1000; // route budget is 5 min
 
 export async function executeTask(userId: string, taskId: string): Promise<{ ok?: boolean; error?: string; task?: Record<string, unknown> }> {
@@ -39,6 +39,7 @@ export async function executeTask(userId: string, taskId: string): Promise<{ ok?
     RETURNING *`;
   if (!claimed.length) return { error: 'not found or already running' };
   const task = claimed[0];
+  await recordRun(userId, taskId, isRepo).catch(() => {});
 
   const prompt = task.acceptance_criteria
     ? `${task.prompt}\n\nAcceptance criteria:\n${task.acceptance_criteria}`
@@ -113,7 +114,7 @@ export async function finalizeRepoTask(userId: string, task: Record<string, unkn
     const result = await pollRepoTask(stats.sandboxName);
     if (!result) {
       if (timedOut()) {
-        const rows = await q`UPDATE tasks SET status = 'review', error = 'Sandbox run timed out (45 min limit).', updated_at = now()
+        const rows = await q`UPDATE tasks SET status = 'review', error = ${`Sandbox run timed out (${SANDBOX_MINUTES} min limit).`}, updated_at = now()
           WHERE id = ${id} AND user_id = ${userId} AND status = 'running' RETURNING id`;
         return rows.length > 0;
       }

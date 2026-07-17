@@ -21,7 +21,7 @@ The Manager can route cards across providers too.
 Settings) and the run happens inside a Vercel Sandbox microVM — the repo is cloned, the
 Claude Code CLI runs the task on your API key, changes are pushed as a `kungfu/<id>` branch,
 and a pull request is opened automatically. The PR link appears on the card in Review.
-Runs are fire-and-poll: the agent can work for up to **45 minutes**; the board (and a
+Runs are fire-and-poll: the agent can work for up to **20 minutes** (SANDBOX_MAX_MINUTES, max 45); the board (and a
 10-minute cron sweep) finalizes the card when the sandbox finishes.
 
 ```bash
