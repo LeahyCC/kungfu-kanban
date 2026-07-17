@@ -51,10 +51,10 @@ const sh = (cmd, opts = {}) =>
 (async () => {
   const out = { text: '', branch: null, prUrl: null };
   try {
-    const prompt = fs.readFileSync('/tmp/kk/prompt.txt', 'utf8');
     const model = process.env.KK_MODEL || 'opus';
     const effort = process.env.KK_EFFORT || '';
     let raw = '';
+    let failed = false;
     try {
       raw = sh(
         'claude -p "$(cat /tmp/kk/prompt.txt)" --output-format json --permission-mode bypassPermissions --model ' +
@@ -63,13 +63,18 @@ const sh = (cmd, opts = {}) =>
       );
     } catch (e) {
       raw = (e.stdout || '') + '\\n' + (e.stderr || '');
-      if (!raw.trim()) throw e;
+      failed = true; // non-zero exit from the CLI
     }
-    out.text = raw.trim();
-    try {
-      const parsed = JSON.parse(raw.trim().split('\\n').pop());
-      if (parsed.result) out.text = parsed.result;
-    } catch {}
+    // Success only if the CLI exited zero AND the JSON envelope parses with a
+    // genuine result and no error flag. Anything else is a failure.
+    let parsed = null;
+    try { parsed = JSON.parse(raw.trim().split('\\n').pop()); } catch {}
+    if (!failed && parsed && parsed.is_error !== true && typeof parsed.result === 'string' && parsed.result) {
+      out.text = parsed.result;
+    } else {
+      const detail = (parsed && (parsed.result || parsed.error)) || raw.trim();
+      throw new Error('Claude Code run failed: ' + String(detail).slice(0, 1500));
+    }
 
     if (sh('git status --porcelain').trim()) {
       const branch = process.env.KK_BRANCH;
@@ -104,7 +109,10 @@ const sh = (cmd, opts = {}) =>
       out.text += '\\n\\n(no file changes were made)';
     }
   } catch (e) {
-    out.error = String(e.message || e).slice(0, 2000);
+    // Redact any embedded credential before persisting the error.
+    out.error = String(e.message || e)
+      .replace(/x-access-token:[^@\\s]+@/gi, 'x-access-token:***@')
+      .slice(0, 2000);
   }
   fs.writeFileSync('/tmp/kk/result.json', JSON.stringify(out));
 })();
@@ -120,13 +128,20 @@ export async function startRepoTask(opts: {
   prompt: string;
   taskId: string;
   title: string;
+  retries: number;
 }): Promise<{ sandboxName: string }> {
   const { owner, repo } = parseRepo(opts.repoUrl);
   const repoInfo = await gh(`/repos/${owner}/${repo}`, opts.githubToken);
   const base = opts.baseBranch || repoInfo.default_branch || 'main';
   if (!/^[\w./-]+$/.test(base)) throw new Error('Invalid base branch name');
   const effort = ['low', 'medium', 'high', 'xhigh', 'max'].includes(opts.effort) ? opts.effort : '';
-  const sandboxName = `kk-${opts.taskId.slice(0, 8)}`;
+  // Unique per RUN, not per task: include a wide slice of the uuid plus the
+  // retry counter so retries get fresh branches/sandboxes and the shared
+  // Vercel sandbox namespace can't collide across tenants.
+  const uid = opts.taskId.replace(/-/g, '');
+  const runIdx = opts.retries || 0;
+  const sandboxName = `kk-${uid.slice(0, 20)}-${runIdx}`;
+  const branch = `kungfu/${opts.taskId.slice(0, 8)}-${runIdx}`;
 
   const sandbox = await Sandbox.create({
     name: sandboxName,
@@ -159,7 +174,7 @@ export async function startRepoTask(opts: {
       GITHUB_TOKEN: opts.githubToken,
       KK_REPO: `${owner}/${repo}`,
       KK_BASE: base,
-      KK_BRANCH: `kungfu/${opts.taskId.slice(0, 8)}`,
+      KK_BRANCH: branch,
       KK_MODEL: CLI_MODEL[opts.model] ?? 'opus',
       KK_EFFORT: effort,
       KK_TITLE: opts.title.slice(0, 120),

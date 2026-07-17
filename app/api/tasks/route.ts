@@ -3,9 +3,10 @@ import { after } from 'next/server';
 import { ensureSchema, sql } from '@/lib/db';
 import { getUserId } from '@/lib/auth';
 import { invokeManager } from '@/lib/manager';
-import { errorResponse } from '@/lib/api';
+import { errorResponse, clampPriority } from '@/lib/api';
 
 export const runtime = 'nodejs';
+export const maxDuration = 300; // the after() new-card manager triage is an LLM call
 
 export async function GET() {
   try {
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
       INSERT INTO tasks (user_id, title, prompt, model, effort, priority, acceptance_criteria, repo_url, base_branch)
       VALUES (${userId}, ${String(b.title || 'Untitled').slice(0, 200)}, ${b.prompt || ''},
               ${b.model || 'default'}, ${b.effort || 'default'},
-              ${Number.isInteger(b.priority) ? b.priority : 0}, ${b.acceptanceCriteria || ''},
+              ${clampPriority(b.priority)}, ${b.acceptanceCriteria || ''},
               ${b.repoUrl || ''}, ${b.baseBranch || ''})
       RETURNING *`;
     const task = rows[0];

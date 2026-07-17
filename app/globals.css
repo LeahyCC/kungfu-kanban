@@ -102,6 +102,16 @@ input, textarea, select {
 .provider-row input { flex: 1; }
 .status-ok { color: var(--green); font-size: 12px; }
 .status-off { color: var(--muted); font-size: 12px; }
+
+/* Billing */
+.plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 10px; }
+.plan { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+.plan.current { border-color: var(--accent); }
+.plan h3 { font-size: 16px; margin-bottom: 12px; }
+.plan ul { list-style: none; display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+.plan li { font-size: 13px; color: var(--muted); padding-left: 18px; position: relative; }
+.plan li::before { content: "✓"; position: absolute; left: 0; color: var(--green); }
+.plan-tag { display: inline-block; font-size: 11px; color: var(--accent-2); border: 1px solid #4a3328; border-radius: 9px; padding: 2px 9px; }
 .empty-col { color: var(--muted); font-size: 12px; text-align: center; padding: 14px 0; }
 
 /* Manager tab */
