@@ -2,19 +2,20 @@
 
 import { useEffect, useState } from 'react';
 
+// Night dojo (dark) is the default; light is the stored override.
 export default function ThemeToggle() {
-  const [dark, setDark] = useState<boolean | null>(null);
+  const [light, setLight] = useState<boolean | null>(null);
 
   useEffect(() => {
-    setDark(document.documentElement.dataset.theme === 'dark');
+    setLight(document.documentElement.dataset.theme === 'light');
   }, []);
 
   const toggle = () => {
-    const next = !(document.documentElement.dataset.theme === 'dark');
-    if (next) document.documentElement.dataset.theme = 'dark';
+    const next = !(document.documentElement.dataset.theme === 'light');
+    if (next) document.documentElement.dataset.theme = 'light';
     else delete document.documentElement.dataset.theme;
-    try { localStorage.setItem('kk-theme', next ? 'dark' : 'light'); } catch {}
-    setDark(next);
+    try { localStorage.setItem('kk-theme', next ? 'light' : 'dark'); } catch {}
+    setLight(next);
   };
 
   return (
@@ -22,10 +23,10 @@ export default function ThemeToggle() {
       type="button"
       className="theme-toggle"
       onClick={toggle}
-      aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
-      title={dark ? 'Day dojo' : 'Night dojo'}
+      aria-label={light ? 'Switch to dark theme' : 'Switch to light theme'}
+      title={light ? 'Night dojo' : 'Day dojo'}
     >
-      {dark === null ? '◐' : dark ? '☀' : '☾'}
+      {light === null ? '◐' : light ? '☾' : '☀'}
     </button>
   );
 }

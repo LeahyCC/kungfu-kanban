@@ -263,7 +263,7 @@ export default function Landing() {
             <div className="colophon-bow">
               <img src="/icons/android-icon-48x48.png" alt="" width={48} height={48} />
               <p>
-                Set in Fraunces, Instrument Sans &amp; IBM Plex Mono.
+                Set in Bricolage Grotesque, Instrument Sans &amp; IBM Plex Mono.
                 Ink, paper, and one cardboard robot. No stock photos.
               </p>
             </div>

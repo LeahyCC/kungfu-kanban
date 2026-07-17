@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from 'next';
-import { Fraunces, Instrument_Sans, IBM_Plex_Mono } from 'next/font/google';
+import { Bricolage_Grotesque, Instrument_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 
-const display = Fraunces({
+const display = Bricolage_Grotesque({
   subsets: ['latin'],
-  axes: ['SOFT', 'WONK', 'opsz'],
   variable: '--font-display',
 });
 const body = Instrument_Sans({
@@ -34,10 +33,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F6F2E9' },
-    { media: '(prefers-color-scheme: dark)', color: '#141210' },
-  ],
+  themeColor: '#141210',
 };
 
 async function Providers({ children }: { children: React.ReactNode }) {
@@ -48,8 +44,9 @@ async function Providers({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Applies the saved theme before first paint to avoid a flash.
-const themeScript = `try{var t=localStorage.getItem('kk-theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.dataset.theme='dark';}catch(e){}`;
+// Dark (night dojo) is the default; only an explicit saved 'light' switches.
+// Runs before first paint to avoid a flash.
+const themeScript = `try{if(localStorage.getItem('kk-theme')==='light')document.documentElement.dataset.theme='light';}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
