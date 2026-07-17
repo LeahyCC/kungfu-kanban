@@ -3,6 +3,7 @@ import { after } from 'next/server';
 import { ensureSchema, sql } from '@/lib/db';
 import { getUserId } from '@/lib/auth';
 import { invokeManager } from '@/lib/manager';
+import { checkCreateAllowed } from '@/lib/billing';
 import { errorResponse, clampPriority } from '@/lib/api';
 
 export const runtime = 'nodejs';
@@ -24,6 +25,8 @@ export async function POST(req: Request) {
     await ensureSchema();
     const userId = await getUserId();
     const b = await req.json();
+    const capError = await checkCreateAllowed(userId);
+    if (capError) return NextResponse.json({ error: capError }, { status: 403 });
     const rows = await sql()`
       INSERT INTO tasks (user_id, title, prompt, model, effort, priority, acceptance_criteria, repo_url, base_branch)
       VALUES (${userId}, ${String(b.title || 'Untitled').slice(0, 200)}, ${b.prompt || ''},

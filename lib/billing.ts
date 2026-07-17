@@ -78,6 +78,16 @@ export async function tasksRunning(userId: string): Promise<number> {
   return rows[0]?.n ?? 0;
 }
 
+// Gate task CREATION against the free-tier daily cap. Returns an error string
+// to block, or null to allow. No-op during beta (maxTasksPerDay = 0).
+export async function checkCreateAllowed(userId: string): Promise<string | null> {
+  const ent = await getEntitlements(userId);
+  if (ent.maxTasksPerDay > 0 && (await tasksCreatedToday(userId)) >= ent.maxTasksPerDay) {
+    return `Your plan allows ${ent.maxTasksPerDay} tasks/day. Upgrade to Pro in Billing for unlimited tasks.`;
+  }
+  return null;
+}
+
 // Gate a task launch against the tenant's entitlements. Returns an error
 // string to block, or null to allow.
 export async function checkLaunchAllowed(userId: string, opts: { repo: boolean }): Promise<string | null> {
