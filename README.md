@@ -34,8 +34,15 @@ npm run dev
    automatically once `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` exist.
    Without them the app runs as a single shared demo tenant (fine for beta testing).
 
-Roadmap: OpenAI/Google adapters, repo-aware coding tasks (clone → agent → PR via Vercel
-Sandbox), the LLM Manager from the local edition, Stripe billing after beta.
+**Manager tab:** an LLM manager (running on your API key, structured outputs) that triages
+new cards, dispatches work, and reviews finished tasks against their acceptance criteria.
+Autonomy ladder — `suggest` (every action needs your ✓, the default), `semi` (can
+create/route/run), `auto` (full autopilot) — with guardrails: hourly launch cap, per-task
+retry limit (rejected tasks re-run with the manager's feedback appended), and a freeform
+management-style prompt. Triggers on new cards, on finished runs, and via chat.
+
+Roadmap: OpenAI/Google adapters, long-running task runner (beyond the 5-min window),
+Stripe billing after beta.
 
 ## Local edition (`local/`)
 

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { ensureSchema, sql } from '@/lib/db';
 import { getUserId } from '@/lib/auth';
+import { invokeManager } from '@/lib/manager';
 import { errorResponse } from '@/lib/api';
 
 export const runtime = 'nodejs';
@@ -28,7 +30,16 @@ export async function POST(req: Request) {
               ${Number.isInteger(b.priority) ? b.priority : 0}, ${b.acceptanceCriteria || ''},
               ${b.repoUrl || ''}, ${b.baseBranch || ''})
       RETURNING *`;
-    return NextResponse.json(rows[0]);
+    const task = rows[0];
+    after(() =>
+      invokeManager(
+        userId,
+        `new card added to backlog by the human: "${task.title}" (id ${task.id}) — triage it (routing, priority, acceptance criteria); do not run it unless it is trivially safe`,
+        null,
+        'new_card',
+      ),
+    );
+    return NextResponse.json(task);
   } catch (e) {
     return errorResponse(e);
   }

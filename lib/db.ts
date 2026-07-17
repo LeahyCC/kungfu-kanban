@@ -32,6 +32,43 @@ export function ensureSchema(): Promise<void> {
       await q`CREATE INDEX IF NOT EXISTS tasks_user_idx ON tasks (user_id, created_at DESC)`;
       await q`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS repo_url text NOT NULL DEFAULT ''`;
       await q`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS base_branch text NOT NULL DEFAULT ''`;
+      await q`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS created_by text NOT NULL DEFAULT 'user'`;
+      await q`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS retries int NOT NULL DEFAULT 0`;
+      await q`CREATE TABLE IF NOT EXISTS manager_config (
+        user_id text PRIMARY KEY,
+        enabled boolean NOT NULL DEFAULT true,
+        model text NOT NULL DEFAULT 'opus',
+        effort text NOT NULL DEFAULT 'medium',
+        autonomy text NOT NULL DEFAULT 'suggest',
+        style_prompt text NOT NULL DEFAULT '',
+        on_finish boolean NOT NULL DEFAULT true,
+        on_new_card boolean NOT NULL DEFAULT true,
+        max_retries int NOT NULL DEFAULT 2,
+        max_launches_per_hour int NOT NULL DEFAULT 10
+      )`;
+      await q`CREATE TABLE IF NOT EXISTS manager_suggestions (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id text NOT NULL,
+        action jsonb NOT NULL,
+        trigger text NOT NULL DEFAULT '',
+        guard text,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`;
+      await q`CREATE TABLE IF NOT EXISTS manager_log (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id text NOT NULL,
+        kind text NOT NULL,
+        text text NOT NULL,
+        action jsonb,
+        ts timestamptz NOT NULL DEFAULT now()
+      )`;
+      await q`CREATE TABLE IF NOT EXISTS manager_chat (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id text NOT NULL,
+        role text NOT NULL,
+        text text NOT NULL,
+        ts timestamptz NOT NULL DEFAULT now()
+      )`;
       await q`CREATE TABLE IF NOT EXISTS provider_keys (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id text NOT NULL,
