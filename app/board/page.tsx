@@ -10,10 +10,18 @@ type Task = {
   effort: string;
   priority: number;
   acceptance_criteria: string;
+  repo_url: string;
+  base_branch: string;
   status: string;
   result_text: string | null;
   error: string | null;
-  stats: { model?: string; inputTokens?: number; outputTokens?: number } | null;
+  stats: {
+    model?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+    branch?: string | null;
+    prUrl?: string | null;
+  } | null;
 };
 
 const COLUMNS = [
@@ -102,6 +110,7 @@ export default function BoardPage() {
                     </div>
                     <div className="badges">
                       {t.priority >= 2 && <span className="badge err">P{t.priority}</span>}
+                      {t.repo_url && <span className="badge">repo</span>}
                       <span className="badge model">{t.model}</span>
                       {t.effort !== 'default' && <span className="badge effort">{t.effort}</span>}
                       {t.error && <span className="badge err">error</span>}
@@ -134,6 +143,13 @@ export default function BoardPage() {
                 <span className="badge">{viewing.stats.inputTokens} in / {viewing.stats.outputTokens} out</span>
               )}
             </div>
+            {viewing.stats?.prUrl && (
+              <p style={{ marginBottom: 12 }}>
+                <a href={viewing.stats.prUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--blue)' }}>
+                  View pull request ({viewing.stats.branch}) ↗
+                </a>
+              </p>
+            )}
             {viewing.error && <div className="error-text">{viewing.error}</div>}
             {viewing.result_text && <div className="result">{viewing.result_text}</div>}
             {!viewing.result_text && !viewing.error && (
@@ -183,6 +199,8 @@ function TaskModal({ task, onClose, onSaved }: { task: Task | null; onClose: () 
       effort: f.get('effort'),
       priority: parseInt(String(f.get('priority')), 10) || 0,
       acceptanceCriteria: f.get('acceptanceCriteria'),
+      repoUrl: f.get('repoUrl'),
+      baseBranch: f.get('baseBranch'),
     };
     await fetch(task ? `/api/tasks/${task.id}` : '/api/tasks', {
       method: task ? 'PATCH' : 'POST',
@@ -227,6 +245,14 @@ function TaskModal({ task, onClose, onSaved }: { task: Task | null; onClose: () 
           <label>Acceptance criteria (appended to the prompt)
             <textarea name="acceptanceCriteria" rows={2} defaultValue={task?.acceptance_criteria || ''} placeholder="e.g. output a markdown table; cite sources" />
           </label>
+          <div className="row">
+            <label style={{ flex: 2 }}>GitHub repo (optional — runs a coding agent in a sandbox and opens a PR)
+              <input name="repoUrl" defaultValue={task?.repo_url || ''} placeholder="https://github.com/you/project" />
+            </label>
+            <label>Base branch
+              <input name="baseBranch" defaultValue={task?.base_branch || ''} placeholder="(default)" />
+            </label>
+          </div>
           <div className="modal-actions">
             <button type="button" onClick={onClose}>Cancel</button>
             <button type="submit" className="primary" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>

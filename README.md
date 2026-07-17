@@ -13,6 +13,12 @@ Multi-tenant board: create task cards with per-card **model** (Fable / Opus / So
 **effort** (low → max), **priority**, and **acceptance criteria**, then run them on your own
 Anthropic API key. Results land in the Review column with token stats.
 
+**Repo-aware coding tasks:** give a card a GitHub repo URL (plus a repo-scoped PAT in
+Settings) and the run happens inside a Vercel Sandbox microVM — the repo is cloned, the
+Claude Code CLI runs the task on your API key, changes are pushed as a `kungfu/<id>` branch,
+and a pull request is opened automatically. The PR link appears on the card in Review.
+Keep repo tasks small for now: the whole run must fit in the 5-minute function window.
+
 ```bash
 npm install
 cp .env.example .env.local   # fill in DATABASE_URL + APP_ENCRYPTION_KEY
