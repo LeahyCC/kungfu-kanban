@@ -7,7 +7,7 @@ import { sql } from '@/lib/db';
 import { decrypt } from '@/lib/crypto';
 import { clampPriority } from '@/lib/api';
 import { executeTask } from '@/lib/run-task';
-import { getEntitlements } from '@/lib/billing';
+import { getEntitlements, checkCreateAllowed } from '@/lib/billing';
 
 const MODEL_MAP: Record<string, string> = {
   default: 'claude-opus-4-8',
@@ -244,6 +244,9 @@ export async function executeAction(userId: string, a: Action): Promise<string |
   const q = sql();
   switch (a.type) {
     case 'create_task': {
+      // Manager-created cards count against the same free-tier daily cap.
+      const capErr = await checkCreateAllowed(userId);
+      if (capErr) return capErr;
       const rows = await q`
         INSERT INTO tasks (user_id, title, prompt, model, effort, priority, acceptance_criteria, repo_url, created_by)
         VALUES (${userId}, ${(a.title || 'Untitled').slice(0, 200)}, ${a.prompt || ''}, ${a.model || 'default'},

@@ -5,7 +5,11 @@ import { errorResponse, clampPriority } from '@/lib/api';
 
 export const runtime = 'nodejs';
 
-const STATUSES = ['backlog', 'running', 'review', 'done'];
+// 'running' is intentionally NOT settable here — launching a task must go
+// through /run (executeTask), which enforces the entitlement gate and stamps
+// the recovery timestamp. Letting a user PATCH status='running' would strand a
+// row that never launched and can never be recovered or deleted.
+const STATUSES = ['backlog', 'review', 'done'];
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -40,7 +44,12 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     await ensureSchema();
     const userId = await getUserId();
     const { id } = await params;
-    await sql()`DELETE FROM tasks WHERE id = ${id} AND user_id = ${userId} AND status != 'running'`;
+    // Allow deleting a task that isn't running — plus any row wedged in
+    // 'running' that never actually launched (no recovery markers in stats),
+    // so a stranded phantom can always be cleaned up.
+    await sql()`DELETE FROM tasks WHERE id = ${id} AND user_id = ${userId}
+      AND (status != 'running'
+           OR (stats->>'startedAt' IS NULL AND stats->>'sandboxName' IS NULL))`;
     return NextResponse.json({ ok: true });
   } catch (e) {
     return errorResponse(e);

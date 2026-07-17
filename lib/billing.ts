@@ -90,6 +90,12 @@ export async function checkCreateAllowed(userId: string): Promise<string | null>
 
 // Gate a task launch against the tenant's entitlements. Returns an error
 // string to block, or null to allow.
+// NOTE: the concurrency check and the status claim in executeTask are not one
+// atomic transaction (Neon's HTTP driver autocommits each statement), so two
+// launches racing in the same instant can transiently exceed maxConcurrent by
+// one. This self-corrects the moment either task finishes and is a soft cap,
+// not a security boundary — strict enforcement would need a per-tenant
+// advisory lock, which isn't worth it for a cosmetic limit.
 export async function checkLaunchAllowed(userId: string, opts: { repo: boolean }): Promise<string | null> {
   const ent = await getEntitlements(userId);
   if (opts.repo && !ent.allowRepoTasks) {
@@ -103,7 +109,9 @@ export async function checkLaunchAllowed(userId: string, opts: { repo: boolean }
 
 export async function upsertSubscriptionFromStripe(sub: Stripe.Subscription, userId: string) {
   const tier: Tier = sub.status === 'canceled' || sub.status === 'incomplete_expired' ? 'free' : 'pro';
-  const periodEnd = (sub as unknown as { current_period_end?: number }).current_period_end ?? null;
+  // In the pinned Stripe API version the period end lives on each subscription
+  // item, not on the Subscription object.
+  const periodEnd = sub.items?.data?.[0]?.current_period_end ?? null;
   await sql()`
     INSERT INTO subscriptions (user_id, stripe_customer_id, stripe_subscription_id, tier, status, current_period_end)
     VALUES (${userId}, ${sub.customer as string}, ${sub.id}, ${tier}, ${sub.status}, ${periodEnd})
