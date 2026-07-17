@@ -1,4 +1,0 @@
-{
-  "framework": "nextjs",
-  "crons": [{ "path": "/api/cron/sweep", "schedule": "*/10 * * * *" }]
-}

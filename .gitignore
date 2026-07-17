@@ -1,8 +1,5 @@
 node_modules/
 data/
-.next/
-.vercel/
-.env*.local
-.env
-.vercel
+local/
 .env*
+.DS_Store
