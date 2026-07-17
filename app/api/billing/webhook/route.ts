@@ -36,14 +36,25 @@ export async function POST(req: Request) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
-        const sub = event.data.object as Stripe.Subscription;
+        const evtSub = event.data.object as Stripe.Subscription;
         // Prefer metadata; fall back to mapping by stored customer id.
-        let userId = sub.metadata?.userId || null;
+        let userId = evtSub.metadata?.userId || null;
         if (!userId) {
-          const rows = await sql()`SELECT user_id FROM subscriptions WHERE stripe_customer_id = ${String(sub.customer)}`;
+          const rows = await sql()`SELECT user_id FROM subscriptions WHERE stripe_customer_id = ${String(evtSub.customer)}`;
           userId = rows[0]?.user_id || null;
         }
-        if (userId) await upsertSubscriptionFromStripe(sub, userId);
+        if (userId) {
+          // Re-fetch the current subscription so a late or out-of-order event
+          // can't overwrite newer state with a stale payload. A deleted sub
+          // still retrieves (status: canceled), so this is safe for all three.
+          let current: Stripe.Subscription = evtSub;
+          try {
+            current = await stripe().subscriptions.retrieve(evtSub.id);
+          } catch {
+            // If retrieval fails (e.g. hard-deleted), fall back to the payload.
+          }
+          await upsertSubscriptionFromStripe(current, userId);
+        }
         break;
       }
       default:

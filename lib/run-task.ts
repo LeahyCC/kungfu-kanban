@@ -60,9 +60,15 @@ export async function executeTask(userId: string, taskId: string): Promise<{ ok?
         title: task.title,
         retries: task.retries || 0,
       });
+      // Guard on status='running' so we can't clobber a row the sweep already
+      // finalized (e.g. if this function outlived a stale-recovery pass).
       const rows = await q`
         UPDATE tasks SET stats = ${JSON.stringify({ sandboxName, startedAt: now })}::jsonb, updated_at = now()
-        WHERE id = ${taskId} RETURNING *`;
+        WHERE id = ${taskId} AND status = 'running' RETURNING *`;
+      if (!rows.length) {
+        const cur = await q`SELECT * FROM tasks WHERE id = ${taskId} AND user_id = ${userId}`;
+        return { ok: true, task: cur[0] }; // already finalized elsewhere
+      }
       return { ok: true, task: rows[0] }; // stays 'running' until finalizeRepoTask
     }
 
