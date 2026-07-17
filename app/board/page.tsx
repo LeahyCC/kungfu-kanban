@@ -21,6 +21,7 @@ type Task = {
     outputTokens?: number;
     branch?: string | null;
     prUrl?: string | null;
+    sandboxName?: string;
   } | null;
 };
 
@@ -30,7 +31,7 @@ const COLUMNS = [
   { key: 'review', label: 'Review' },
   { key: 'done', label: 'Done' },
 ];
-const MODELS = ['default', 'fable', 'opus', 'sonnet', 'haiku'];
+const MODELS = ['default', 'fable', 'opus', 'sonnet', 'haiku', 'gpt', 'gpt-luna', 'gemini-pro', 'gemini-flash'];
 const EFFORTS = ['default', 'low', 'medium', 'high', 'xhigh', 'max'];
 
 export default function BoardPage() {
@@ -55,11 +56,19 @@ export default function BoardPage() {
     load();
   }, [load]);
 
-  // Poll while anything is running
+  // Poll while anything is running; running repo tasks also get their sandbox
+  // checked (which finalizes them when the detached agent finishes)
   useEffect(() => {
     const anyRunning = tasks.some((t) => t.status === 'running');
     if (anyRunning && !pollRef.current) {
-      pollRef.current = setInterval(load, 3000);
+      pollRef.current = setInterval(async () => {
+        await Promise.all(
+          tasks
+            .filter((t) => t.status === 'running' && t.stats?.sandboxName)
+            .map((t) => fetch(`/api/tasks/${t.id}/poll`, { method: 'POST' }).catch(() => {}))
+        );
+        await load();
+      }, 5000);
     } else if (!anyRunning && pollRef.current) {
       clearInterval(pollRef.current);
       pollRef.current = null;

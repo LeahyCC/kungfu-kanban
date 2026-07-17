@@ -13,11 +13,16 @@ Multi-tenant board: create task cards with per-card **model** (Fable / Opus / So
 **effort** (low → max), **priority**, and **acceptance criteria**, then run them on your own
 Anthropic API key. Results land in the Review column with token stats.
 
+**Multi-provider:** cards can also run on OpenAI (`gpt` → GPT-5.6, `gpt-luna` → the fast
+tier) or Google (`gemini-pro`, `gemini-flash`) — connect the matching API key in Settings.
+The Manager can route cards across providers too.
+
 **Repo-aware coding tasks:** give a card a GitHub repo URL (plus a repo-scoped PAT in
 Settings) and the run happens inside a Vercel Sandbox microVM — the repo is cloned, the
 Claude Code CLI runs the task on your API key, changes are pushed as a `kungfu/<id>` branch,
 and a pull request is opened automatically. The PR link appears on the card in Review.
-Keep repo tasks small for now: the whole run must fit in the 5-minute function window.
+Runs are fire-and-poll: the agent can work for up to **45 minutes**; the board (and a
+10-minute cron sweep) finalizes the card when the sandbox finishes.
 
 ```bash
 npm install
@@ -41,8 +46,7 @@ create/route/run), `auto` (full autopilot) — with guardrails: hourly launch ca
 retry limit (rejected tasks re-run with the manager's feedback appended), and a freeform
 management-style prompt. Triggers on new cards, on finished runs, and via chat.
 
-Roadmap: OpenAI/Google adapters, long-running task runner (beyond the 5-min window),
-Stripe billing after beta.
+Roadmap: Stripe billing after beta.
 
 ## Local edition (`local/`)
 
