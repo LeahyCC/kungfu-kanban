@@ -17,7 +17,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const res = await executeTask(userId, id);
     if (res.error) return NextResponse.json({ error: res.error }, { status: 400 });
     // Let the manager review the finished run after the response is sent
-    after(() => invokeManager(userId, `task finished and awaits review: "${res.task?.title}" (id ${id})`, null, 'finish'));
+    // (repo tasks stay 'running' — their review trigger fires from poll/sweep)
+    if (res.task?.status === 'review') {
+      after(() => invokeManager(userId, `task finished and awaits review: "${res.task?.title}" (id ${id})`, null, 'finish'));
+    }
     return NextResponse.json(res.task);
   } catch (e) {
     return errorResponse(e);
