@@ -1,0 +1,13 @@
+{
+  "name": "kungfu-kanban",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local kanban board that runs tasks through the Claude Code CLI on your subscription",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0"
+  }
+}
