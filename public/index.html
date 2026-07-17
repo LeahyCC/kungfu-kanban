@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claude Kanban</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>" />
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="logo">🗂️</span>
+      <h1>Claude Kanban</h1>
+      <span class="sub">on your subscription · via Claude Code CLI</span>
+    </div>
+    <div class="header-actions">
+      <label class="conc">
+        parallel <input id="maxConcurrent" type="number" min="1" max="8" />
+      </label>
+      <button id="newTaskBtn" class="primary">+ New task</button>
+    </div>
+  </header>
+
+  <main id="board"></main>
+
+  <!-- Card editor modal -->
+  <div id="modalBackdrop" class="backdrop hidden">
+    <div class="modal">
+      <h2 id="modalTitle">New task</h2>
+      <form id="taskForm">
+        <label>Title
+          <input name="title" required placeholder="Fix flaky login test" />
+        </label>
+        <label>Prompt
+          <textarea name="prompt" rows="5" required placeholder="What should the agent do?"></textarea>
+        </label>
+        <label>Working directory
+          <input name="cwd" placeholder="/Users/you/project" />
+        </label>
+        <div class="row">
+          <label>Model
+            <select name="model"></select>
+          </label>
+          <label>Effort
+            <select name="effort"></select>
+          </label>
+          <label>Permissions
+            <select name="permissionMode"></select>
+          </label>
+        </div>
+        <div class="row">
+          <label>Agent
+            <select name="agent"><option value="">(none)</option></select>
+          </label>
+          <label class="check">
+            <input type="checkbox" name="worktree" /> Isolate in git worktree
+          </label>
+        </div>
+        <label>Skills to use</label>
+        <div id="skillPicker" class="skill-picker"></div>
+        <div class="modal-actions">
+          <button type="button" id="cancelBtn">Cancel</button>
+          <button type="submit" class="primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Detail drawer -->
+  <div id="drawer" class="drawer hidden">
+    <div class="drawer-head">
+      <h2 id="drawerTitle"></h2>
+      <button id="drawerClose">✕</button>
+    </div>
+    <div id="drawerMeta" class="drawer-meta"></div>
+    <div id="drawerActions" class="drawer-actions"></div>
+    <div id="transcript" class="transcript"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
