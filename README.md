@@ -1,4 +1,4 @@
-# Claude Kanban
+# Kungfu Kanban
 
 A local kanban board that runs tasks through the **Claude Code CLI** — so everything
 runs on your Anthropic subscription (OAuth login), never API-key token billing.
@@ -8,7 +8,7 @@ so it can't silently fall back to pay-per-token.
 ## Run
 
 ```bash
-cd claude-kanban
+cd kungfu-kanban
 npm install
 npm start          # http://localhost:4747
 ```
