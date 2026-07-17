@@ -1,24 +1,28 @@
-// Cron sweep: finalize running repo tasks even when nobody has the board open.
+// Cron sweep: finalize running repo tasks even when nobody has the board open,
+// and recover plain-model tasks stranded in 'running' past the route budget.
 import { NextResponse } from 'next/server';
 import { ensureSchema, sql } from '@/lib/db';
-import { finalizeRepoTask } from '@/lib/run-task';
+import { finalizeRepoTask, finalizeStalePlainTask } from '@/lib/run-task';
 import { invokeManager } from '@/lib/manager';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 export async function GET(req: Request) {
+  // Fail closed: without a configured secret the endpoint is disabled entirely.
+  // Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` automatically.
   const secret = process.env.CRON_SECRET;
-  if (secret && req.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   try {
     await ensureSchema();
-    const rows = await sql()`SELECT * FROM tasks
-      WHERE status = 'running' AND stats ? 'sandboxName' ORDER BY updated_at ASC LIMIT 10`;
+    const rows = await sql()`SELECT * FROM tasks WHERE status = 'running' ORDER BY updated_at ASC LIMIT 20`;
     let finalized = 0;
     for (const task of rows) {
-      const finished = await finalizeRepoTask(task.user_id, task);
+      const finished = task.stats && (task.stats as { sandboxName?: string }).sandboxName
+        ? await finalizeRepoTask(task.user_id, task)
+        : await finalizeStalePlainTask(task.user_id, task);
       if (finished) {
         finalized++;
         await invokeManager(task.user_id, `task finished and awaits review: "${task.title}" (id ${task.id})`, null, 'finish');

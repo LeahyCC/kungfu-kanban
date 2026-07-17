@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureSchema, sql } from '@/lib/db';
 import { getUserId } from '@/lib/auth';
-import { errorResponse } from '@/lib/api';
+import { errorResponse, clampPriority } from '@/lib/api';
 
 export const runtime = 'nodejs';
 
@@ -20,7 +20,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         prompt = COALESCE(${b.prompt ?? null}, prompt),
         model = COALESCE(${b.model ?? null}, model),
         effort = COALESCE(${b.effort ?? null}, effort),
-        priority = COALESCE(${Number.isInteger(b.priority) ? b.priority : null}, priority),
+        priority = COALESCE(${Number.isInteger(b.priority) ? clampPriority(b.priority) : null}, priority),
         acceptance_criteria = COALESCE(${b.acceptanceCriteria ?? null}, acceptance_criteria),
         repo_url = COALESCE(${b.repoUrl ?? null}, repo_url),
         base_branch = COALESCE(${b.baseBranch ?? null}, base_branch),

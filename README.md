@@ -46,7 +46,16 @@ create/route/run), `auto` (full autopilot) — with guardrails: hourly launch ca
 retry limit (rejected tasks re-run with the manager's feedback appended), and a freeform
 management-style prompt. Triggers on new cards, on finished runs, and via chat.
 
-Roadmap: Stripe billing after beta.
+**Billing (Stripe).** Free and Pro plans. Free caps concurrency (1 running task),
+tasks/day, manager autonomy (no autopilot), and blocks repo tasks; Pro unlocks everything.
+Dormant until `STRIPE_SECRET_KEY` / `STRIPE_PRICE_PRO` / `STRIPE_WEBHOOK_SECRET` are set —
+during beta (no keys) every tenant gets Pro entitlements for free. Point a Stripe webhook at
+`/api/billing/webhook` for the subscription lifecycle.
+
+The whole web edition was hardened by an adversarial multi-agent review before first run —
+fixes include per-run sandbox/branch names (repo-task retries no longer collide), stranded-
+task recovery via the cron sweep, Gemini/OpenAI safety-block and non-JSON-error handling,
+credential redaction on all surfaced errors, launch-cap accounting, and int-overflow guards.
 
 ## Local edition (`local/`)
 

@@ -69,6 +69,15 @@ export function ensureSchema(): Promise<void> {
         text text NOT NULL,
         ts timestamptz NOT NULL DEFAULT now()
       )`;
+      await q`CREATE TABLE IF NOT EXISTS subscriptions (
+        user_id text PRIMARY KEY,
+        stripe_customer_id text,
+        stripe_subscription_id text,
+        tier text NOT NULL DEFAULT 'free',
+        status text NOT NULL DEFAULT 'none',
+        current_period_end bigint,
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`;
       await q`CREATE TABLE IF NOT EXISTS provider_keys (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id text NOT NULL,

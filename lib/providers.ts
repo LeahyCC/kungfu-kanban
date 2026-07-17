@@ -99,15 +99,21 @@ export async function runOpenAITask(opts: { apiKey: string; model: string; effor
     headers: { Authorization: `Bearer ${opts.apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`OpenAI: ${data.error?.message || res.status}`);
-  const choice = data.choices?.[0];
+  const raw = await res.text();
+  let data: Record<string, unknown> = {};
+  try { data = raw ? JSON.parse(raw) : {}; } catch { /* non-JSON error body */ }
+  if (!res.ok) throw new Error(`OpenAI: ${(data.error as { message?: string })?.message || res.status}`);
+  const choice = (data.choices as Array<{ message?: { content?: string }; finish_reason?: string }>)?.[0];
+  const usage = data.usage as { prompt_tokens?: number; completion_tokens?: number } | undefined;
+  if (choice?.finish_reason === 'content_filter' && !choice?.message?.content) {
+    throw new Error('OpenAI declined this request (content filter).');
+  }
   return {
     text: choice?.message?.content || '',
     stopReason: choice?.finish_reason ?? null,
-    model: data.model || model,
-    inputTokens: data.usage?.prompt_tokens ?? 0,
-    outputTokens: data.usage?.completion_tokens ?? 0,
+    model: (data.model as string) || model,
+    inputTokens: usage?.prompt_tokens ?? 0,
+    outputTokens: usage?.completion_tokens ?? 0,
   };
 }
 
@@ -120,17 +126,26 @@ export async function runGeminiTask(opts: { apiKey: string; model: string; effor
     headers: { 'x-goog-api-key': opts.apiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({ contents: [{ parts: [{ text: opts.prompt }] }] }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`Gemini: ${data.error?.message || res.status}`);
-  const candidate = data.candidates?.[0];
-  const text = (candidate?.content?.parts || [])
-    .map((p: { text?: string }) => p.text || '')
-    .join('');
+  const raw = await res.text();
+  let data: Record<string, unknown> = {};
+  try { data = raw ? JSON.parse(raw) : {}; } catch { /* non-JSON error body */ }
+  if (!res.ok) throw new Error(`Gemini: ${(data.error as { message?: string })?.message || res.status}`);
+
+  const promptFeedback = data.promptFeedback as { blockReason?: string } | undefined;
+  const candidate = (data.candidates as Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>)?.[0];
+  const text = (candidate?.content?.parts || []).map((p) => p.text || '').join('');
+  // HTTP 200 with no usable content = a safety/recitation block. Surface it as
+  // an error instead of silently finalizing to an empty result.
+  if (!text) {
+    const reason = promptFeedback?.blockReason || candidate?.finishReason || 'no content returned';
+    throw new Error(`Gemini: response blocked or empty (${reason}).`);
+  }
+  const usage = data.usageMetadata as { promptTokenCount?: number; candidatesTokenCount?: number } | undefined;
   return {
     text,
     stopReason: candidate?.finishReason ?? null,
     model,
-    inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
-    outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
+    inputTokens: usage?.promptTokenCount ?? 0,
+    outputTokens: usage?.candidatesTokenCount ?? 0,
   };
 }

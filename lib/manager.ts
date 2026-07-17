@@ -5,7 +5,9 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { sql } from '@/lib/db';
 import { decrypt } from '@/lib/crypto';
+import { clampPriority } from '@/lib/api';
 import { executeTask } from '@/lib/run-task';
+import { getEntitlements } from '@/lib/billing';
 
 const MODEL_MAP: Record<string, string> = {
   default: 'claude-opus-4-8',
@@ -150,9 +152,12 @@ async function buildPrompt(userId: string, config: ManagerConfig, trigger: strin
 }
 
 async function launchesInLastHour(userId: string): Promise<number> {
+  // Count only actions that actually start a run — the same set the guard
+  // gates on. A plain create_task (backlog card, no autoRun) is not a launch.
   const rows = await sql()`SELECT count(*)::int AS n FROM manager_log
     WHERE user_id = ${userId} AND kind = 'action' AND ts > now() - interval '1 hour'
-    AND action->>'type' IN ('run_task', 'reject_task', 'create_task')`;
+    AND (action->>'type' IN ('run_task', 'reject_task')
+         OR (action->>'type' = 'create_task' AND action->>'autoRun' = 'true'))`;
   return rows[0]?.n ?? 0;
 }
 
@@ -167,6 +172,10 @@ export async function invokeManager(
     if (!config.enabled) return null;
     if (kind === 'finish' && !config.on_finish) return null;
     if (kind === 'new_card' && !config.on_new_card) return null;
+    // Cap autonomy to the tenant's entitlement — 'auto' requires Pro. This is
+    // the enforcement point, so a plan downgrade takes effect immediately.
+    const ent = await getEntitlements(userId);
+    if (config.autonomy === 'auto' && !ent.allowAutoAutonomy) config.autonomy = 'semi';
 
     const keys = await sql()`SELECT encrypted_key FROM provider_keys WHERE user_id = ${userId} AND provider = 'anthropic'`;
     if (!keys.length) {
@@ -238,9 +247,13 @@ export async function executeAction(userId: string, a: Action): Promise<string |
       const rows = await q`
         INSERT INTO tasks (user_id, title, prompt, model, effort, priority, acceptance_criteria, repo_url, created_by)
         VALUES (${userId}, ${(a.title || 'Untitled').slice(0, 200)}, ${a.prompt || ''}, ${a.model || 'default'},
-                ${a.effort || 'default'}, ${a.priority ?? 0}, ${a.acceptanceCriteria || ''}, ${a.repoUrl || ''}, 'manager')
+                ${a.effort || 'default'}, ${clampPriority(a.priority)}, ${a.acceptanceCriteria || ''}, ${a.repoUrl || ''}, 'manager')
         RETURNING id`;
-      if (a.autoRun) await executeTask(userId, rows[0].id);
+      if (a.autoRun) {
+        // Surface a launch failure instead of logging the create as success.
+        const res = await executeTask(userId, rows[0].id);
+        if (res.error) return res.error;
+      }
       return null;
     }
     case 'update_task': {
@@ -251,7 +264,7 @@ export async function executeAction(userId: string, a: Action): Promise<string |
           prompt = COALESCE(${a.prompt ?? null}, prompt),
           model = COALESCE(${a.model ?? null}, model),
           effort = COALESCE(${a.effort ?? null}, effort),
-          priority = COALESCE(${a.priority ?? null}, priority),
+          priority = COALESCE(${a.priority == null ? null : clampPriority(a.priority)}, priority),
           acceptance_criteria = COALESCE(${a.acceptanceCriteria ?? null}, acceptance_criteria),
           updated_at = now()
         WHERE id = ${a.taskId} AND user_id = ${userId} AND status != 'running' RETURNING id`;
