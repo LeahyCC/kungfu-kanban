@@ -1,64 +1,88 @@
-# Kungfu Kanban
+# Kungfu Kanban 🥋
 
-A kanban board where every card is an AI task. Two editions live in this repo:
+A personal kanban board where every card is an AI task, run through the **Claude Code
+CLI on your subscription login** — no API keys, no token billing, no cloud. The runner
+even strips `ANTHROPIC_API_KEY` from the environment before spawning, so it can't
+silently fall back to pay-per-token.
 
-| Edition | Where | Execution |
-|---|---|---|
-| **Web (SaaS)** | repo root — Next.js, deploys to Vercel | Hosted, **bring your own provider API key** (Anthropic first; usage bills to your provider account) |
-| **Local** | [`local/`](local/) — Node/Express | Your local Claude Code CLI on your subscription login, plus an LLM Manager that triages/dispatches/reviews cards |
+> This used to be a two-edition repo with a hosted SaaS variant (Stripe, Clerk, Neon,
+> Vercel Sandbox). That edition is deleted — this is a tool for one person: me.
 
-## Web edition (root)
-
-Multi-tenant board: create task cards with per-card **model** (Fable / Opus / Sonnet / Haiku),
-**effort** (low → max), **priority**, and **acceptance criteria**, then run them on your own
-Anthropic API key. Results land in the Review column with token stats.
-
-**Multi-provider:** cards can also run on OpenAI (`gpt` → GPT-5.6, `gpt-luna` → the fast
-tier) or Google (`gemini-pro`, `gemini-flash`) — connect the matching API key in Settings.
-The Manager can route cards across providers too.
-
-**Repo-aware coding tasks:** give a card a GitHub repo URL (plus a repo-scoped PAT in
-Settings) and the run happens inside a Vercel Sandbox microVM — the repo is cloned, the
-Claude Code CLI runs the task on your API key, changes are pushed as a `kungfu/<id>` branch,
-and a pull request is opened automatically. The PR link appears on the card in Review.
-Runs are fire-and-poll: the agent can work for up to **20 minutes** (SANDBOX_MAX_MINUTES, max 45); the board (and a
-10-minute cron sweep) finalizes the card when the sandbox finishes.
+## Run
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in DATABASE_URL + APP_ENCRYPTION_KEY
-npm run dev
+npm start          # http://localhost:4747
 ```
 
-**Required setup on Vercel** (project → moonlightleads/kungfu-kanban):
-1. **Neon Postgres** — Storage tab → add Neon; it injects `DATABASE_URL`. The schema
-   auto-creates on first request.
-2. **`APP_ENCRYPTION_KEY`** — `openssl rand -hex 32`, add as an env var. Provider keys are
-   AES-256-GCM encrypted with it.
-3. **Clerk** (optional, enables real accounts) — install the Clerk integration; auth turns on
-   automatically once `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` exist.
-   Without them the app runs as a single shared demo tenant (fine for beta testing).
+## What each card controls
 
-**Manager tab:** an LLM manager (running on your API key, structured outputs) that triages
-new cards, dispatches work, and reviews finished tasks against their acceptance criteria.
-Autonomy ladder — `suggest` (every action needs your ✓, the default), `semi` (can
-create/route/run), `auto` (full autopilot) — with guardrails: hourly launch cap, per-task
-retry limit (rejected tasks re-run with the manager's feedback appended), and a freeform
-management-style prompt. Triggers on new cards, on finished runs, and via chat.
+| Field | CLI flag |
+|---|---|
+| Model (fable / opus / sonnet / haiku) | `--model` |
+| Effort (low → max) | `--effort` |
+| Permissions (acceptEdits, plan, bypassPermissions, …) | `--permission-mode` |
+| Agent | `--agent` |
+| Git worktree isolation | `--worktree` |
+| Skills | injected into the prompt (picked from your installed skills) |
+| Working directory | process `cwd` |
 
-**Billing (Stripe).** Free and Pro plans. Free caps concurrency (1 running task),
-tasks/day, manager autonomy (no autopilot), and blocks repo tasks; Pro unlocks everything.
-Dormant until `STRIPE_SECRET_KEY` / `STRIPE_PRICE_PRO` / `STRIPE_WEBHOOK_SECRET` are set —
-during beta (no keys) every tenant gets Pro entitlements for free. Point a Stripe webhook at
-`/api/billing/webhook` for the subscription lifecycle.
+Skills and agents are auto-discovered from `~/.claude/skills`, `~/.claude/agents`,
+and enabled plugins.
 
-The whole web edition was hardened by an adversarial multi-agent review before first run —
-fixes include per-run sandbox/branch names (repo-task retries no longer collide), stranded-
-task recovery via the cron sweep, Gemini/OpenAI safety-block and non-JSON-error handling,
-credential redaction on all surfaced errors, launch-cap accounting, and int-overflow guards.
+## Board flow
 
-## Local edition (`local/`)
+Backlog → Queued → Running → Review → Done
 
-See [local/README.md](local/README.md). Runs task cards through the Claude Code CLI on your
-subscription (no API key), with skills/agents discovery, git-worktree isolation, and an LLM
-manager tab. `cd local && npm install && npm start` → http://localhost:4747.
+- Drag a card to **Queued** (or hit ▶ Run) to launch it.
+- **parallel** (toolbar) caps concurrent sessions so parallel tasks don't burn
+  through your subscription rate limits; extras wait in Queued.
+- Click a card for the live transcript, stats, and a `claude -r <session-id>`
+  command to resume the session in your terminal.
+- Finished tasks land in **Review**; shipping earns the vermillion seal.
+
+Task data lives in `data/` (JSON + per-task transcripts). Delete it to reset.
+
+## Repo cards → real PRs
+
+Check **Git worktree** + **Open PR when done** on a card whose working directory is a
+git repo. After the agent finishes, the board commits anything left uncommitted in the
+worktree, pushes the branch, and opens a PR with your existing **`gh` auth** — no PAT,
+no sandbox. The PR link lands on the card in Review.
+
+## Notifications
+
+- **macOS**: a notification fires when a card lands in Review or a run fails
+  (toggle in ⚙ Settings).
+- **Phone**: set an ntfy topic in ⚙ Settings and subscribe to it in the
+  [ntfy app](https://ntfy.sh) — pushes include a tap-through link to the PR when
+  there is one. Pick an unguessable topic name; ntfy topics are public namespaces.
+
+## Access from anywhere (Tailscale)
+
+The server binds `127.0.0.1` only, and refuses to bind wider without a token. To use
+the board from your phone:
+
+```bash
+openssl rand -hex 16 > data/auth-token   # enables the token gate (or export KFK_TOKEN)
+npm start
+tailscale serve --bg 4747                # HTTPS on your tailnet, proxied to localhost
+```
+
+Open the tailnet URL, enter the token once — it's a cookie for a year. API calls can
+send `Authorization: Bearer <token>` instead. The gate exists because the runner
+executes code: **never** expose the port without it.
+
+## Manager tab — the Sensei
+
+An LLM manager (also a `claude -p` session on your subscription) that triages,
+routes, dispatches, and reviews cards against their acceptance criteria.
+
+- **Autonomy ladder**: `suggest` (everything needs your ✓) → `semi` (can
+  create/route/run; verdicts need your ✓) → `auto` (full autopilot within
+  guardrails). Deleting cards is never available to the manager.
+- **Triggers**: on task finish, on new card, on an interval, or via chat.
+- **Guardrails**: max launches/hour, max retries/task (rejected tasks re-run with
+  the manager's feedback appended), and a permission ceiling it can't assign beyond.
+- **Management style**: a freeform prompt to tune behavior ("prefer haiku for docs
+  tasks", "never auto-approve migrations") without code.

@@ -1,4 +1,4 @@
-/* Claude Kanban frontend */
+/* Kungfu Kanban frontend */
 const COLUMNS = [
   { key: 'backlog', label: 'Backlog' },
   { key: 'queued', label: 'Queued' },
@@ -21,6 +21,7 @@ const api = async (url, opts = {}) => {
     ...opts,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
+  if (res.status === 401) { location.href = '/login'; return {}; }
   return res.json();
 };
 
@@ -28,6 +29,25 @@ const api = async (url, opts = {}) => {
 function render() {
   const board = $('#board');
   board.innerHTML = '';
+  board.classList.toggle('is-empty', !tasks.length);
+
+  updateHeaderStatus();
+
+  if (!tasks.length) {
+    const empty = document.createElement('div');
+    empty.className = 'dojo-empty';
+    empty.innerHTML = `
+      <h3>The dojo is quiet</h3>
+      <p>Write a card, pick a model and effort, and let an agent train on it. Results land in Review.</p>`;
+    const btn = document.createElement('button');
+    btn.className = 'primary';
+    btn.textContent = '＋ First card';
+    btn.addEventListener('click', () => openModal(null));
+    empty.appendChild(btn);
+    board.appendChild(empty);
+    return;
+  }
+
   for (const col of COLUMNS) {
     const colTasks = tasks
       .filter((t) => (col.key === 'running' ? RUNNING_LIKE[t.status] : t.status === col.key))
@@ -36,7 +56,7 @@ function render() {
     el.className = 'column';
     el.dataset.status = col.key;
     el.innerHTML = `
-      <div class="col-head"><span>${col.label}</span><span class="count">${colTasks.length}</span></div>
+      <div class="col-head"><span class="col-name">${col.label}</span><span class="col-count">${colTasks.length}</span></div>
       <div class="col-body"></div>`;
     const body = el.querySelector('.col-body');
     if (!colTasks.length) body.innerHTML = '<div class="empty-col">—</div>';
@@ -62,27 +82,49 @@ function render() {
   }
 }
 
+function updateHeaderStatus() {
+  const counts = { backlog: 0, queued: 0, running: 0, stopping: 0, review: 0, done: 0 };
+  for (const t of tasks) counts[t.status] = (counts[t.status] || 0) + 1;
+  const running = counts.running + counts.stopping;
+  $('#countBacklog').textContent = counts.backlog + counts.queued;
+  $('#countRunning').textContent = running;
+  $('#countReview').textContent = counts.review;
+  $('#countDone').textContent = counts.done;
+  const antenna = $('#antenna');
+  antenna.classList.toggle('lit', running > 0);
+  antenna.setAttribute('aria-label', running > 0 ? `${running} agent${running > 1 ? 's' : ''} running` : 'No agents running');
+}
+
 function cardEl(t) {
   const el = document.createElement('div');
-  el.className = 'card';
-  el.draggable = !RUNNING_LIKE[t.status];
+  const isRunning = RUNNING_LIKE[t.status];
+  el.className = 'card'
+    + (isRunning ? ' running-card brush' : '')
+    + (t.status === 'done' ? ' done-card' : '')
+    + (t.error && t.status === 'review' ? ' failed-card' : '');
+  el.draggable = !isRunning;
   el.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', t.id));
   el.addEventListener('click', () => openDrawer(t.id));
 
-  const badges = [];
-  if (t.priority >= 2) badges.push(`<span class="badge ${t.priority === 3 ? 'err' : 'effort'}">P${t.priority}</span>`);
-  if (t.createdBy === 'manager') badges.push(`<span class="badge wt">mgr</span>`);
-  badges.push(`<span class="badge model">${esc(t.model || 'default')}</span>`);
-  if (t.effort && t.effort !== 'default') badges.push(`<span class="badge effort">${esc(t.effort)}</span>`);
-  if (t.agent) badges.push(`<span class="badge">agent:${esc(t.agent)}</span>`);
-  if (t.worktree) badges.push(`<span class="badge wt">worktree</span>`);
-  for (const s of (t.skills || []).slice(0, 3)) badges.push(`<span class="badge skill">${esc(s)}</span>`);
-  if ((t.skills || []).length > 3) badges.push(`<span class="badge skill">+${t.skills.length - 3}</span>`);
-  if (t.error) badges.push(`<span class="badge err">error</span>`);
-  if (t.stats && t.stats.turns) badges.push(`<span class="badge">${t.stats.turns} turns</span>`);
+  const meta = [];
+  if (t.priority >= 2) meta.push(`<span class="prio-high" title="P${t.priority}"></span>`);
+  if (t.createdBy === 'manager') meta.push('<span class="badge wt">sensei</span>');
+  meta.push(`<span class="badge model">${esc(t.model || 'default')}</span>`);
+  if (t.effort && t.effort !== 'default') meta.push(`<span class="badge">${esc(t.effort)}</span>`);
+  if (t.agent) meta.push(`<span class="badge">agent:${esc(t.agent)}</span>`);
+  if (t.worktree) meta.push('<span class="badge wt">worktree</span>');
+  for (const s of (t.skills || []).slice(0, 3)) meta.push(`<span class="badge">${esc(s)}</span>`);
+  if ((t.skills || []).length > 3) meta.push(`<span class="badge">+${t.skills.length - 3}</span>`);
+  if (t.prUrl) meta.push(`<a class="pr-link" href="${esc(t.prUrl)}" target="_blank" rel="noopener">PR ↗</a>`);
+  if (t.error && t.status !== 'done') meta.push(`<span class="failword">${t.error === 'Stopped by user' ? 'stopped' : 'failed'}</span>`);
+  if (isRunning) meta.push('<span class="runword">training…</span>');
+  else if (t.stats && t.stats.turns) meta.push(`<span class="badge">${t.stats.turns} turns</span>`);
 
-  const spin = RUNNING_LIKE[t.status] ? '<span class="spin"></span>' : '';
-  el.innerHTML = `<div class="title">${spin}${esc(t.title)}</div><div class="badges">${badges.join('')}</div>`;
+  const antenna = isRunning ? '<span class="antenna lit"></span>' : '';
+  const seal = t.status === 'done' ? '<span class="seal card-seal seal--stamp">Shipped</span>' : '';
+  el.innerHTML = `${seal}<div class="title">${antenna}${esc(t.title)}</div><div class="meta">${meta.join('')}</div>`;
+  const pr = el.querySelector('.pr-link');
+  if (pr) pr.addEventListener('click', (e) => e.stopPropagation());
   return el;
 }
 
@@ -90,10 +132,10 @@ function esc(s) {
   return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-// ---------- modal ----------
+// ---------- card modal ----------
 function openModal(task) {
   editingId = task ? task.id : null;
-  $('#modalTitle').textContent = task ? 'Edit task' : 'New task';
+  $('#modalTitle').textContent = task ? 'Edit card' : 'New card';
   const f = $('#taskForm');
   f.title.value = task ? task.title : '';
   f.prompt.value = task ? task.prompt : '';
@@ -104,6 +146,7 @@ function openModal(task) {
   const agentOpts = ['', ...config.agents.map((a) => a.name)];
   fillSelect(f.agent, agentOpts, task && task.agent ? task.agent : '');
   f.worktree.checked = task ? !!task.worktree : false;
+  f.openPr.checked = task ? !!task.openPr : false;
   f.priority.value = String(task && task.priority ? task.priority : 0);
   f.acceptanceCriteria.value = task ? task.acceptanceCriteria || '' : '';
 
@@ -146,6 +189,7 @@ $('#taskForm').addEventListener('submit', async (e) => {
     permissionMode: f.permissionMode.value,
     agent: f.agent.value || null,
     worktree: f.worktree.checked,
+    openPr: f.openPr.checked,
     priority: parseInt(f.priority.value, 10) || 0,
     acceptanceCriteria: f.acceptanceCriteria.value,
     skills: [...document.querySelectorAll('.skill-chip.on')].map((c) => c.dataset.name),
@@ -161,6 +205,49 @@ $('#cancelBtn').addEventListener('click', () => $('#modalBackdrop').classList.ad
 $('#modalBackdrop').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) $('#modalBackdrop').classList.add('hidden');
 });
+
+// ---------- settings modal ----------
+function openSettings() {
+  const f = $('#settingsForm');
+  f.defaultCwd.value = config.settings.defaultCwd || '';
+  f.ntfyTopic.value = config.settings.ntfyTopic || '';
+  f.notifyMac.checked = config.settings.notifyMac !== false;
+  $('#settingsBackdrop').classList.remove('hidden');
+}
+$('#settingsBtn').addEventListener('click', openSettings);
+$('#settingsCancelBtn').addEventListener('click', () => $('#settingsBackdrop').classList.add('hidden'));
+$('#settingsBackdrop').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) $('#settingsBackdrop').classList.add('hidden');
+});
+$('#settingsForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  config.settings = await api('/api/settings', {
+    method: 'PUT',
+    body: {
+      defaultCwd: f.defaultCwd.value,
+      ntfyTopic: f.ntfyTopic.value,
+      notifyMac: f.notifyMac.checked,
+    },
+  });
+  $('#settingsBackdrop').classList.add('hidden');
+});
+
+// ---------- theme ----------
+function paintThemeToggle() {
+  const light = document.documentElement.dataset.theme === 'light';
+  const btn = $('#themeToggle');
+  btn.textContent = light ? '☾' : '☀';
+  btn.title = light ? 'Enter the night dojo' : 'Enter the day dojo';
+}
+$('#themeToggle').addEventListener('click', () => {
+  const next = !(document.documentElement.dataset.theme === 'light');
+  if (next) document.documentElement.dataset.theme = 'light';
+  else delete document.documentElement.dataset.theme;
+  try { localStorage.setItem('kk-theme', next ? 'light' : 'dark'); } catch {}
+  paintThemeToggle();
+});
+paintThemeToggle();
 
 // ---------- drawer ----------
 async function openDrawer(id) {
@@ -193,7 +280,9 @@ function renderDrawerMeta(t) {
     if (t.stats.outputTokens) bits.push(`${t.stats.inputTokens || 0} in / ${t.stats.outputTokens} out tok`);
   }
   if (t.sessionId) bits.push(`resume: claude -r ${t.sessionId}`);
-  $('#drawerMeta').innerHTML = bits.map((b) => `<span class="badge">${esc(b)}</span>`).join('');
+  const html = bits.map((b) => `<span class="badge">${esc(b)}</span>`);
+  if (t.prUrl) html.push(`<a class="pr-link" href="${esc(t.prUrl)}" target="_blank" rel="noopener">${esc(t.prUrl)} ↗</a>`);
+  $('#drawerMeta').innerHTML = html.join('');
 }
 
 function renderDrawerActions(t) {
@@ -210,13 +299,13 @@ function renderDrawerActions(t) {
     mk('⏹ Stop', 'danger', () => api(`/api/tasks/${t.id}/stop`, { method: 'POST' }));
   } else {
     mk('▶ Run', 'primary', () => api(`/api/tasks/${t.id}/run`, { method: 'POST' }));
-    mk('Edit', '', () => { $('#drawer').classList.add('hidden'); openModal(t); });
+    mk('Edit', 'ghost', () => { $('#drawer').classList.add('hidden'); openModal(t); });
     if (t.status === 'review') mk('✓ Done', '', async () => {
       await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: 'done' } });
       $('#drawer').classList.add('hidden');
     });
     mk('Delete', 'danger', async () => {
-      if (!confirm('Delete this task?')) return;
+      if (!confirm('Delete this card?')) return;
       await api(`/api/tasks/${t.id}`, { method: 'DELETE' });
       $('#drawer').classList.add('hidden');
       await loadTasks();
@@ -238,6 +327,7 @@ let mgrState = null;
 
 function showTab(which) {
   $('#board').classList.toggle('hidden', which !== 'board');
+  $('#boardToolbar').classList.toggle('hidden', which !== 'board');
   $('#managerView').classList.toggle('hidden', which !== 'manager');
   $('#tabBoard').classList.toggle('active', which === 'board');
   $('#tabManager').classList.toggle('active', which === 'manager');
@@ -413,7 +503,7 @@ es.onmessage = (msg) => {
 
 // ---------- settings ----------
 $('#maxConcurrent').addEventListener('change', async (e) => {
-  await api('/api/settings', { method: 'PUT', body: { maxConcurrent: parseInt(e.target.value, 10) } });
+  config.settings = await api('/api/settings', { method: 'PUT', body: { maxConcurrent: parseInt(e.target.value, 10) } });
 });
 
 // ---------- init ----------

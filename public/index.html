@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kungfu Kanban</title>
+  <meta name="theme-color" content="#141210" />
+  <link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="/icons/apple-icon-180x180.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script>
+    // Night dojo is the default; only an explicit saved 'light' switches. Pre-paint, no flash.
+    try { if (localStorage.getItem('kk-theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) {}
+  </script>
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="app-brand">
+      <img src="/icons/android-icon-96x96.png" alt="" width="24" height="24" class="app-logo" />
+      <span class="wordmark">Kungfu Kanban</span>
+      <span id="antenna" class="antenna" role="status" aria-label="No agents running"></span>
+    </div>
+    <nav class="app-tabs" aria-label="Application">
+      <button id="tabBoard" class="app-tab active">Board</button>
+      <button id="tabManager" class="app-tab">Manager <span id="suggCount" class="pill hidden"></span></button>
+    </nav>
+    <div class="app-status" aria-label="Board summary">
+      <span class="status-chip" title="Backlog"><span class="belt-dot belt-todo"></span><span id="countBacklog" class="status-count">0</span></span>
+      <span class="status-chip" title="Running"><span class="belt-dot belt-doing"></span><span id="countRunning" class="status-count">0</span></span>
+      <span class="status-chip" title="Review"><span class="belt-dot belt-review"></span><span id="countReview" class="status-count">0</span></span>
+      <span class="status-chip" title="Done"><span class="belt-dot belt-done"></span><span id="countDone" class="status-count">0</span></span>
+      <button id="themeToggle" class="theme-toggle" title="Day / night dojo" aria-label="Toggle theme">◐</button>
+    </div>
+  </header>
+
+  <div class="toolbar" id="boardToolbar">
+    <span class="sub">on your subscription · via claude code cli</span>
+    <div class="toolbar-actions">
+      <label class="conc">parallel <input id="maxConcurrent" type="number" min="1" max="8" /></label>
+      <button id="settingsBtn" class="ghost" title="Settings">⚙ Settings</button>
+      <button id="newTaskBtn" class="primary">＋ New card</button>
+    </div>
+  </div>
+
+  <main id="board" class="board"></main>
+
+  <main id="managerView" class="manager-grid hidden">
+    <section class="mgr-col mgr-settings">
+      <div class="sensei-chip">
+        <span class="crate"><img src="/icons/android-icon-96x96.png" alt="" width="34" height="34" /></span>
+        <span class="who"><b>The Sensei</b><span>triage · dispatch · review</span></span>
+      </div>
+      <form id="mgrForm">
+        <label class="check-row"><input type="checkbox" name="enabled" /> Manager enabled</label>
+        <div class="row">
+          <label>Model <select name="model"></select></label>
+          <label>Effort <select name="effort"></select></label>
+        </div>
+        <span class="field-label">Autonomy</span>
+        <div class="ladder">
+          <label class="ladder-row" data-level="suggest">
+            <input type="radio" name="autonomy" value="suggest" />
+            <span class="belt-bar"></span>
+            <span class="ladder-text"><b>Suggest</b><span>every action needs your ✓</span></span>
+          </label>
+          <label class="ladder-row" data-level="semi">
+            <input type="radio" name="autonomy" value="semi" />
+            <span class="belt-bar"></span>
+            <span class="ladder-text"><b>Semi</b><span>can create / route / run; verdicts need your ✓</span></span>
+          </label>
+          <label class="ladder-row" data-level="auto">
+            <input type="radio" name="autonomy" value="auto" />
+            <span class="belt-bar"></span>
+            <span class="ladder-text"><b>Auto</b><span>full autopilot within guardrails</span></span>
+          </label>
+        </div>
+        <label>Management style
+          <textarea name="stylePrompt" rows="4" placeholder="e.g. prefer haiku for docs tasks; never auto-approve DB migrations; keep cards under one hour of work"></textarea>
+        </label>
+        <fieldset>
+          <legend class="field-label">Triggers</legend>
+          <label class="check-row"><input type="checkbox" name="onFinish" /> when a task finishes (review it)</label>
+          <label class="check-row"><input type="checkbox" name="onNewCard" /> when a card is added (triage it)</label>
+          <label class="check-row">every <input type="number" name="intervalMin" min="0" max="240" class="tiny" /> min (0 = off)</label>
+        </fieldset>
+        <div class="row">
+          <label>Max launches/hr <input type="number" name="maxLaunchesPerHour" min="1" max="60" /></label>
+          <label>Max retries/task <input type="number" name="maxRetries" min="0" max="5" /></label>
+        </div>
+        <label>Permission ceiling
+          <select name="permissionCeiling"></select>
+        </label>
+        <button type="submit" class="primary">Save settings</button>
+      </form>
+    </section>
+
+    <section class="mgr-col mgr-main">
+      <h2>Chat <span id="mgrBusy" class="pill hidden">thinking…</span></h2>
+      <div id="mgrChat" class="mgr-chat"></div>
+      <form id="mgrChatForm" class="mgr-chat-input">
+        <input name="message" placeholder="e.g. plan the auth refactor into cards, or: what's blocking?" autocomplete="off" />
+        <button type="submit" class="primary">Send</button>
+      </form>
+      <h2>Pending suggestions</h2>
+      <div id="mgrSuggestions" class="mgr-suggestions"></div>
+    </section>
+
+    <section class="mgr-col mgr-log-col">
+      <h2>Activity log</h2>
+      <div id="mgrLog" class="mgr-log"></div>
+    </section>
+  </main>
+
+  <!-- Card editor modal -->
+  <div id="modalBackdrop" class="backdrop hidden">
+    <div class="modal">
+      <h2 id="modalTitle">New card</h2>
+      <form id="taskForm">
+        <label>Title
+          <input name="title" required placeholder="Fix flaky login test" />
+        </label>
+        <label>Prompt
+          <textarea name="prompt" rows="5" required placeholder="What should the agent do?"></textarea>
+        </label>
+        <label>Working directory
+          <input name="cwd" placeholder="/Users/you/project" />
+        </label>
+        <div class="row">
+          <label>Model
+            <select name="model"></select>
+          </label>
+          <label>Effort
+            <select name="effort"></select>
+          </label>
+          <label>Permissions
+            <select name="permissionMode"></select>
+          </label>
+        </div>
+        <div class="row">
+          <label>Agent
+            <select name="agent"><option value="">(none)</option></select>
+          </label>
+          <label>Priority
+            <select name="priority">
+              <option value="0">0 · low</option>
+              <option value="1">1 · normal</option>
+              <option value="2">2 · high</option>
+              <option value="3">3 · urgent</option>
+            </select>
+          </label>
+        </div>
+        <div class="row wt-row">
+          <label class="check-row"><input type="checkbox" name="worktree" /> Git worktree</label>
+          <label class="check-row"><input type="checkbox" name="openPr" /> Open PR when done <span class="badge">gh</span></label>
+        </div>
+        <label>Acceptance criteria <span class="hint-inline">(the manager reviews against this)</span>
+          <textarea name="acceptanceCriteria" rows="2" placeholder="e.g. tests pass; README updated; no new dependencies"></textarea>
+        </label>
+        <span class="field-label">Skills to use</span>
+        <div id="skillPicker" class="skill-picker"></div>
+        <div class="modal-actions">
+          <button type="button" id="cancelBtn" class="ghost">Cancel</button>
+          <button type="submit" class="primary">Save card</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div id="settingsBackdrop" class="backdrop hidden">
+    <div class="modal">
+      <h2>Settings</h2>
+      <form id="settingsForm">
+        <label>Default working directory
+          <input name="defaultCwd" placeholder="/Users/you/project" />
+        </label>
+        <label>ntfy topic <span class="hint-inline">(push to your phone via ntfy.sh — leave empty to disable)</span>
+          <input name="ntfyTopic" placeholder="my-secret-kanban-topic" />
+        </label>
+        <label class="check-row"><input type="checkbox" name="notifyMac" /> macOS notifications</label>
+        <div class="modal-actions">
+          <button type="button" id="settingsCancelBtn" class="ghost">Cancel</button>
+          <button type="submit" class="primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Detail drawer -->
+  <div id="drawer" class="drawer hidden">
+    <div class="drawer-head">
+      <h2 id="drawerTitle"></h2>
+      <button id="drawerClose" class="ghost" aria-label="Close">✕</button>
+    </div>
+    <div id="drawerMeta" class="drawer-meta"></div>
+    <div id="drawerActions" class="drawer-actions"></div>
+    <div id="transcript" class="transcript slab"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

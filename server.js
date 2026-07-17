@@ -5,10 +5,13 @@ const { discoverSkills, discoverAgents } = require('./lib/discovery');
 const { state, save, getTask, readTranscript } = require('./lib/store');
 const runner = require('./lib/runner');
 const manager = require('./lib/manager');
+const auth = require('./lib/auth');
 
 const PORT = process.env.PORT || 4747;
+const HOST = process.env.HOST || '127.0.0.1';
 const app = express();
 app.use(express.json({ limit: '1mb' }));
+auth.install(app); // token gate (only active when a token is configured) — must precede static
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- Server-sent events ---
@@ -54,11 +57,13 @@ app.get('/api/config', (req, res) => {
 });
 
 app.put('/api/settings', (req, res) => {
-  const { maxConcurrent, defaultCwd } = req.body || {};
+  const { maxConcurrent, defaultCwd, ntfyTopic, notifyMac } = req.body || {};
   if (Number.isInteger(maxConcurrent) && maxConcurrent >= 1 && maxConcurrent <= 8) {
     state.settings.maxConcurrent = maxConcurrent;
   }
   if (typeof defaultCwd === 'string' && defaultCwd) state.settings.defaultCwd = defaultCwd;
+  if (typeof ntfyTopic === 'string') state.settings.ntfyTopic = ntfyTopic.trim();
+  if (typeof notifyMac === 'boolean') state.settings.notifyMac = notifyMac;
   save();
   res.json(state.settings);
 });
@@ -66,7 +71,7 @@ app.put('/api/settings', (req, res) => {
 // --- Tasks ---
 const TASK_FIELDS = [
   'title', 'prompt', 'cwd', 'model', 'effort', 'permissionMode',
-  'skills', 'agent', 'worktree', 'status', 'priority', 'acceptanceCriteria',
+  'skills', 'agent', 'worktree', 'openPr', 'status', 'priority', 'acceptanceCriteria',
 ];
 const STATUSES = ['backlog', 'queued', 'running', 'stopping', 'review', 'done'];
 
@@ -85,6 +90,7 @@ app.post('/api/tasks', (req, res) => {
     skills: Array.isArray(b.skills) ? b.skills : [],
     agent: b.agent || null,
     worktree: !!b.worktree,
+    openPr: !!b.openPr,
     priority: Number.isInteger(b.priority) ? b.priority : 0,
     acceptanceCriteria: b.acceptanceCriteria || '',
     status: 'backlog',
@@ -172,6 +178,17 @@ app.post('/api/manager/suggestions/:sid', (req, res) => {
   res.json(manager.resolveSuggestion(req.params.sid, !!(req.body && req.body.approve)));
 });
 
-app.listen(PORT, '127.0.0.1', () => {
-  console.log(`claude-kanban running at http://localhost:${PORT}`);
+// The runner executes code: never bind beyond loopback without a token gate.
+if (HOST !== '127.0.0.1' && HOST !== 'localhost' && !auth.getToken()) {
+  console.error(
+    `Refusing to bind ${HOST} without an access token.\n` +
+    `Set one first:  openssl rand -hex 16 > data/auth-token   (or export KFK_TOKEN)`
+  );
+  process.exit(1);
+}
+
+app.listen(PORT, HOST, () => {
+  console.log(`kungfu-kanban running at http://localhost:${PORT}`);
+  if (auth.getToken()) console.log('token gate: ON (cookie or Authorization: Bearer)');
+  else console.log('token gate: off (loopback only) — for Tailscale: openssl rand -hex 16 > data/auth-token, then `tailscale serve --bg 4747`');
 });
