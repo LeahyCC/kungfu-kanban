@@ -6,6 +6,7 @@ const { state, save, getTask, readTranscript } = require('./lib/store');
 const runner = require('./lib/runner');
 const manager = require('./lib/manager');
 const auth = require('./lib/auth');
+const importer = require('./lib/importer');
 
 const PORT = process.env.PORT || 4747;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -33,6 +34,7 @@ function broadcast(msg) {
 }
 runner.setBroadcaster(broadcast);
 manager.setBroadcaster(broadcast);
+importer.setBroadcaster(broadcast);
 runner.setOnFinish((task) => {
   if (manager.config().triggers.onFinish) {
     manager.invoke(`task finished and awaits review: "${task.title}" (id ${task.id})`);
@@ -67,6 +69,25 @@ app.put('/api/settings', (req, res) => {
   save();
   res.json(state.settings);
 });
+
+// --- Markdown import: paste/upload via API, or drop .md files in data/inbox ---
+function triageImported(created, source) {
+  if (manager.config().triggers.onNewCard) {
+    manager.invoke(
+      `${created.length} card(s) imported from markdown (${source}) — triage them (routing, priority); do not run them unless trivially safe`
+    );
+  }
+}
+
+app.post('/api/import', (req, res) => {
+  const md = (req.body && req.body.markdown) || '';
+  if (!md.trim()) return res.status(400).json({ error: 'empty markdown' });
+  const created = importer.importMarkdown(md);
+  if (created.length) triageImported(created, 'pasted');
+  res.json({ created: created.length, ids: created.map((t) => t.id) });
+});
+
+importer.watchInbox(triageImported);
 
 // Fire both notification channels on demand, for wiring up phones.
 app.post('/api/notify/test', (req, res) => {

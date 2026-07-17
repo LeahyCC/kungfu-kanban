@@ -41,6 +41,7 @@
     <span class="sub">on your subscription · via claude code cli</span>
     <div class="toolbar-actions">
       <label class="conc">parallel <input id="maxConcurrent" type="number" min="1" max="8" /></label>
+      <button id="importBtn" class="ghost" title="Import cards from markdown">⇪ Import</button>
       <button id="settingsBtn" class="ghost" title="Settings">⚙ Settings</button>
       <button id="newTaskBtn" class="primary">＋ New card</button>
     </div>
@@ -165,6 +166,27 @@
         <div class="modal-actions">
           <button type="button" id="cancelBtn" class="ghost">Cancel</button>
           <button type="submit" class="primary">Save card</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Import modal -->
+  <div id="importBackdrop" class="backdrop hidden">
+    <div class="modal">
+      <h2>Import cards from Markdown</h2>
+      <form id="importForm">
+        <label>Markdown
+          <textarea name="markdown" id="importText" rows="12" class="mono" placeholder="## Fix the flaky login test&#10;model: opus&#10;priority: 2&#10;The test fails intermittently because…&#10;### Acceptance&#10;- passes 10x in a row&#10;&#10;— or just a checklist —&#10;&#10;- [ ] update the README badges&#10;- [ ] bump express"></textarea>
+        </label>
+        <label class="check-row">…or pick a file
+          <input type="file" id="importFile" accept=".md,.markdown,.txt" />
+        </label>
+        <span class="footnote">every <span class="mono">## heading</span> becomes a card (body = prompt, leading <span class="mono">key: value</span> lines = fields) · no headings? each <span class="mono">- [ ]</span> item becomes a card · frontmatter sets file-wide defaults · tip: drop .md files into <span class="mono">data/inbox/</span> for hands-free import</span>
+        <div class="modal-actions">
+          <span id="importResult" class="import-result"></span>
+          <button type="button" id="importCancelBtn" class="ghost">Cancel</button>
+          <button type="submit" class="primary">⇪ Import</button>
         </div>
       </form>
     </div>
