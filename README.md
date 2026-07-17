@@ -130,6 +130,10 @@ Settings → Notifications → allow notifications for "Script Editor" / your te
 Pushes include the card title, and tapping one opens the PR when there is one.
 Because the topic is public-by-obscurity, keep card titles free of secrets.
 
+**🔔 Test notification** (in ⚙ Settings) fires both channels on demand — use it to
+verify the phone hookup. You can also watch the topic live at
+`https://ntfy.sh/<your-topic>` in any browser.
+
 ---
 
 ## Use it from your phone (Tailscale)
