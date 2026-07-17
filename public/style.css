@@ -40,6 +40,13 @@ header {
 h1 { font-size: 17px; font-weight: 650; }
 .sub { color: var(--muted); font-size: 12px; }
 .header-actions { display: flex; gap: 14px; align-items: center; }
+.tabs { display: flex; gap: 4px; margin-left: 18px; }
+.tab { background: transparent; border: none; color: var(--muted); font-weight: 600; padding: 6px 12px; border-radius: 7px; }
+.tab.active { background: var(--panel-2); color: var(--text); }
+.pill {
+  background: var(--accent); color: #fff; border-radius: 9px;
+  padding: 0 7px; font-size: 10.5px; font-weight: 700;
+}
 .conc { color: var(--muted); font-size: 12px; display: flex; gap: 6px; align-items: center; }
 .conc input { width: 48px; }
 
@@ -186,3 +193,49 @@ label.check { flex-direction: row; align-items: center; gap: 8px; margin-top: 20
 .t-entry.init { border-color: var(--border); color: var(--muted); font-size: 11px; }
 .t-entry.error { border-color: var(--red); color: var(--red); }
 .empty-col { color: var(--muted); font-size: 12px; text-align: center; padding: 14px 0; }
+
+/* Manager tab */
+main.manager {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 320px 1fr 340px;
+  gap: 14px;
+  padding: 16px 20px;
+  overflow: hidden;
+}
+.mgr-col {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.mgr-col h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.mgr-col h2:not(:first-child) { margin-top: 18px; }
+.mgr-settings fieldset { border: 1px solid var(--border); border-radius: 7px; padding: 10px 12px 2px; margin-bottom: 12px; }
+.mgr-settings legend { font-size: 11.5px; color: var(--muted); padding: 0 6px; }
+.mgr-settings label.check { margin-top: 0; margin-bottom: 10px; }
+.mgr-settings label.inline { flex-direction: row; align-items: center; }
+.mgr-main { display: flex; flex-direction: column; }
+.mgr-chat {
+  flex: 1; min-height: 160px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+}
+.chat-msg { max-width: 85%; padding: 8px 12px; border-radius: 10px; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+.chat-msg.user { align-self: flex-end; background: var(--panel-2); border: 1px solid var(--border); }
+.chat-msg.manager { align-self: flex-start; background: #3a2a2233; border: 1px solid #4a3328; }
+.mgr-chat-input { display: flex; gap: 8px; margin-top: 10px; }
+.mgr-chat-input input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; color: var(--text); padding: 8px 12px; }
+.mgr-suggestions { display: flex; flex-direction: column; gap: 10px; }
+.suggestion { background: var(--panel-2); border: 1px solid var(--border); border-left: 3px solid var(--yellow); border-radius: 8px; padding: 10px 12px; }
+.sugg-head { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.sugg-why { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+.sugg-actions { display: flex; gap: 8px; }
+.mgr-log { display: flex; flex-direction: column; gap: 5px; font-size: 11.5px; font-family: ui-monospace, Menlo, monospace; }
+.log-entry { color: var(--muted); border-left: 2px solid var(--border); padding-left: 8px; }
+.log-entry.action { border-color: var(--green); color: var(--text); }
+.log-entry.suggestion { border-color: var(--yellow); }
+.log-entry.error { border-color: var(--red); color: var(--red); }

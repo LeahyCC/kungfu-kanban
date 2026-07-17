@@ -41,3 +41,25 @@ Backlog → Queued → Running → Review → Done
   marking them Done.
 
 Task data lives in `data/` (JSON + per-task transcripts). Delete it to reset.
+
+## Manager tab
+
+An LLM manager (also a `claude -p` session on your subscription) that triages,
+routes, dispatches, and reviews cards. It receives a board snapshot and returns
+structured actions (create/update/run/approve/reject) that are executed or held
+for your approval.
+
+- **Autonomy**: `suggest` (everything needs your ✓), `semi` (can create/route/run;
+  review verdicts need your ✓), `auto` (full autopilot within guardrails).
+  Deleting cards is never available to the manager.
+- **Triggers**: on task finish (reviews the result against the card's acceptance
+  criteria), on new card (triage/routing), on an interval, or via the chat box.
+- **Guardrails**: max launches per hour, max retries per task (rejected tasks are
+  re-run with the manager's feedback appended to the prompt), and a permission
+  ceiling the manager can't assign beyond. Guardrail-blocked actions become
+  suggestions instead of executing.
+- **Management style**: a freeform prompt in settings to tune its behavior
+  ("prefer haiku for docs tasks", "never auto-approve migrations") without code.
+
+Cards now also carry a **priority** (0–3, sorts columns) and **acceptance
+criteria** (what the manager reviews against).
