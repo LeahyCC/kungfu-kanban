@@ -127,6 +127,13 @@ a card with no body uses its title as the prompt.
 **Checklist** — a file with no `##` headings: every unchecked `- [ ] item`
 becomes a card (checked items are skipped).
 
+**From Claude Code**: a personal skill at `~/.claude/skills/kungfu-todo/SKILL.md`
+teaches every Claude Code session (any project) to do this on request — say
+"create a kungfu todo for …" and it drafts the cards, drops the file in the
+inbox, and confirms the import. The skill encodes the format, frugal
+model-routing, and the self-contained-prompt rule (card agents start with zero
+conversation context).
+
 Imported cards land in **Backlog** tagged `import`, and the Sensei gets one
 triage ping per batch (if the new-card trigger is on) — so you can paste a plan,
 and routing/prioritization happens for you.
