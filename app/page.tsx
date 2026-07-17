@@ -4,7 +4,9 @@ export default function Landing() {
   return (
     <main>
       <section className="hero">
-        <h2>🥋 Kanban for AI agents</h2>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icons/android-icon-192x192.png" alt="Kungfu Kanban robot" width={96} height={96} className="hero-logo" />
+        <h2>Kanban for AI agents</h2>
         <p>
           Every card is an AI task. Pick the model, set the effort, write acceptance criteria,
           and run it — on your own provider API key, with results landing back on the board for review.
