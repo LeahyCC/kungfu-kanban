@@ -1,65 +1,38 @@
 # Kungfu Kanban
 
-A local kanban board that runs tasks through the **Claude Code CLI** — so everything
-runs on your Anthropic subscription (OAuth login), never API-key token billing.
-The runner even strips `ANTHROPIC_API_KEY` from the environment before spawning,
-so it can't silently fall back to pay-per-token.
+A kanban board where every card is an AI task. Two editions live in this repo:
 
-## Run
+| Edition | Where | Execution |
+|---|---|---|
+| **Web (SaaS)** | repo root — Next.js, deploys to Vercel | Hosted, **bring your own provider API key** (Anthropic first; usage bills to your provider account) |
+| **Local** | [`local/`](local/) — Node/Express | Your local Claude Code CLI on your subscription login, plus an LLM Manager that triages/dispatches/reviews cards |
+
+## Web edition (root)
+
+Multi-tenant board: create task cards with per-card **model** (Fable / Opus / Sonnet / Haiku),
+**effort** (low → max), **priority**, and **acceptance criteria**, then run them on your own
+Anthropic API key. Results land in the Review column with token stats.
 
 ```bash
-cd kungfu-kanban
 npm install
-npm start          # http://localhost:4747
+cp .env.example .env.local   # fill in DATABASE_URL + APP_ENCRYPTION_KEY
+npm run dev
 ```
 
-## What each card controls
+**Required setup on Vercel** (project → moonlightleads/kungfu-kanban):
+1. **Neon Postgres** — Storage tab → add Neon; it injects `DATABASE_URL`. The schema
+   auto-creates on first request.
+2. **`APP_ENCRYPTION_KEY`** — `openssl rand -hex 32`, add as an env var. Provider keys are
+   AES-256-GCM encrypted with it.
+3. **Clerk** (optional, enables real accounts) — install the Clerk integration; auth turns on
+   automatically once `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` exist.
+   Without them the app runs as a single shared demo tenant (fine for beta testing).
 
-| Field | CLI flag |
-|---|---|
-| Model (fable / opus / sonnet / haiku) | `--model` |
-| Effort (low → max) | `--effort` |
-| Permissions (acceptEdits, plan, bypassPermissions, …) | `--permission-mode` |
-| Agent | `--agent` |
-| Git worktree isolation | `--worktree` |
-| Skills | injected into the prompt (picked from your installed skills) |
-| Working directory | process `cwd` |
+Roadmap: OpenAI/Google adapters, repo-aware coding tasks (clone → agent → PR via Vercel
+Sandbox), the LLM Manager from the local edition, Stripe billing after beta.
 
-Skills and agents are auto-discovered from `~/.claude/skills`, `~/.claude/agents`,
-and enabled plugins in `~/.claude/plugins/installed_plugins.json`.
+## Local edition (`local/`)
 
-## Board flow
-
-Backlog → Queued → Running → Review → Done
-
-- Drag a card to **Queued** (or hit ▶ Run) to launch it.
-- **parallel** (header) caps concurrent sessions so parallel tasks don't burn
-  through your subscription rate limits; extras wait in Queued.
-- Click a card for the live transcript, stats, and a `claude -r <session-id>`
-  command to resume the session in your terminal.
-- Finished tasks land in **Review** so you can inspect the result/diff before
-  marking them Done.
-
-Task data lives in `data/` (JSON + per-task transcripts). Delete it to reset.
-
-## Manager tab
-
-An LLM manager (also a `claude -p` session on your subscription) that triages,
-routes, dispatches, and reviews cards. It receives a board snapshot and returns
-structured actions (create/update/run/approve/reject) that are executed or held
-for your approval.
-
-- **Autonomy**: `suggest` (everything needs your ✓), `semi` (can create/route/run;
-  review verdicts need your ✓), `auto` (full autopilot within guardrails).
-  Deleting cards is never available to the manager.
-- **Triggers**: on task finish (reviews the result against the card's acceptance
-  criteria), on new card (triage/routing), on an interval, or via the chat box.
-- **Guardrails**: max launches per hour, max retries per task (rejected tasks are
-  re-run with the manager's feedback appended to the prompt), and a permission
-  ceiling the manager can't assign beyond. Guardrail-blocked actions become
-  suggestions instead of executing.
-- **Management style**: a freeform prompt in settings to tune its behavior
-  ("prefer haiku for docs tasks", "never auto-approve migrations") without code.
-
-Cards now also carry a **priority** (0–3, sorts columns) and **acceptance
-criteria** (what the manager reviews against).
+See [local/README.md](local/README.md). Runs task cards through the Claude Code CLI on your
+subscription (no API key), with skills/agents discovery, git-worktree isolation, and an LLM
+manager tab. `cd local && npm install && npm start` → http://localhost:4747.
