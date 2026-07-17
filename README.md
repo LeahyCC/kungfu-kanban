@@ -84,6 +84,53 @@ Auto-discovered at load, no config:
 
 ---
 
+## Importing cards from Markdown
+
+Turn a plan into a backlog in one paste. Two entry points:
+
+- **⇪ Import** (toolbar): paste markdown or pick a file — works from your phone.
+- **Watch folder**: drop `.md` files into `data/inbox/` — cards appear
+  automatically and the file is archived to `data/inbox/imported/`. Files already
+  in the inbox when the server starts are imported too.
+
+Two formats, auto-detected:
+
+**Sections** — every `## Heading` becomes a card. The heading is the title,
+leading `key: value` lines set fields, an `### Acceptance` subsection becomes the
+acceptance criteria, everything else is the prompt. Optional frontmatter sets
+file-wide defaults:
+
+```markdown
+---
+cwd: /Users/you/project
+model: sonnet
+worktree: true
+openPr: true
+---
+
+## Fix the flaky login test
+model: opus
+priority: 2
+The test in auth.spec.ts fails intermittently because…
+
+### Acceptance
+- passes 10x in a row
+
+## Update the README badges
+```
+
+Recognized keys (case/space-insensitive): `cwd` (`dir`/`repo`), `model`, `effort`,
+`permissions`, `priority` (0–3), `worktree`, `openPr` (`pr`), `agent`,
+`skills` (comma-separated), `acceptance`. Unknown or invalid values are ignored;
+a card with no body uses its title as the prompt.
+
+**Checklist** — a file with no `##` headings: every unchecked `- [ ] item`
+becomes a card (checked items are skipped).
+
+Imported cards land in **Backlog** tagged `import`, and the Sensei gets one
+triage ping per batch (if the new-card trigger is on) — so you can paste a plan,
+and routing/prioritization happens for you.
+
 ## Repo cards → real PRs
 
 Give a card a working directory that's a git repo with an `origin` remote, check

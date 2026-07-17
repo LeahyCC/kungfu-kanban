@@ -109,6 +109,7 @@ function cardEl(t) {
   const meta = [];
   if (t.priority >= 2) meta.push(`<span class="prio-high" title="P${t.priority}"></span>`);
   if (t.createdBy === 'manager') meta.push('<span class="badge wt">sensei</span>');
+  if (t.createdBy === 'import') meta.push('<span class="badge">import</span>');
   meta.push(`<span class="badge model">${esc(t.model || 'default')}</span>`);
   if (t.effort && t.effort !== 'default') meta.push(`<span class="badge">${esc(t.effort)}</span>`);
   if (t.agent) meta.push(`<span class="badge">agent:${esc(t.agent)}</span>`);
@@ -204,6 +205,42 @@ $('#newTaskBtn').addEventListener('click', () => openModal(null));
 $('#cancelBtn').addEventListener('click', () => $('#modalBackdrop').classList.add('hidden'));
 $('#modalBackdrop').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) $('#modalBackdrop').classList.add('hidden');
+});
+
+// ---------- import modal ----------
+$('#importBtn').addEventListener('click', () => {
+  $('#importResult').textContent = '';
+  $('#importBackdrop').classList.remove('hidden');
+  $('#importText').focus();
+});
+$('#importCancelBtn').addEventListener('click', () => $('#importBackdrop').classList.add('hidden'));
+$('#importBackdrop').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) $('#importBackdrop').classList.add('hidden');
+});
+$('#importFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { $('#importText').value = reader.result; };
+  reader.readAsText(file);
+});
+$('#importForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const md = $('#importText').value;
+  if (!md.trim()) return;
+  const r = await api('/api/import', { method: 'POST', body: { markdown: md } });
+  const out = $('#importResult');
+  if (r.error) {
+    out.textContent = `✕ ${r.error}`;
+  } else if (!r.created) {
+    out.textContent = '✕ no cards found — need ## headings or - [ ] items';
+  } else {
+    out.textContent = `✓ ${r.created} card${r.created === 1 ? '' : 's'} created`;
+    $('#importText').value = '';
+    $('#importFile').value = '';
+    await loadTasks();
+    setTimeout(() => $('#importBackdrop').classList.add('hidden'), 900);
+  }
 });
 
 // ---------- settings modal ----------
