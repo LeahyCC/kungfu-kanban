@@ -7,43 +7,7 @@
 
 /* ---------- tokens ---------- */
 :root {
-  /* paper (light — the day dojo) */
-  --paper-0: #F6F2E9;
-  --paper-1: #FDFBF5;
-  --paper-2: #EDE7D9;
-  --ink-900: #1A1714;
-  --ink-600: #4A443C;
-  --ink-400: #5F594F;
-  --rule: rgba(26, 23, 20, 0.16);
-  --rule-strong: #1A1714;
-  --accent: #C1272D;
-  --accent-ink: #A31F24;
-  --accent-wash: rgba(193, 39, 45, 0.08);
-  --on-accent: #FDFBF5;
-  /* the ink slab: agent output is always dark, both themes */
-  --slab-bg: #1A1714;
-  --slab-text: #ECE5D6;
-  --slab-rule: rgba(236, 229, 214, 0.14);
-  /* belt ranks */
-  --belt-todo: #8A8271;
-  --belt-doing: #2E5E8C;
-  --belt-review: #7A5230;
-  --belt-done: #1A1714;
-  /* semantic */
-  --success: #3E6B4A;
-  --error: #8F1D1D;
-  --warning: #8A6116;
-  --info: #2E5E8C;
-  --shadow-hard: rgba(26, 23, 20, 0.92);
-  --grain-opacity: 0.05;
-  --grain-blend: multiply;
-
-  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  color-scheme: light;
-}
-
-[data-theme='dark'] {
-  /* the night dojo */
+  /* the night dojo — DEFAULT */
   --paper-0: #141210;
   --paper-1: #1C1916;
   --paper-2: #0E0D0B;
@@ -56,9 +20,16 @@
   --accent-ink: #E8776F;
   --accent-wash: rgba(224, 82, 74, 0.10);
   --on-accent: #141210;
+  /* the ink slab: agent output is always dark, both themes */
+  --slab-bg: #1A1714;
+  --slab-text: #ECE5D6;
+  --slab-rule: rgba(236, 229, 214, 0.14);
+  /* belt ranks */
+  --belt-todo: #8A8271;
   --belt-doing: #6FA3D4;
   --belt-review: #C79A6B;
   --belt-done: #ECE5D6;
+  /* semantic */
   --success: #7FB08D;
   --error: #E06C5F;
   --warning: #D2A24C;
@@ -66,7 +37,36 @@
   --shadow-hard: rgba(0, 0, 0, 0.85);
   --grain-opacity: 0.04;
   --grain-blend: screen;
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   color-scheme: dark;
+}
+
+[data-theme='light'] {
+  /* rice paper — the day dojo (opt-in) */
+  --paper-0: #F6F2E9;
+  --paper-1: #FDFBF5;
+  --paper-2: #EDE7D9;
+  --ink-900: #1A1714;
+  --ink-600: #4A443C;
+  --ink-400: #5F594F;
+  --rule: rgba(26, 23, 20, 0.16);
+  --rule-strong: #1A1714;
+  --accent: #C1272D;
+  --accent-ink: #A31F24;
+  --accent-wash: rgba(193, 39, 45, 0.08);
+  --on-accent: #FDFBF5;
+  --belt-doing: #2E5E8C;
+  --belt-review: #7A5230;
+  --belt-done: #1A1714;
+  --success: #3E6B4A;
+  --error: #8F1D1D;
+  --warning: #8A6116;
+  --info: #2E5E8C;
+  --shadow-hard: rgba(26, 23, 20, 0.92);
+  --grain-opacity: 0.05;
+  --grain-blend: multiply;
+  color-scheme: light;
 }
 
 /* ---------- base ---------- */
@@ -97,15 +97,13 @@ body::before {
   mix-blend-mode: var(--grain-blend);
 }
 
-.app-shell { --grain-opacity: 0.025; }
-[data-theme='dark'] .app-shell { --grain-opacity: 0.02; }
+.app-shell { --grain-opacity: 0.02; }
+[data-theme='light'] .app-shell { --grain-opacity: 0.025; }
 
 a { color: inherit; text-decoration: none; }
 
 h1, h2, h3 {
-  font-family: var(--font-display), 'Fraunces', serif;
-  font-optical-sizing: auto;
-  font-variation-settings: 'SOFT' 0, 'WONK' 0;
+  font-family: var(--font-display), 'Bricolage Grotesque', sans-serif;
   letter-spacing: -0.01em;
 }
 
@@ -151,7 +149,7 @@ h1, h2, h3 {
   display: inline-block;
   background: var(--accent);
   color: var(--on-accent);
-  font-family: var(--font-display), serif;
+  font-family: var(--font-display), sans-serif;
   font-weight: 600;
   font-size: 11px;
   text-transform: uppercase;
@@ -395,8 +393,8 @@ input, textarea, select { text-transform: none; letter-spacing: normal; font-wei
 .app-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .app-logo { display: block; }
 .wordmark {
-  font-family: var(--font-display), serif;
-  font-weight: 900;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 800;
   font-size: 17px;
   letter-spacing: -0.01em;
   white-space: nowrap;
@@ -483,7 +481,7 @@ input, textarea, select { text-transform: none; letter-spacing: normal; font-wei
   padding: 10px 12px 8px;
 }
 .col-head .col-name {
-  font-family: var(--font-display), serif;
+  font-family: var(--font-display), sans-serif;
   font-weight: 600;
   font-size: 15px;
   color: var(--ink-900);
@@ -667,7 +665,7 @@ input, textarea, select { text-transform: none; letter-spacing: normal; font-wei
   margin-bottom: 16px;
 }
 .sensei-chip .who { display: flex; flex-direction: column; gap: 2px; }
-.sensei-chip .who b { font-family: var(--font-display), serif; font-weight: 600; font-size: 15px; }
+.sensei-chip .who b { font-family: var(--font-display), sans-serif; font-weight: 600; font-size: 15px; }
 .sensei-chip .who span { font-family: var(--font-mono), monospace; font-size: 11px; color: var(--ink-400); }
 
 /* chat */
@@ -878,9 +876,8 @@ input, textarea, select { text-transform: none; letter-spacing: normal; font-wei
 .hero h1 {
   font-size: clamp(3rem, 7.5vw, 6.5rem);
   line-height: 1.02;
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: -0.02em;
-  font-variation-settings: 'SOFT' 0, 'WONK' 1;
   margin-bottom: 28px;
 }
 .hero h1 .line { display: block; overflow: hidden; }
@@ -949,8 +946,8 @@ input, textarea, select { text-transform: none; letter-spacing: normal; font-wei
 }
 .form-band + .form-band { border-top: 1px solid var(--rule); }
 .form-num {
-  font-family: var(--font-display), serif;
-  font-weight: 900;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 800;
   font-size: clamp(96px, 14vw, 180px);
   line-height: 0.9;
   color: var(--paper-2);
@@ -970,7 +967,7 @@ input, textarea, select { text-transform: none; letter-spacing: normal; font-wei
   border-bottom: 2px solid var(--rule-strong);
   padding: clamp(56px, 8vw, 96px) 0;
 }
-.live-band h2 { font-size: clamp(2rem, 4vw, 3.25rem); font-weight: 900; line-height: 1.08; margin-bottom: 32px; }
+.live-band h2 { font-size: clamp(2rem, 4vw, 3.25rem); font-weight: 800; line-height: 1.08; margin-bottom: 32px; }
 .live-board {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1031,7 +1028,7 @@ input, textarea, select { text-transform: none; letter-spacing: normal; font-wei
   align-items: center;
 }
 @media (max-width: 860px) { .ink-band .mkt-inner { grid-template-columns: 1fr; } }
-.ink-band h2 { font-size: clamp(2rem, 4vw, 3.25rem); font-weight: 900; line-height: 1.08; margin-bottom: 18px; }
+.ink-band h2 { font-size: clamp(2rem, 4vw, 3.25rem); font-weight: 800; line-height: 1.08; margin-bottom: 18px; }
 .ink-band p { color: #BDB4A3; font-size: 1.0625rem; line-height: 1.6; max-width: 460px; }
 .ladder-demo { display: flex; flex-direction: column; gap: 18px; }
 .ladder-demo .rung { display: flex; flex-direction: column; gap: 6px; }
@@ -1052,7 +1049,7 @@ input, textarea, select { text-transform: none; letter-spacing: normal; font-wei
 @media (max-width: 700px) { .pricing-grid { grid-template-columns: 1fr; } }
 
 .section-pad { padding: clamp(72px, 10vw, 140px) 0; }
-.section-title { font-size: clamp(2rem, 4vw, 3.25rem); font-weight: 900; line-height: 1.08; margin-bottom: 40px; }
+.section-title { font-size: clamp(2rem, 4vw, 3.25rem); font-weight: 800; line-height: 1.08; margin-bottom: 40px; }
 
 /* footer colophon */
 .colophon { padding: 48px 0 64px; }
