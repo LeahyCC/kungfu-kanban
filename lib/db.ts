@@ -94,6 +94,14 @@ export function ensureSchema(): Promise<void> {
         created_at timestamptz NOT NULL DEFAULT now(),
         UNIQUE (user_id, provider)
       )`;
+      await q`CREATE TABLE IF NOT EXISTS run_log (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id text NOT NULL,
+        task_id uuid,
+        repo boolean NOT NULL DEFAULT false,
+        ts timestamptz NOT NULL DEFAULT now()
+      )`;
+      await q`CREATE INDEX IF NOT EXISTS run_log_user_ts ON run_log (user_id, ts DESC)`;
     })();
     schemaReady.catch(() => { schemaReady = null; });
   }

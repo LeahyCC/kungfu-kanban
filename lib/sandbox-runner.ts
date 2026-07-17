@@ -16,7 +16,10 @@ const CLI_MODEL: Record<string, string> = {
   default: 'opus', fable: 'fable', opus: 'opus', sonnet: 'sonnet', haiku: 'haiku',
 };
 
-const SANDBOX_TIMEOUT_MS = 45 * 60 * 1000;
+// Sandbox minutes are the app's #1 operating cost — every repo card holds a
+// microVM for up to this long. Configurable via env, clamped 5..45, default 20.
+export const SANDBOX_MINUTES = Math.min(45, Math.max(5, parseInt(process.env.SANDBOX_MAX_MINUTES || '20', 10) || 20));
+const SANDBOX_TIMEOUT_MS = SANDBOX_MINUTES * 60 * 1000;
 
 function parseRepo(repoUrl: string): { owner: string; repo: string } {
   const m = repoUrl.match(/github\.com[/:]([^/]+)\/([^/.]+)(?:\.git)?/);

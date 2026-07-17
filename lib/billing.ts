@@ -14,14 +14,20 @@ export type Entitlements = {
   allowRepoTasks: boolean;
   allowAutoAutonomy: boolean;
   maxTasksPerDay: number; // 0 = unlimited
+  maxRepoRunsPerDay: number; // sandbox-hour protection; 0 = none allowed
   currentPeriodEnd: number | null;
 };
+
+// Repo runs are the only feature with real operator COGS (sandbox compute) —
+// cap them per tenant per day even on Pro/beta. Env-overridable.
+const REPO_RUNS_PER_DAY = Math.max(1, parseInt(process.env.REPO_RUNS_PER_DAY || '30', 10) || 30);
 
 const FREE: Omit<Entitlements, 'tier' | 'billingEnabled' | 'status' | 'currentPeriodEnd'> = {
   maxConcurrent: 1,
   allowRepoTasks: false,
   allowAutoAutonomy: false,
   maxTasksPerDay: 25,
+  maxRepoRunsPerDay: 0,
 };
 
 const PRO: Omit<Entitlements, 'tier' | 'billingEnabled' | 'status' | 'currentPeriodEnd'> = {
@@ -29,6 +35,7 @@ const PRO: Omit<Entitlements, 'tier' | 'billingEnabled' | 'status' | 'currentPer
   allowRepoTasks: true,
   allowAutoAutonomy: true,
   maxTasksPerDay: 0,
+  maxRepoRunsPerDay: REPO_RUNS_PER_DAY,
 };
 
 export function billingEnabled(): boolean {
@@ -101,10 +108,22 @@ export async function checkLaunchAllowed(userId: string, opts: { repo: boolean }
   if (opts.repo && !ent.allowRepoTasks) {
     return 'Repo (coding-agent) tasks require the Pro plan. Upgrade in Billing.';
   }
+  if (opts.repo && ent.maxRepoRunsPerDay > 0) {
+    const rows = await sql()`SELECT count(*)::int AS n FROM run_log
+      WHERE user_id = ${userId} AND repo = true AND ts > now() - interval '1 day'`;
+    if ((rows[0]?.n ?? 0) >= ent.maxRepoRunsPerDay) {
+      return `Repo runs are capped at ${ent.maxRepoRunsPerDay}/day (each one reserves an isolated sandbox). Try again tomorrow.`;
+    }
+  }
   if (ent.maxConcurrent > 0 && (await tasksRunning(userId)) >= ent.maxConcurrent) {
     return `Your plan allows ${ent.maxConcurrent} task${ent.maxConcurrent === 1 ? '' : 's'} running at once. Wait for one to finish or upgrade in Billing.`;
   }
   return null;
+}
+
+// Record a launch for caps + analytics.
+export async function recordRun(userId: string, taskId: string, repo: boolean) {
+  await sql()`INSERT INTO run_log (user_id, task_id, repo) VALUES (${userId}, ${taskId}, ${repo})`;
 }
 
 export async function upsertSubscriptionFromStripe(sub: Stripe.Subscription, userId: string) {
