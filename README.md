@@ -1,88 +1,294 @@
 # Kungfu Kanban 🥋
 
-A personal kanban board where every card is an AI task, run through the **Claude Code
+A personal kanban board where every card is an AI task, executed by the **Claude Code
 CLI on your subscription login** — no API keys, no token billing, no cloud. The runner
-even strips `ANTHROPIC_API_KEY` from the environment before spawning, so it can't
+strips `ANTHROPIC_API_KEY` from the environment before spawning, so it can never
 silently fall back to pay-per-token.
 
 > This used to be a two-edition repo with a hosted SaaS variant (Stripe, Clerk, Neon,
-> Vercel Sandbox). That edition is deleted — this is a tool for one person: me.
+> Vercel Sandbox). That edition is deleted — this is a tool for one person.
 
-## Run
+**How it works:** an Express server (`server.js`) serves the board UI and spawns
+`claude -p <prompt> --output-format stream-json` per card. Output streams into the
+card's transcript over server-sent events. An LLM "Manager" (also a `claude -p` call)
+triages, dispatches, and reviews cards. Everything persists as JSON files in `data/`.
+
+---
+
+## Requirements
+
+| Thing | Why | Check |
+|---|---|---|
+| **Node 20+** | server runtime (uses global `fetch`) | `node -v` |
+| **Claude Code CLI**, logged in on your subscription | runs every card | `claude --version`, then `claude` → `/login` if needed |
+| **git** | worktree isolation for repo cards | `git -v` |
+| **GitHub CLI (`gh`)**, authed | only for "Open PR when done" | `gh auth status` |
+| **macOS** | desktop notifications (`osascript`); the rest works anywhere | — |
+| **Tailscale** (optional) | use the board from your phone | `tailscale status` |
+
+## Quick start
 
 ```bash
+git clone <this repo> && cd kungfu-kanban
 npm install
-npm start          # http://localhost:4747
+npm start          # → http://localhost:4747
 ```
 
-## What each card controls
+That's it for local use. The server binds `127.0.0.1` only by default.
 
-| Field | CLI flag |
-|---|---|
-| Model (fable / opus / sonnet / haiku) | `--model` |
-| Effort (low → max) | `--effort` |
-| Permissions (acceptEdits, plan, bypassPermissions, …) | `--permission-mode` |
-| Agent | `--agent` |
-| Git worktree isolation | `--worktree` |
-| Skills | injected into the prompt (picked from your installed skills) |
-| Working directory | process `cwd` |
+---
 
-Skills and agents are auto-discovered from `~/.claude/skills`, `~/.claude/agents`,
-and enabled plugins.
+## The board
 
-## Board flow
+Columns: **Backlog → Queued → Running → Review → Done**
 
-Backlog → Queued → Running → Review → Done
+- **＋ New card** (or drag an existing card to **Queued**, or ▶ Run in the card
+  drawer) launches it.
+- **parallel** (toolbar, 1–8, default 2) caps concurrent sessions so you don't burn
+  subscription rate limits; extra launches wait in Queued and start automatically as
+  slots free up.
+- Click any card for the **drawer**: live transcript, token/turn stats, and a
+  `claude -r <session-id>` command to resume that session in your terminal.
+- Finished runs land in **Review** (with a vermillion error stripe if they failed).
+  **✓ Done** ships them — hanko seal included.
+- If the server restarts mid-run, orphaned "running" cards are recovered into Review.
+- **⚙ Settings** (toolbar): default working directory, ntfy topic, macOS
+  notification toggle.
+- **☀ / ☾** toggles the day/night dojo. Night is the default.
 
-- Drag a card to **Queued** (or hit ▶ Run) to launch it.
-- **parallel** (toolbar) caps concurrent sessions so parallel tasks don't burn
-  through your subscription rate limits; extras wait in Queued.
-- Click a card for the live transcript, stats, and a `claude -r <session-id>`
-  command to resume the session in your terminal.
-- Finished tasks land in **Review**; shipping earns the vermillion seal.
+### Card fields
 
-Task data lives in `data/` (JSON + per-task transcripts). Delete it to reset.
+| Field | Maps to | Notes |
+|---|---|---|
+| Title | — | shown on the card, PR title, notification text |
+| Prompt | the `claude -p` prompt | what the agent should do |
+| Working directory | process `cwd` | defaults from ⚙ Settings |
+| Model | `--model` | default / fable / opus / sonnet / haiku |
+| Effort | `--effort` | default / low / medium / high / xhigh / max |
+| Permissions | `--permission-mode` | `acceptEdits` (default), `auto`, `plan`, `dontAsk`, `bypassPermissions` — see [Security](#security-notes) |
+| Agent | `--agent` | your custom agents from `~/.claude/agents/*.md` |
+| Git worktree | `--worktree kanban-<id>` | isolates the run on its own branch |
+| Open PR when done | post-run `gh pr create` | requires worktree; see below |
+| Priority | sort order (0–3) | 2+ shows the vermillion square |
+| Acceptance criteria | manager review rubric | the Sensei approves/rejects against this |
+| Skills | injected into the prompt | picked from your installed skills |
+
+### Skills & agents discovery
+
+Auto-discovered at load, no config:
+
+- Personal skills: `~/.claude/skills/*/SKILL.md`
+- Plugin skills: every enabled plugin in `~/.claude/plugins/installed_plugins.json`
+  (their `skills/` and `workflow-skills/` dirs), namespaced `plugin:skill`
+- Agents: `~/.claude/agents/*.md`
+
+---
 
 ## Repo cards → real PRs
 
-Check **Git worktree** + **Open PR when done** on a card whose working directory is a
-git repo. After the agent finishes, the board commits anything left uncommitted in the
-worktree, pushes the branch, and opens a PR with your existing **`gh` auth** — no PAT,
-no sandbox. The PR link lands on the card in Review.
+Give a card a working directory that's a git repo with an `origin` remote, check
+**Git worktree** + **Open PR when done**, and run it. After the agent succeeds:
+
+1. The worktree is located by asking git (`git worktree list`) for the branch
+   named `kanban-<card-id>` — wherever the CLI put it.
+2. Anything the agent left uncommitted is committed (`<card title>` / "via Kungfu
+   Kanban").
+3. If the branch has no commits beyond the base (the branch your main checkout is
+   on), the flow stops — no empty PRs.
+4. The branch is pushed to `origin` and `gh pr create` opens a PR: title = card
+   title, body = prompt + acceptance criteria.
+5. The **PR link** lands on the card, in the drawer, and in your phone notification.
+
+Every step logs to the card transcript (`⇡` lines). Failures (no remote, `gh` not
+authed, push rejected…) log an `✕` line and leave the card in Review — the work is
+still in the worktree, nothing is lost.
+
+**One-time setup:** `gh auth login` (with push scope to the repos you'll use).
+
+---
 
 ## Notifications
 
-- **macOS**: a notification fires when a card lands in Review or a run fails
-  (toggle in ⚙ Settings).
-- **Phone**: set an ntfy topic in ⚙ Settings and subscribe to it in the
-  [ntfy app](https://ntfy.sh) — pushes include a tap-through link to the PR when
-  there is one. Pick an unguessable topic name; ntfy topics are public namespaces.
+When a card lands in **Review** (or fails), you get notified. User-stopped runs
+don't notify.
 
-## Access from anywhere (Tailscale)
+### macOS (on by default)
 
-The server binds `127.0.0.1` only, and refuses to bind wider without a token. To use
-the board from your phone:
+Fires via `osascript`. Toggle in ⚙ Settings. If nothing appears, check System
+Settings → Notifications → allow notifications for "Script Editor" / your terminal.
+
+### Phone (ntfy)
+
+1. Install the **ntfy** app ([iOS](https://apps.apple.com/us/app/ntfy/id1625396347) /
+   [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy)) — no
+   account needed.
+2. Pick a long, unguessable topic name (ntfy topics are a public namespace — anyone
+   who knows the name can read it): e.g. `kk-$(openssl rand -hex 8)`.
+3. Put it in **⚙ Settings → ntfy topic** on the board.
+4. In the ntfy app: **+ → Subscribe to topic** → same name.
+
+Pushes include the card title, and tapping one opens the PR when there is one.
+Because the topic is public-by-obscurity, keep card titles free of secrets.
+
+---
+
+## Use it from your phone (Tailscale)
+
+The server **refuses** to bind beyond loopback without an access token, because the
+runner executes code. The safe path is a token + Tailscale (the port stays on
+loopback; Tailscale proxies it inside your tailnet only):
 
 ```bash
-openssl rand -hex 16 > data/auth-token   # enables the token gate (or export KFK_TOKEN)
-npm start
-tailscale serve --bg 4747                # HTTPS on your tailnet, proxied to localhost
+# 1. one-time: create the token (this enables the login gate)
+openssl rand -hex 16 > data/auth-token
+
+# 2. run the board
+npm start                          # logs: "token gate: ON"
+
+# 3. one-time: serve it over your tailnet with HTTPS
+tailscale serve --bg 4747
+tailscale serve status             # shows your https://<machine>.<tailnet>.ts.net URL
 ```
 
-Open the tailnet URL, enter the token once — it's a cookie for a year. API calls can
-send `Authorization: Bearer <token>` instead. The gate exists because the runner
-executes code: **never** expose the port without it.
+On your phone: install Tailscale, sign in to the same tailnet, open the URL, enter
+the token once — it's stored as a cookie for a year. Scripts/API calls can send
+`Authorization: Bearer <token>` instead.
 
-## Manager tab — the Sensei
+- Token can also come from the `KFK_TOKEN` env var (overrides the file).
+- Rotate it by regenerating `data/auth-token` (old cookies stop working).
+- `tailscale serve` is tailnet-only. **Never** use `tailscale funnel` or a public
+  port-forward for this app.
+- To stop sharing: `tailscale serve --https=443 off` (or `tailscale serve reset`).
 
-An LLM manager (also a `claude -p` session on your subscription) that triages,
-routes, dispatches, and reviews cards against their acceptance criteria.
+---
 
-- **Autonomy ladder**: `suggest` (everything needs your ✓) → `semi` (can
-  create/route/run; verdicts need your ✓) → `auto` (full autopilot within
-  guardrails). Deleting cards is never available to the manager.
-- **Triggers**: on task finish, on new card, on an interval, or via chat.
-- **Guardrails**: max launches/hour, max retries/task (rejected tasks re-run with
-  the manager's feedback appended), and a permission ceiling it can't assign beyond.
-- **Management style**: a freeform prompt to tune behavior ("prefer haiku for docs
-  tasks", "never auto-approve migrations") without code.
+## The Manager (the Sensei)
+
+An LLM manager — itself a `claude -p` structured-output call on your subscription —
+that triages new cards (model/effort/skills/priority routing), dispatches queued
+work, reviews finished cards against their acceptance criteria, and answers you in
+chat ("plan the auth refactor into cards", "what's blocking?").
+
+**Autonomy ladder** (Manager tab):
+
+| Level | Can do without you |
+|---|---|
+| `suggest` *(default)* | nothing — every action waits for your ✓ |
+| `semi` | create / route / run cards; approve-reject verdicts still wait |
+| `auto` | everything, within guardrails |
+
+Deleting cards is never available to the manager, at any level.
+
+**Triggers:** on task finish (review it), on new card (triage it), every N minutes
+(0 = off), and chat. Each trigger is one manager invocation — mind your rate limits
+before enabling the interval.
+
+**Guardrails:** max launches/hour (default 10), max retries/task (default 2 —
+rejected cards re-run with the manager's feedback appended to the prompt), and a
+**permission ceiling** (default `acceptEdits`) the manager can't assign beyond.
+Guardrail-blocked actions become suggestions instead of executing.
+
+**Management style:** freeform standing instructions ("prefer haiku for docs tasks",
+"never auto-approve migrations") — no code changes needed.
+
+The manager's own model/effort (default opus/medium) are configurable; it can also
+be disabled entirely with the checkbox.
+
+---
+
+## Run at login (optional)
+
+`~/Library/LaunchAgents/com.kungfu-kanban.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.kungfu-kanban</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/node</string>  <!-- `which node` -->
+    <string>server.js</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/YOU/path/to/kungfu-kanban</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- launchd's PATH is minimal; claude + gh + git must be findable -->
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/tmp/kungfu-kanban.log</string>
+  <key>StandardErrorPath</key><string>/tmp/kungfu-kanban.log</string>
+</dict></plist>
+```
+
+```bash
+launchctl load ~/Library/LaunchAgents/com.kungfu-kanban.plist   # start now + at login
+launchctl unload ~/Library/LaunchAgents/com.kungfu-kanban.plist # stop
+```
+
+---
+
+## Configuration reference
+
+**Environment variables**
+
+| Var | Default | Meaning |
+|---|---|---|
+| `PORT` | `4747` | listen port |
+| `HOST` | `127.0.0.1` | bind address; anything non-loopback requires a token |
+| `KFK_TOKEN` | — | access token (overrides `data/auth-token`) |
+
+**Files (`data/`, gitignored — this is all app state)**
+
+| File | Contents |
+|---|---|
+| `tasks.json` | all cards |
+| `settings.json` | parallel cap, default cwd, ntfy topic, notification toggle, manager config |
+| `manager.json` | pending suggestions, chat history, launch timestamps |
+| `manager-log.jsonl` | manager activity log |
+| `transcripts/<task-id>.jsonl` | per-card transcript |
+| `auth-token` | access token (create to enable the gate) |
+
+Back up `data/` to keep your board; delete it to factory-reset. Individual sessions
+can always be reopened in the terminal with `claude -r <session-id>` (shown in each
+card's drawer).
+
+---
+
+## Troubleshooting
+
+- **Card fails instantly with "Failed to launch claude CLI"** — `claude` isn't on
+  the server's PATH (common under launchd; fix the plist PATH above) or isn't
+  installed.
+- **Run errors mentioning auth/login** — the CLI isn't logged in: run `claude` in a
+  terminal, `/login`, pick your subscription account. API-key auth can't be used —
+  the runner deletes `ANTHROPIC_API_KEY` on purpose.
+- **PR flow: "no worktree matching …"** — the card ran without the worktree box, or
+  the cwd isn't a git repo. **"gh pr create failed"** — check `gh auth status` and
+  that `origin` points at GitHub.
+- **Port already in use** — `lsof -nP -iTCP:4747 -sTCP:LISTEN`, kill the old server.
+- **No macOS notifications** — System Settings → Notifications: allow "Script
+  Editor"/terminal; check the ⚙ Settings toggle.
+- **Hitting subscription rate limits** — lower **parallel**, prefer haiku/sonnet +
+  low effort for routine cards, disable the manager interval trigger, or use the
+  Sensei's frugality bias (it's prompted to route cheap by default).
+- **Server won't start: "Refusing to bind …"** — you set `HOST` without a token.
+  Create `data/auth-token` (or unset `HOST` and use Tailscale serve, which works
+  with loopback).
+
+## Security notes
+
+This board **executes code on your machine** with whatever permission mode a card
+carries — `bypassPermissions` means exactly that. Accordingly:
+
+- The server never binds beyond loopback without a token, and you shouldn't either.
+  Tailscale serve (tailnet-only) + token is the supported remote path. No public
+  exposure, ever.
+- The manager's permission ceiling stops it from escalating cards beyond what you
+  allow; deleting cards is hard-blocked regardless of autonomy.
+- ntfy topics are public-by-obscurity: unguessable names only, no secrets in card
+  titles.
+- The token cookie is `HttpOnly`/`SameSite=Lax`, compared timing-safe, and lives a
+  year; rotate `data/auth-token` to invalidate.
