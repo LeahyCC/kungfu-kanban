@@ -64,26 +64,30 @@ export default function BillingPage() {
 
       <div className="plan-grid">
         <div className={`plan ${ent.tier === 'free' ? 'current' : ''}`}>
-          <h3>Free</h3>
+          {ent.tier === 'free' && <span className="seal seal--ink plan-seal">Current</span>}
+          <h3>White Belt</h3>
           <ul>
-            <li>1 task running at a time</li>
-            <li>25 tasks/day</li>
+            <li>1 card running at a time</li>
+            <li>25 cards/day</li>
             <li>Manager: suggest &amp; semi modes</li>
-            <li>No repo (coding-agent) tasks</li>
+            <li>No repo (coding-agent) cards</li>
           </ul>
-          {ent.tier === 'free' && <span className="plan-tag">Current plan</span>}
+          {ent.tier === 'free' && <span className="plan-tag">current plan</span>}
         </div>
-        <div className={`plan ${ent.tier === 'pro' ? 'current' : ''}`}>
-          <h3>Pro</h3>
+        <div className={`plan pro-plan ${ent.tier === 'pro' ? 'current' : ''}`}>
+          {ent.tier === 'pro'
+            ? <span className="seal seal--ink plan-seal">Current</span>
+            : <span className="seal plan-seal">Soon</span>}
+          <h3>Black Belt</h3>
           <ul>
-            <li>5 tasks running at once</li>
-            <li>Unlimited tasks</li>
+            <li>5 cards running at once</li>
+            <li>Unlimited cards</li>
             <li>Manager autopilot (auto mode)</li>
-            <li>Repo tasks → sandboxed agent + PR</li>
+            <li>Repo cards → sandboxed agent + PR</li>
           </ul>
           {ent.tier === 'pro' ? (
             <>
-              <span className="plan-tag">Current plan</span>
+              <span className="plan-tag">current plan</span>
               {ent.billingEnabled && (
                 <button disabled={busy} onClick={() => go('/api/billing/portal')} style={{ marginTop: 10 }}>Manage subscription</button>
               )}
@@ -93,7 +97,7 @@ export default function BillingPage() {
               Upgrade to Pro
             </button>
           ) : (
-            <span className="plan-tag">Included in beta</span>
+            <span className="plan-tag">included in beta</span>
           )}
         </div>
       </div>
