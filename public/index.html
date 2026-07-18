@@ -16,11 +16,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <script>
-    // Night dojo is the default; only an explicit saved 'light' switches. Pre-paint, no flash.
-    try { if (localStorage.getItem('kk-theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) {}
+    // Saved choice wins; first visit follows the OS. Pre-paint, no flash.
+    try {
+      var saved = localStorage.getItem('kk-theme');
+      if (saved === 'light' || (!saved && matchMedia('(prefers-color-scheme: light)').matches)) {
+        document.documentElement.dataset.theme = 'light';
+      }
+    } catch (e) {}
   </script>
 </head>
 <body>
+<a class="skip-link" href="#board">Skip to board</a>
 <div class="app-shell">
   <header class="app-header">
     <div class="app-brand">
@@ -28,25 +34,27 @@
       <span class="wordmark">Kungfu Kanban</span>
       <span id="antenna" class="antenna" role="status" aria-label="No agents running"></span>
     </div>
-    <nav class="app-tabs" aria-label="Application">
-      <button id="tabBoard" class="app-tab active">Board</button>
-      <button id="tabManager" class="app-tab">Manager <span id="suggCount" class="pill hidden"></span></button>
+    <nav class="app-tabs" role="tablist" aria-label="Application">
+      <button id="tabBoard" class="app-tab active" role="tab" aria-selected="true">Board</button>
+      <button id="tabManager" class="app-tab" role="tab" aria-selected="false" tabindex="-1">Sensei <span id="suggCount" class="pill hidden"></span></button>
     </nav>
     <div class="app-status" aria-label="Board summary">
       <span id="usageChip" class="cooldown-chip usage-chip hidden" title="All Claude Code output tokens on this Mac in the rolling 5-hour limit window (board + terminal). Set a budget in ⚙ Settings for a % meter.">⛽ <span id="usageChipText"></span></span>
       <span id="cooldownChip" class="cooldown-chip hidden" title="Subscription limits hit — auto flow paused; queued cards launch when it resets">⏳ <span id="cooldownTimer">--:--</span></span>
       <span id="modelChip" class="cooldown-chip model-chip hidden" title="Model capped or unavailable — launches use the next model down until it resets">⬇ <span id="modelChipText"></span></span>
-      <span class="status-chip" title="Backlog"><span class="belt-dot belt-todo"></span><span id="countBacklog" class="status-count">0</span></span>
-      <span class="status-chip" title="Running"><span class="belt-dot belt-doing"></span><span id="countRunning" class="status-count">0</span></span>
-      <span class="status-chip" title="Review"><span class="belt-dot belt-review"></span><span id="countReview" class="status-count">0</span></span>
-      <span class="status-chip" title="Done"><span class="belt-dot belt-done"></span><span id="countDone" class="status-count">0</span></span>
-      <button id="themeToggle" class="theme-toggle" title="Day / night dojo" aria-label="Toggle theme">◐</button>
+      <span id="sseChip" class="cooldown-chip hidden" role="status" title="Live connection to the server lost — reconnecting; the board may be stale until it's back">⚡ reconnecting…</span>
+      <span class="status-chip" title="Backlog + Queued"><span class="belt-dot belt-todo"></span><span id="countBacklog" class="status-count">0</span><span class="sr-only">cards in Backlog or Queued</span></span>
+      <span class="status-chip" title="Running"><span class="belt-dot belt-doing"></span><span id="countRunning" class="status-count">0</span><span class="sr-only">cards Running</span></span>
+      <span class="status-chip" title="Review"><span class="belt-dot belt-review"></span><span id="countReview" class="status-count">0</span><span class="sr-only">cards in Review</span></span>
+      <span class="status-chip" title="Done"><span class="belt-dot belt-done"></span><span id="countDone" class="status-count">0</span><span class="sr-only">cards Done</span></span>
+      <button id="themeToggle" class="theme-toggle" title="Day / night dojo" aria-label="Toggle theme" aria-pressed="false">◐</button>
     </div>
   </header>
 
   <div class="toolbar" id="boardToolbar">
-    <span class="sub" id="sysStatus" title="System status: the claude CLI runs your cards; gh opens and merges PRs. Checked every few minutes.">on your subscription · via claude code cli</span>
+    <span class="sub" id="sysStatus" title="System status: the claude CLI runs your cards (on your subscription); gh opens and merges PRs. Checked every few minutes.">checking status…</span>
     <div class="toolbar-actions">
+      <input id="filterInput" class="filter" type="search" placeholder="⌕ filter cards…" aria-label="Filter cards by text, repo, model, or skill" title="Filter the board by title, prompt, repo path, model, agent, or skill" />
       <label class="conc" title="How many agent sessions may run at once — extras wait in Queued. Keeps parallel cards from burning your subscription rate limits.">parallel <input id="maxConcurrent" type="number" min="1" max="8" /></label>
       <button id="settingsBtn" class="ghost" title="Settings">⚙ Settings</button>
       <button id="newTaskBtn" class="ghost" title="Fallback: write a card by hand — nothing runs until you launch it">＋ New card</button>
@@ -56,7 +64,7 @@
     </div>
   </div>
 
-  <main id="board" class="board"></main>
+  <main id="board" class="board" tabindex="-1"></main>
 
   <main id="managerView" class="manager-grid hidden">
     <section class="mgr-col mgr-settings">
@@ -65,7 +73,7 @@
         <span class="who"><b>The Sensei</b><span>triage · dispatch · review</span></span>
       </div>
       <form id="mgrForm">
-        <label class="check-row" title="The Sensei is an LLM that triages new cards (routing, priority), dispatches work, and reviews finished runs — each trigger is one claude -p call on your subscription"><input type="checkbox" name="enabled" /> Manager enabled</label>
+        <label class="check-row" title="The Sensei is an LLM that triages new cards (routing, priority), dispatches work, and reviews finished runs — each trigger is one claude -p call on your subscription"><input type="checkbox" name="enabled" /> Sensei enabled</label>
         <div class="row">
           <label title="The model the Sensei itself thinks with — not the models it assigns to cards">Model <select name="model"></select></label>
           <label title="The Sensei's own reasoning budget">Effort <select name="effort"></select></label>
@@ -103,6 +111,7 @@
         </div>
         <label title="The most permissive mode the Sensei may assign to a card — it can never grant more than this, whatever it decides">Permission ceiling
           <select name="permissionCeiling"></select>
+          <span class="hint-inline perm-warn">⚠ dontAsk / bypassPermissions remove all guardrails — the Sensei could assign them to any card</span>
         </label>
         <button type="submit" class="primary" title="Apply — takes effect immediately, no restart needed">Save settings</button>
       </form>
@@ -127,7 +136,7 @@
 
   <!-- Card editor modal -->
   <div id="modalBackdrop" class="backdrop hidden">
-    <div class="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <h2 id="modalTitle">New card</h2>
       <form id="taskForm">
         <label>Title
@@ -153,6 +162,7 @@
             <select name="permissionMode"></select>
           </label>
         </div>
+        <p class="hint">acceptEdits: edit files freely (default) · plan: read-only planning · <b>dontAsk / bypassPermissions: no guardrails at all — the agent runs anything without asking. Use with care.</b></p>
         <div class="row">
           <label title="Run the card through one of your custom agents from ~/.claude/agents">Agent
             <select name="agent"><option value="">(none)</option></select>
@@ -170,6 +180,7 @@
           <label class="check-row" title="Run in an isolated git worktree on branch kanban-<id> — your main checkout stays untouched while the agent works"><input type="checkbox" name="worktree" /> Git worktree</label>
           <label class="check-row" title="After a successful run: commit anything left over, push the branch, and open a GitHub PR with your gh login. Needs the worktree box + an origin remote."><input type="checkbox" name="openPr" /> Open PR when done <span class="badge">gh</span></label>
         </div>
+        <p class="hint">worktree = the agent works on an isolated branch (<span class="mono">kanban-&lt;id&gt;</span>); your checkout stays untouched. Open PR pushes that branch and opens a GitHub PR after a successful run (needs worktree + an origin remote).</p>
         <label>Acceptance criteria <span class="hint-inline">(the manager reviews against this)</span>
           <textarea name="acceptanceCriteria" rows="2" placeholder="e.g. tests pass; README updated; no new dependencies"></textarea>
         </label>
@@ -188,8 +199,8 @@
 
   <!-- Import modal -->
   <div id="importBackdrop" class="backdrop hidden">
-    <div class="modal">
-      <h2>Import cards from Markdown</h2>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+      <h2 id="importTitle">Import cards from Markdown</h2>
       <form id="importForm">
         <div class="draft-row">
           <input id="draftPrompt" placeholder="✨ Or describe the work and let the Sensei draft it… e.g. plan a dark-mode pass for bouldi as 4 cards" autocomplete="off" />
@@ -239,8 +250,8 @@ The prompt: self-contained instructions for the executing agent.
 
   <!-- Settings modal -->
   <div id="settingsBackdrop" class="backdrop hidden">
-    <div class="modal">
-      <h2>Settings <span id="settingsVersion" class="badge model" title="Board version — the status line offers ⬆ update when origin has a newer one"></span></h2>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <h2 id="settingsTitle">Settings <span id="settingsVersion" class="badge model" title="Board version — the status line offers ⬆ update when origin has a newer one"></span></h2>
       <form id="settingsForm">
         <div id="usageBreakdown" class="footnote"></div>
         <label title="Anthropic doesn't publish exact quotas, so pick a number that matches your experience of when limits hit — the ⛽ chip then shows what's left at a glance">5-hour budget <span class="hint-inline">(output Mtok, 0 = just show usage)</span>
@@ -270,6 +281,7 @@ The prompt: self-contained instructions for the executing agent.
           <button type="button" id="skillInstallBtn" class="ghost hidden">Install</button>
         </div>
         <div class="modal-actions">
+          <button type="button" id="logoutBtn" class="ghost hidden" title="Clear this device's auth cookie — you'll need the token to sign back in">Sign out</button>
           <button type="button" id="notifyTestBtn" class="ghost">🔔 Test notification</button>
           <button type="button" id="settingsCancelBtn" class="ghost" title="Close without saving">Cancel</button>
           <button type="submit" class="primary" title="Apply — takes effect immediately, no restart needed">Save</button>
@@ -279,7 +291,7 @@ The prompt: self-contained instructions for the executing agent.
   </div>
 
   <!-- Detail drawer -->
-  <div id="drawer" class="drawer hidden">
+  <div id="drawer" class="drawer hidden" role="dialog" aria-labelledby="drawerTitle">
     <div class="drawer-head">
       <h2 id="drawerTitle"></h2>
       <button id="drawerClose" class="ghost" aria-label="Close">✕</button>
