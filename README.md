@@ -38,6 +38,12 @@ npm start          # → http://localhost:4747
 
 That's it for local use. The server binds `127.0.0.1` only by default.
 
+**Updating**: the status line shows your board version and checks `origin/main`
+(every 30 min); when your clone is behind, a **⬆ update available** button pulls
+fast-forward, runs `npm ci` if needed, and restarts the server (instant under
+launchd; under plain `npm start`, start it again). Blocked while cards are
+running. See [CHANGELOG.md](CHANGELOG.md) for what changed.
+
 ---
 
 ## The board

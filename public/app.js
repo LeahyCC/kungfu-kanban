@@ -1030,20 +1030,39 @@ setInterval(renderUsage, 5 * 60_000);
 // ---------- system status (claude CLI + gh health) ----------
 async function renderHealth() {
   const el = $('#sysStatus');
-  const h = await api('/api/health');
+  const [h, v] = await Promise.all([api('/api/health'), api('/api/version')]);
   if (!h.claude) return; // auth redirect etc.
   const dot = (ok) => `<span class="sys-dot ${ok ? 'ok' : 'bad'}">●</span>`;
   const upBtn = h.claude.ok
     ? ' <button id="updateClaudeBtn" class="ghost mini" title="Update the Claude Code CLI in place (runs claude update)">↑ update</button>'
     : '';
+  const boardVer = v && v.version
+    ? `kungfu v${esc(v.version)}${v.behind > 0
+      ? ` <button id="updateBoardBtn" class="ghost mini warn" title="Your clone is ${v.behind} commit${v.behind > 1 ? 's' : ''} behind origin — pulls fast-forward and restarts the board">⬆ ${v.remoteVersion ? `v${esc(v.remoteVersion)}` : 'update'} available</button>`
+      : ''} · `
+    : '';
   if (h.claude.ok && h.gh.ok) {
-    el.innerHTML = `on your subscription · ${dot(true)} ${esc(h.claude.out || 'claude')}${upBtn} · ${dot(true)} gh`;
+    el.innerHTML = `${boardVer}on your subscription · ${dot(true)} ${esc(h.claude.out || 'claude')}${upBtn} · ${dot(true)} gh`;
   } else {
-    el.innerHTML = [
+    el.innerHTML = boardVer + [
       h.claude.ok ? `${dot(true)} ${esc(h.claude.out)}${upBtn}` : `${dot(false)} claude CLI not working — cards can't run`,
       h.gh.ok ? `${dot(true)} gh` : `${dot(false)} gh not authed — PR features off`,
     ].join(' · ');
   }
+  const bb = $('#updateBoardBtn');
+  if (bb) bb.addEventListener('click', async () => {
+    if (!confirm('Update the board to the latest code? It pulls from origin and restarts itself (blocked while cards are running). Under plain `npm start` the server stops instead — restart it after.')) return;
+    bb.disabled = true;
+    bb.textContent = '⬆ updating…';
+    const r = await api('/api/system/update-board', { method: 'POST' });
+    if (r.error) {
+      alert(`Update failed: ${r.error}`);
+      renderHealth();
+      return;
+    }
+    bb.textContent = '⬆ restarting…';
+    setTimeout(() => location.reload(), 6000);
+  });
   const ub = $('#updateClaudeBtn');
   if (ub) ub.addEventListener('click', async () => {
     if (!confirm('Update the Claude Code CLI now? Running agents finish on the old version; new runs use the new one.')) return;
