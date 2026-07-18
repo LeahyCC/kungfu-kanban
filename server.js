@@ -289,7 +289,10 @@ app.post('/api/system/update-claude', (req, res) => {
     if (brewCmd) {
       const fs = require('fs');
       const brew = ['/opt/homebrew/bin/brew', '/usr/local/bin/brew'].find((p) => fs.existsSync(p)) || 'brew';
-      return execFile(brew, [brewCmd[1], brewCmd[2]], { timeout: 600_000, maxBuffer: 4 * 1024 * 1024 }, (bErr, bOut, bErrOut) => {
+      // Force brew's tap auto-refresh: with a stale index brew answers
+      // "already installed" while claude's own checker sees a newer release.
+      const brewEnv = { ...process.env, HOMEBREW_AUTO_UPDATE_SECS: '1' };
+      return execFile(brew, [brewCmd[1], brewCmd[2]], { timeout: 600_000, maxBuffer: 4 * 1024 * 1024, env: brewEnv }, (bErr, bOut, bErrOut) => {
         healthCache = { at: 0, data: null };
         if (bErr) return res.status(500).json({ error: (tail(`${bOut || ''}\n${bErrOut || ''}`) || bErr.message).slice(0, 300) });
         execFile('claude', ['--version'], { timeout: 15_000 }, (vErr, vOut) => {
