@@ -728,6 +728,10 @@ textarea.mono { font-family: var(--font-mono); font-size: 12.5px; line-height: 1
   font-variant-numeric: tabular-nums;
   color: var(--ink-900);
 }
+.u-stat b.ok { color: var(--success); }
+.u-stat b.warn { color: var(--warning); }
+.u-stat b.bad { color: var(--error); }
+.usage-grid { grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); }
 .u-stat span {
   font-family: var(--font-mono);
   font-size: 10px;

@@ -7,6 +7,14 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.2.6] — 2026-07-17
+
+### Changed
+- Settings shows the board version in its title, and the usage panel moved to
+  the top of the modal with the budget field beside it
+- With a budget set, a colored "left (5h)" stat leads the panel and the
+  ⛽ header chip shows remaining tokens ("5h 1.2M left") instead of a bare %
+
 ## [0.2.5] — 2026-07-17
 
 ### Fixed

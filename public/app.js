@@ -435,6 +435,9 @@ function openSettings() {
   f.usageBudgetM.value = (config.settings.usageBudgetTokens || 0) / 1_000_000;
   renderUsage();
   renderSkillStatus();
+  api('/api/version').then((v) => {
+    if (v && v.version) $('#settingsVersion').textContent = `v${v.version}`;
+  });
   $('#settingsBackdrop').classList.remove('hidden');
 }
 async function renderSkillStatus() {
@@ -1023,8 +1026,9 @@ async function renderUsage() {
   const chip = $('#usageChip');
   const txt = $('#usageChipText');
   if (u.budgetTokens > 0) {
+    const left = Math.max(0, u.budgetTokens - u.output);
     const pct = Math.round((u.output / u.budgetTokens) * 100);
-    txt.textContent = `5h ${pct}%`;
+    txt.textContent = `5h ${fmtTok(left)} left`;
     chip.classList.toggle('warn', pct >= 70 && pct < 90);
     chip.classList.toggle('bad', pct >= 90);
   } else {
@@ -1036,16 +1040,23 @@ async function renderUsage() {
   bd.innerHTML = '';
   const grid = document.createElement('div');
   grid.className = 'usage-grid';
-  for (const [val, label] of [
-    [fmtTok(u.output), 'out tok'],
-    [fmtTok(u.input), 'in tok'],
-    [fmtTok(u.cacheRead), 'cached'],
-    [String(u.turns), 'turns'],
-  ]) {
+  const stats = [
+    [fmtTok(u.output), 'out tok', ''],
+    [fmtTok(u.input), 'in tok', ''],
+    [fmtTok(u.cacheRead), 'cached', ''],
+    [String(u.turns), 'turns', ''],
+  ];
+  if (u.budgetTokens > 0) {
+    const left = Math.max(0, u.budgetTokens - u.output);
+    const pct = Math.round((u.output / u.budgetTokens) * 100);
+    stats.unshift([fmtTok(left), 'left (5h)', pct >= 90 ? 'bad' : pct >= 70 ? 'warn' : 'ok']);
+  }
+  for (const [val, label, tone] of stats) {
     const s = document.createElement('div');
     s.className = 'u-stat';
     const b = document.createElement('b');
     b.textContent = val;
+    if (tone) b.className = tone;
     const l = document.createElement('span');
     l.textContent = label;
     s.append(b, l);
