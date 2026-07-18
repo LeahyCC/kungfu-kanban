@@ -115,6 +115,7 @@ function cardEl(t) {
   if (t.effort && t.effort !== 'default') meta.push(`<span class="badge">${esc(t.effort)}</span>`);
   if (t.agent) meta.push(`<span class="badge">agent:${esc(t.agent)}</span>`);
   if (t.worktree) meta.push('<span class="badge wt">worktree</span>');
+  if (t.issueNumber) meta.push(`<span class="badge">#${t.issueNumber}</span>`);
   if (t.schedule) meta.push(`<span class="badge sched">⏱ ${esc(scheduleLabel(t.schedule))}</span>`);
   if (t.skillsAuto) meta.push('<span class="badge skillauto">✦ auto</span>');
   for (const s of (t.skills || []).slice(0, 3)) meta.push(`<span class="badge">${esc(s)}</span>`);
@@ -257,29 +258,101 @@ $('#modalBackdrop').addEventListener('click', (e) => {
 });
 
 // ---------- import modal ----------
+let draftSessionId = null;
+
 $('#importBtn').addEventListener('click', () => {
   $('#importResult').textContent = '';
+  draftSessionId = null;
+  $('#refineRow').classList.add('hidden');
+  const dr = $('#draftRepo');
+  dr.innerHTML = '<option value="">repo…</option>';
+  for (const r of config.repos || []) {
+    const opt = document.createElement('option');
+    opt.value = r.path;
+    opt.textContent = r.name;
+    dr.appendChild(opt);
+  }
+  updatePreview();
   $('#importBackdrop').classList.remove('hidden');
   $('#importText').focus();
 });
+
+// live parse preview + duplicate-title guard
+let previewTimer = null;
+function updatePreview() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(async () => {
+    const md = $('#importText').value;
+    const box = $('#importPreview');
+    if (!md.trim()) { box.textContent = ''; return; }
+    const r = await api('/api/import/preview', { method: 'POST', body: { markdown: md } });
+    if (!r.cards || !r.cards.length) { box.textContent = '✕ no cards found — need ## headings or - [ ] items'; return; }
+    box.innerHTML = '';
+    box.append(`will create ${r.cards.length} card${r.cards.length === 1 ? '' : 's'}: `);
+    box.append(r.cards.map((c) => c.title).join(' · '));
+    if (r.dupes && r.dupes.length) {
+      const warn = document.createElement('span');
+      warn.className = 'dupe';
+      warn.textContent = ` ⚠ already on the board: ${r.dupes.join(', ')}`;
+      box.appendChild(warn);
+    }
+  }, 400);
+}
+$('#importText').addEventListener('input', updatePreview);
 $('#importCancelBtn').addEventListener('click', () => $('#importBackdrop').classList.add('hidden'));
 $('#importBackdrop').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) $('#importBackdrop').classList.add('hidden');
 });
-$('#draftBtn').addEventListener('click', async (e) => {
-  const btn = e.target;
-  const request = $('#draftPrompt').value.trim();
-  if (!request) return;
+async function runDraft(btn, busyLabel, idleLabel, body) {
   btn.disabled = true;
-  btn.textContent = '✨ drafting…';
-  const r = await api('/api/import/draft', { method: 'POST', body: { request } });
+  btn.textContent = busyLabel;
+  const r = await api('/api/import/draft', { method: 'POST', body });
   btn.disabled = false;
-  btn.textContent = '✨ Draft';
+  btn.textContent = idleLabel;
   if (r.markdown) {
     $('#importText').value = r.markdown;
-    $('#importResult').textContent = '✓ draft ready — review, edit, then Import';
+    draftSessionId = r.sessionId || draftSessionId;
+    $('#refineRow').classList.toggle('hidden', !draftSessionId);
+    $('#importResult').textContent = '✓ draft ready — review, edit (or ↻ refine), then Import';
+    updatePreview();
   } else {
     $('#importResult').textContent = `✕ ${r.error || 'draft failed'}`;
+  }
+}
+
+$('#draftBtn').addEventListener('click', (e) => {
+  const request = $('#draftPrompt').value.trim();
+  if (!request) return;
+  const explore = $('#exploreToggle').checked;
+  runDraft(e.target, explore ? '✨ exploring & drafting…' : '✨ drafting…', '✨ Draft', {
+    request,
+    repoPath: $('#draftRepo').value || null,
+    explore,
+  });
+});
+
+$('#refineBtn').addEventListener('click', (e) => {
+  const msg = $('#refinePrompt').value.trim();
+  if (!msg || !draftSessionId) return;
+  $('#refinePrompt').value = '';
+  runDraft(e.target, '↻ refining…', '↻ Refine', { refine: msg, sessionId: draftSessionId });
+});
+
+$('#issuesBtn').addEventListener('click', async (e) => {
+  const repoPath = $('#draftRepo').value;
+  if (!repoPath) { $('#importResult').textContent = '✕ pick a repo first'; return; }
+  const btn = e.target;
+  btn.disabled = true;
+  btn.textContent = '⇣ fetching…';
+  const r = await api('/api/import/issues', { method: 'POST', body: { repoPath } });
+  btn.disabled = false;
+  btn.textContent = '⇣ From issues';
+  if (r.error) $('#importResult').textContent = `✕ ${r.error}`;
+  else if (!r.count) $('#importResult').textContent = 'no open issues in that repo';
+  else {
+    $('#importText').value = r.markdown;
+    $('#importResult').textContent = `✓ ${r.count} issue${r.count === 1 ? '' : 's'} → review, then Import (PRs will say Fixes #N)`;
+    updatePreview();
   }
 });
 
@@ -299,7 +372,7 @@ $('#importFile').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => { $('#importText').value = reader.result; };
+  reader.onload = () => { $('#importText').value = reader.result; updatePreview(); };
   reader.readAsText(file);
 });
 $('#importForm').addEventListener('submit', async (e) => {
