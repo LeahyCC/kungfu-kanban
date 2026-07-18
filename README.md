@@ -52,9 +52,22 @@ Columns: **Backlog → Queued → Running → Review → Done**
 - Finished runs land in **Review** (with a vermillion error stripe if they failed).
   **✓ Done** ships them — hanko seal included.
 - If the server restarts mid-run, orphaned "running" cards are recovered into Review.
-- **⚙ Settings** (toolbar): default working directory, ntfy topic, macOS
-  notification toggle.
+- **⚙ Settings** (toolbar): default working directory, repos directory, ntfy
+  topic, macOS notification toggle, and Done-column archiving (see below).
 - **☀ / ☾** toggles the day/night dojo. Night is the default.
+
+### Archiving old Done cards
+
+The Done column would otherwise grow forever, so a daily sweep moves cards out
+once they've sat in Done longer than `settings.archiveDays` (default 7,
+measured from `finishedAt`, falling back to `createdAt`). Archived cards are:
+
+- appended as full JSON to `data/archive.jsonl` (one line per card), and
+- removed from `data/tasks.json`, with their `data/transcripts/<id>.jsonl` file deleted.
+
+The sweep runs once at server startup and every 24h after that. Set
+**Archive "done" cards after (days)** to `0` in ⚙ Settings to turn it off;
+archived history in `data/archive.jsonl` is never deleted automatically.
 
 ### Follow-up prompts
 
@@ -371,10 +384,11 @@ launchctl unload ~/Library/LaunchAgents/com.kungfu-kanban.plist # stop
 | File | Contents |
 |---|---|
 | `tasks.json` | all cards |
-| `settings.json` | parallel cap, default cwd, ntfy topic, notification toggle, manager config |
+| `settings.json` | parallel cap, default cwd, ntfy topic, notification toggle, archive-after-days, manager config |
 | `manager.json` | pending suggestions, chat history, launch timestamps |
 | `manager-log.jsonl` | manager activity log |
 | `transcripts/<task-id>.jsonl` | per-card transcript |
+| `archive.jsonl` | Done cards swept out after `archiveDays` (append-only) |
 | `auth-token` | access token (create to enable the gate) |
 
 Back up `data/` to keep your board; delete it to factory-reset. Individual sessions
