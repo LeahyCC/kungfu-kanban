@@ -308,6 +308,7 @@ const TASK_FIELDS = [
   'title', 'prompt', 'cwd', 'model', 'effort', 'permissionMode',
   'skills', 'skillsAuto', 'agent', 'worktree', 'openPr', 'status', 'priority', 'acceptanceCriteria',
   'schedule', 'issueNumber',
+  'prUrl', // repair hatch: lets a manually-created PR be attached to its card
 ];
 const STATUSES = ['backlog', 'queued', 'running', 'stopping', 'review', 'done'];
 
