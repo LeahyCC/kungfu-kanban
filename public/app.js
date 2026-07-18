@@ -284,6 +284,11 @@ function cardEl(t) {
   if ((t.depsUnresolved || []).length) {
     meta.push(`<span class="badge err" title="Unresolved after: ${esc(t.depsUnresolved.join(' · '))} — edit the card or let the Sensei fix the link">⛓ unresolved dep</span>`);
   }
+  // Bottleneck flag: this verdict is what queued work is waiting for.
+  if (t.status === 'review') {
+    const held = tasks.filter((x) => x.status === 'queued' && (x.deps || []).includes(t.id));
+    if (held.length) meta.push(`<span class="badge dep" title="Queued work waits on this verdict: ${esc(held.map((x) => x.title).join(' · '))} — ${t.prUrl ? 'merge its PR or approve' : 'approve or reject'} to release">🖐 blocks ${held.length}</span>`);
+  }
   if (t.schedule) meta.push(`<span class="badge sched">⏱ ${esc(scheduleLabel(t.schedule))}</span>`);
   if (t.skillsAuto) meta.push('<span class="badge skillauto">✦ auto</span>');
   for (const s of (t.skills || []).slice(0, 3)) meta.push(`<span class="badge">${esc(s)}</span>`);
@@ -1005,6 +1010,8 @@ function renderDrawerMeta(t) {
   const unmetD = depsUnmet(t);
   if (unmetD.length) bits.push(`⛓ waits for: ${unmetD.map((d) => d.title).join(' · ')}`);
   else if ((t.deps || []).length) bits.push('⛓ all prerequisites done');
+  const held = tasks.filter((x) => x.status === 'queued' && (x.deps || []).includes(t.id));
+  if (held.length && t.status !== 'done') bits.push(`🖐 blocks: ${held.map((x) => x.title).join(' · ')}`);
   if ((t.depsUnresolved || []).length) bits.push(`⛓ unresolved: ${t.depsUnresolved.join(' · ')}`);
   if (t.createdAt) bits.push(`created ${relTime(t.createdAt)}`);
   if (t.updatedAt && t.updatedAt !== t.createdAt) bits.push(`updated ${relTime(t.updatedAt)}`);

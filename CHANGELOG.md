@@ -7,6 +7,20 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-07-18
+
+### Added — human bottlenecks bubble up (🖐 blocks N)
+- When queued work is held behind a card awaiting a verdict, the board now
+  says so out loud instead of leaving the reason buried in a transcript:
+  review cards that block queued dependents wear a `🖐 blocks N` badge
+  (dependents + the releasing action in the tooltip), the drawer lists what
+  they hold up, and a notification fires — "your verdict is the bottleneck:
+  merge its PR / approve / fix to release" — once per landing (a re-run that
+  lands in review again renotifies; no re-ping every sweep).
+- The Sensei's snapshot carries `blocksQueued` with orders to review
+  critical-path cards FIRST, and to open its reply with exactly what the
+  human must click when releasing needs them (e.g. merging a PR).
+
 ## [0.8.1] — 2026-07-18
 
 ### Fixed — ↑ update button actually updates a Homebrew-installed CLI
