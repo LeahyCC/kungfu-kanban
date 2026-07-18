@@ -7,6 +7,29 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-07-18
+
+### Added — CI surveillance for card PRs (no more silently red PRs)
+- The PR watcher now pulls every open card PR's **check rollup** each sweep
+  (plus one quick sweep ~2 min after a card opens/updates a PR, so fast
+  failures like branch guards surface in minutes): pass/fail/pending counts,
+  the failing check names, and the PR's actual base branch land on the card as
+  `prChecks`. Transitions log to the card transcript and notify once — a red
+  PR doesn't re-notify every sweep, and recovery ("all green") is noted.
+- Cards can declare the intended PR base: `base: staging` in the import
+  frontmatter (field `prBaseBranch`). The PR flow opens PRs against it, and
+  the watcher flags **wrongBase** when an open PR drifts from it — the fix for
+  "source-must-be-staging"-style branch guards rejecting PRs into main.
+- The Sensei sees `prChecks`/`prBaseBranch` in its snapshot with hard
+  guidance: never approve while checks are failing, pending, or wrongBase;
+  failing tests → reject with the check names (the retry's push updates the
+  same PR); wrong base → set `prBaseBranch` and flag the human to retarget
+  (`gh pr edit --base`).
+- UI: `CI ✕ n` (red, failing names in the tooltip), `CI wrong base`,
+  `CI … n` (running), `CI ✓` (all green) badges on cards, and a CI summary
+  line in the drawer. The kungfu-todo skill and ✨ Draft prompt teach `base:`
+  and warn that a card isn't shipped until its PR is 100% green.
+
 ## [0.6.0] — 2026-07-18
 
 ### Added — first-class card dependencies (chains run in order, unattended)

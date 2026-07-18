@@ -289,6 +289,14 @@ function cardEl(t) {
   for (const s of (t.skills || []).slice(0, 3)) meta.push(`<span class="badge">${esc(s)}</span>`);
   if ((t.skills || []).length > 3) meta.push(`<span class="badge">+${t.skills.length - 3}</span>`);
   if (t.prUrl) meta.push(`<a class="pr-link" href="${esc(t.prUrl)}" target="_blank" rel="noopener">PR ↗</a>`);
+  // PR check rollup (from the PR watcher): red until CI is 100% green.
+  if (t.prChecks && t.status !== 'done') {
+    const c = t.prChecks;
+    if (c.failing) meta.push(`<span class="badge err" title="Failing checks: ${esc((c.failed || []).join(' · '))}">CI ✕ ${c.failing}</span>`);
+    else if (c.wrongBase) meta.push(`<span class="badge err" title="PR targets ${esc(c.base || '?')} but the card wants ${esc(t.prBaseBranch || '?')}">CI wrong base</span>`);
+    else if (c.pending) meta.push(`<span class="badge" title="CI still running (${c.pending} pending)">CI … ${c.pending}</span>`);
+    else if (c.passing) meta.push(`<span class="badge dep-met" title="All ${c.passing} checks green">CI ✓</span>`);
+  }
   if (t.error && t.status !== 'done') meta.push(`<span class="failword">${t.error === 'Stopped by user' ? 'stopped' : 'failed'}</span>`);
   if (isRunning) {
     meta.push('<span class="runword">training…</span>');
@@ -988,6 +996,10 @@ function renderDrawerMeta(t) {
   mkSel('perms', config.permissionModes, t.permissionMode, 'permissionMode');
 
   const bits = [`cwd: ${t.cwd}`];
+  if (t.prChecks) {
+    const c = t.prChecks;
+    bits.push(`CI: ${c.failing ? `✕ ${c.failing} failing — ${(c.failed || []).join(' · ')}` : c.pending ? `… ${c.pending} running` : `✓ ${c.passing} green`}${c.base ? ` · base ${c.base}` : ''}${c.wrongBase ? ` (card wants ${t.prBaseBranch})` : ''}`);
+  }
   const unmetD = depsUnmet(t);
   if (unmetD.length) bits.push(`⛓ waits for: ${unmetD.map((d) => d.title).join(' · ')}`);
   else if ((t.deps || []).length) bits.push('⛓ all prerequisites done');

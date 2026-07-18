@@ -47,6 +47,10 @@ cooldown.setBroadcaster(broadcast);
 models.setBroadcaster(broadcast);
 setTimeout(() => prwatch.sweep(), 30_000); // first pass shortly after boot
 runner.setOnFinish((task) => {
+  // A card that just opened/updated a PR: sweep once after CI has had a couple
+  // of minutes, so fast failures (branch guards fail in seconds) badge the
+  // card long before the next interval sweep.
+  if (task.prUrl && !task.error) setTimeout(() => prwatch.sweep(), 120_000);
   if (manager.config().triggers.onFinish) {
     manager.invoke(`task finished and awaits review: "${task.title}" (id ${task.id})`);
   }
@@ -332,7 +336,7 @@ app.post('/api/notify/test', (req, res) => {
 // --- Tasks ---
 const TASK_FIELDS = [
   'title', 'prompt', 'cwd', 'model', 'effort', 'permissionMode',
-  'skills', 'skillsAuto', 'agent', 'worktree', 'openPr', 'status', 'priority', 'acceptanceCriteria',
+  'skills', 'skillsAuto', 'agent', 'worktree', 'openPr', 'prBaseBranch', 'status', 'priority', 'acceptanceCriteria',
   'schedule', 'issueNumber',
   'prUrl', // repair hatch: lets a manually-created PR be attached to its card
 ];
@@ -377,6 +381,7 @@ function makeTask(b, createdBy = 'user') {
     agent: b.agent || null,
     worktree: !!b.worktree,
     openPr: !!b.openPr,
+    prBaseBranch: typeof b.prBaseBranch === 'string' && b.prBaseBranch.trim() ? b.prBaseBranch.trim() : null,
     priority: Number.isInteger(b.priority) ? b.priority : 0,
     acceptanceCriteria: b.acceptanceCriteria || '',
     deps: depsLib.sanitize(b.deps, null),
