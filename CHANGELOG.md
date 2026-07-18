@@ -7,6 +7,16 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.2.5] — 2026-07-17
+
+### Fixed
+- PR base selection: if the main checkout sits on a local-only branch, the PR
+  bases on origin's default branch instead (GitHub rejects unpushed bases);
+  the ahead-check now compares against origin too
+- `gh pr create` retries once after a beat when GitHub hasn't indexed the
+  just-pushed branch yet
+- `prUrl` is PATCHable as a repair hatch for manually-opened PRs
+
 ## [0.2.4] — 2026-07-17
 
 ### Fixed
