@@ -7,6 +7,13 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.2.2] — 2026-07-17
+
+### Fixed
+- SHIPPED seals no longer flicker: the stamp animation plays once per card
+  instead of replaying on every board rebuild, and running-card telemetry
+  broadcasts are throttled to one per 2s per task
+
 ## [0.2.1] — 2026-07-17
 
 ### Fixed
