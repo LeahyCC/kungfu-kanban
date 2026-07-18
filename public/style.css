@@ -1060,6 +1060,8 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 .t-entry.user::before { content: '» '; }
 .t-entry.error { color: #E06C5F; }
 .t-entry.error::before { content: '✕ '; }
+.t-entry.blocked { color: #E0A33A; }
+.t-entry.blocked::before { content: '⛔ '; }
 
 /* markdown-rendered assistant/result entries */
 .t-entry.md { white-space: normal; }

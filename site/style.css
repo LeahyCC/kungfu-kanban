@@ -114,6 +114,25 @@ h1, h2, h3, h4 {
   border-radius: 2px;
 }
 
+/* skip link — visible only when focused */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  z-index: 60;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 10px 16px;
+  border-radius: 2px;
+}
+.skip-link:focus { top: 12px; }
+
+/* anchor targets clear the sticky masthead */
+.chapter,
+section[id] { scroll-margin-top: 84px; }
+
 ::selection { background: var(--accent-wash); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -378,6 +397,23 @@ button, .btn {
   background: var(--paper-0);
   border-bottom: 3px double var(--rule-strong);
 }
+
+/* reading progress — a vermillion ink stroke under the masthead rule */
+.scroll-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px; /* sits on the double rule */
+  height: 3px;
+  pointer-events: none;
+}
+.scroll-progress i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
 .masthead .mkt-inner {
   display: flex;
   align-items: center;
@@ -606,20 +642,27 @@ button, .btn {
 .manual-toc {
   position: sticky;
   top: 88px;
+  max-height: calc(100vh - 104px);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 1px;
   font-family: var(--font-mono), monospace;
   font-size: 12.5px;
 }
-@media (max-width: 900px) { .manual-toc { position: static; } }
+@media (max-width: 900px) { .manual-toc { position: static; max-height: none; } }
 .manual-toc a {
   color: var(--ink-600);
   padding: 5px 10px;
   border-left: 2px solid var(--rule);
-  transition: color 120ms var(--ease), border-color 120ms var(--ease);
+  transition: color 120ms var(--ease), border-color 120ms var(--ease), background 120ms var(--ease);
 }
 .manual-toc a:hover { color: var(--ink-900); border-left-color: var(--accent); }
+.manual-toc a.active {
+  color: var(--ink-900);
+  border-left-color: var(--accent);
+  background: var(--accent-wash);
+}
 .manual-toc a b { color: var(--ink-400); font-weight: 400; margin-right: 8px; }
 
 .chapter { padding: 36px 0; }
@@ -773,4 +816,7 @@ pre code { background: none; border: none; padding: 0; white-space: pre; font-si
 }
 @media (max-width: 640px) {
   .masthead nav a:not(.btn) { display: none; }
+  /* long inline commands must wrap, not push the page sideways */
+  p code, li code, td code { white-space: normal; overflow-wrap: anywhere; }
+  .doc-table { display: block; overflow-x: auto; }
 }

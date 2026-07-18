@@ -23,22 +23,24 @@
 
 <body>
   <div class="mkt">
+    <a class="skip-link" href="#main">Skip to content</a>
 
     <header class="masthead">
       <div class="mkt-inner">
-        <a href="#" class="wordmark">Kungfu Kanban <span class="antenna" aria-hidden="true"></span></a>
+        <a href="#main" class="wordmark">Kungfu Kanban <span class="antenna" aria-hidden="true"></span></a>
         <nav aria-label="Site">
           <a href="#forms">The four forms</a>
           <a href="#manual">The manual</a>
           <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer">GitHub</a>
-          <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"
-            title="Day / night dojo">☀</button>
+          <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to day dojo"
+            aria-pressed="false" title="Day / night dojo">☀</button>
           <a href="#manual" class="btn ink">Build the dojo</a>
         </nav>
       </div>
+      <div class="scroll-progress" aria-hidden="true"><i id="scroll-progress-bar"></i></div>
     </header>
 
-    <main>
+    <main id="main">
       <!-- HERO -->
       <section class="hero">
         <div class="mkt-inner hero-grid">
@@ -911,10 +913,14 @@ launchctl unload ~/Library/LaunchAgents/com.kungfu-kanban.plist <span class="c">
     // Night dojo (dark) is the default; light is the stored override.
     (function () {
       var btn = document.getElementById('theme-toggle');
+      var themeMeta = document.querySelector('meta[name="theme-color"]');
       function render() {
         var light = document.documentElement.dataset.theme === 'light';
         btn.textContent = light ? '☾' : '☀';
         btn.title = light ? 'Night dojo' : 'Day dojo';
+        btn.setAttribute('aria-label', light ? 'Switch to night dojo' : 'Switch to day dojo');
+        btn.setAttribute('aria-pressed', String(light));
+        if (themeMeta) themeMeta.content = light ? '#F6F2E9' : '#141210';
       }
       btn.addEventListener('click', function () {
         var next = !(document.documentElement.dataset.theme === 'light');
@@ -924,6 +930,62 @@ launchctl unload ~/Library/LaunchAgents/com.kungfu-kanban.plist <span class="c">
         render();
       });
       render();
+    })();
+
+    // Reading progress — the vermillion stroke under the masthead rule.
+    (function () {
+      var bar = document.getElementById('scroll-progress-bar');
+      if (!bar) return;
+      var ticking = false;
+      function update() {
+        ticking = false;
+        var doc = document.documentElement;
+        var max = doc.scrollHeight - window.innerHeight;
+        bar.style.transform = 'scaleX(' + (max > 0 ? Math.min(1, window.scrollY / max) : 0) + ')';
+      }
+      window.addEventListener('scroll', function () {
+        if (!ticking) { ticking = true; requestAnimationFrame(update); }
+      }, { passive: true });
+      window.addEventListener('resize', update);
+      update();
+    })();
+
+    // Manual scroll-spy — highlight the chapter you're reading in the TOC.
+    (function () {
+      var links = Array.prototype.slice.call(document.querySelectorAll('.manual-toc a[href^="#"]'));
+      var chapters = links
+        .map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); })
+        .filter(Boolean);
+      if (!chapters.length) return;
+      var byId = {};
+      links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+      function activate(id) {
+        links.forEach(function (a) {
+          var on = a === byId[id];
+          a.classList.toggle('active', on);
+          if (on) a.setAttribute('aria-current', 'true');
+          else a.removeAttribute('aria-current');
+        });
+      }
+      // The chapter crossing a reading line ~1/3 down the viewport wins.
+      var manual = document.getElementById('manual');
+      function spy() {
+        spyTicking = false;
+        var line = window.innerHeight / 3;
+        var r = manual.getBoundingClientRect();
+        if (r.top > line || r.bottom < 0) { activate(null); return; }
+        var current = chapters[0];
+        for (var i = 0; i < chapters.length; i++) {
+          if (chapters[i].getBoundingClientRect().top <= line) current = chapters[i];
+        }
+        activate(current.id);
+      }
+      var spyTicking = false;
+      window.addEventListener('scroll', function () {
+        if (!spyTicking) { spyTicking = true; requestAnimationFrame(spy); }
+      }, { passive: true });
+      window.addEventListener('resize', spy);
+      spy();
     })();
   </script>
 </body>

@@ -619,7 +619,9 @@ async function openDrawer(id) {
   const box = $('#transcript');
   box.innerHTML = '';
   for (const e of entries) box.appendChild(entryEl(e));
-  if (t.error) box.appendChild(entryEl({ kind: 'error', text: t.error }));
+  // A permission block already lives in the transcript as its own 'blocked'
+  // entry; only synthesize an error line for other (unpersisted) failures.
+  if (t.error && !t.permissionBlocked) box.appendChild(entryEl({ kind: 'error', text: t.error }));
   box.classList.toggle('hidden', !box.children.length && !RUNNING_LIKE[t.status]);
   $('#followForm').classList.toggle('hidden', RUNNING_LIKE[t.status] || !t.sessionId);
 
@@ -683,8 +685,10 @@ function renderDrawerMeta(t) {
   };
   mkSel('model', config.models, t.model, 'model');
   mkSel('effort', config.efforts, t.effort, 'effort');
+  // Live too: a card blocked on permission is fixed by raising this, then re-running.
+  mkSel('perms', config.permissionModes, t.permissionMode, 'permissionMode');
 
-  const bits = [`perms: ${t.permissionMode}`, `cwd: ${t.cwd}`];
+  const bits = [`cwd: ${t.cwd}`];
   if (t.ctxTokens) bits.push(`ctx: ${fmtTok(t.ctxTokens)} (${Math.round(t.ctxTokens / 2000)}% of 200k)`);
   if (t.modelUsed && t.model !== 'default' && !t.modelUsed.includes(t.model)) bits.unshift(`ran on: ${t.modelUsed}`);
   if (t.skills && t.skills.length) bits.push(`skills: ${t.skills.join(', ')}`);
