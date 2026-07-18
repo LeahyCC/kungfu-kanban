@@ -215,13 +215,12 @@ issue automatically — issue → card → agent → PR → merged → closed.
 Claude Code session (any project) to do this on request: say "create a kungfu todo
 for …" and it drafts the cards, drops the file in the inbox, and confirms the
 import. It encodes the format, frugal model-routing, and the self-contained-prompt
-rule (card agents start with zero conversation context). Install it once:
+rule (card agents start with zero conversation context).
 
-```bash
-cp -r skills/kungfu-todo ~/.claude/skills/
-# then replace every <board> in ~/.claude/skills/kungfu-todo/SKILL.md
-# with this clone's absolute path
-```
+**Installing it is one click**: ⚙ Settings shows whether the skill is installed
+and current, and Install/Update writes it to `~/.claude/skills/kungfu-todo/`
+with this clone's real paths baked in (the board generates it — see
+`lib/skill.js`; the copy in `skills/` is for browsing).
 
 Imported cards land in **Backlog** tagged `import`, and the Sensei gets one
 triage ping per batch (if the new-card trigger is on) — so you can paste a plan,
