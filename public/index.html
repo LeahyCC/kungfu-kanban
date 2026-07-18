@@ -214,6 +214,10 @@
           <input name="ntfyTopic" placeholder="my-secret-kanban-topic" />
         </label>
         <label class="check-row"><input type="checkbox" name="notifyMac" /> macOS notifications</label>
+        <label>Check PRs every <span class="hint-inline">(minutes, 0 = off — merged PRs ship their card; conflicted PRs can auto-fix)</span>
+          <input name="prWatchMin" type="number" min="0" max="120" class="tiny" />
+        </label>
+        <label class="check-row"><input type="checkbox" name="prWatchAutoFix" /> auto-fix PR merge conflicts (spawns a fix card, max 2 tries)</label>
         <div class="modal-actions">
           <button type="button" id="notifyTestBtn" class="ghost">🔔 Test notification</button>
           <button type="button" id="settingsCancelBtn" class="ghost">Cancel</button>

@@ -110,6 +110,7 @@ function cardEl(t) {
   if (t.priority >= 2) meta.push(`<span class="prio-high" title="P${t.priority}"></span>`);
   if (t.createdBy === 'manager') meta.push('<span class="badge wt">sensei</span>');
   if (t.createdBy === 'import') meta.push('<span class="badge">import</span>');
+  if (t.createdBy === 'auto') meta.push('<span class="badge skillauto">auto-fix</span>');
   meta.push(`<span class="badge model">${esc(t.model || 'default')}</span>`);
   if (t.effort && t.effort !== 'default') meta.push(`<span class="badge">${esc(t.effort)}</span>`);
   if (t.agent) meta.push(`<span class="badge">agent:${esc(t.agent)}</span>`);
@@ -279,6 +280,8 @@ function openSettings() {
   f.reposDir.value = config.settings.reposDir || '';
   f.ntfyTopic.value = config.settings.ntfyTopic || '';
   f.notifyMac.checked = config.settings.notifyMac !== false;
+  f.prWatchMin.value = Number.isInteger(config.settings.prWatchMin) ? config.settings.prWatchMin : 10;
+  f.prWatchAutoFix.checked = config.settings.prWatchAutoFix !== false;
   $('#settingsBackdrop').classList.remove('hidden');
 }
 $('#settingsBtn').addEventListener('click', openSettings);
@@ -308,6 +311,8 @@ $('#settingsForm').addEventListener('submit', async (e) => {
       reposDir: f.reposDir.value,
       ntfyTopic: f.ntfyTopic.value,
       notifyMac: f.notifyMac.checked,
+      prWatchMin: parseInt(f.prWatchMin.value, 10) || 0,
+      prWatchAutoFix: f.prWatchAutoFix.checked,
     },
   });
   config = await api('/api/config'); // re-scan repos for the picker

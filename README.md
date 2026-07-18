@@ -159,6 +159,24 @@ still in the worktree, nothing is lost.
 
 **One-time setup:** `gh auth login` (with push scope to the repos you'll use).
 
+### PR watch — merged PRs ship, conflicted PRs self-heal
+
+Every N minutes (⚙ Settings, default 10, 0 = off) the board checks each Review
+card's PR via `gh`:
+
+- **Merged** → the card moves to Done ("PR merged") and you get a notification.
+- **Closed without merge** → noted once on the card transcript.
+- **Conflicting** (main moved under the branch) → with auto-fix on (default), the
+  board spawns a **fix card**: a fresh agent run *inside the original worktree*
+  that merges the base branch, resolves the conflicts preserving both sides, and
+  pushes — updating the PR in place. Max 2 attempts per PR, one active fixer at a
+  time; after that you get a "needs you" notification and it stops. Fix cards
+  wear an `auto-fix` badge and flow through the normal columns, so the Sensei
+  reviews the resolution like any other run.
+
+Keep local `main` pushed: agent worktrees branch from the default branch, so an
+unpushed main is how you get avoidable conflicts in the first place.
+
 ---
 
 ## Notifications
