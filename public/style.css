@@ -85,6 +85,7 @@ body {
   font-size: 0.875rem;
   line-height: 1.55;
   min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
 }
 
@@ -117,6 +118,75 @@ h1, h2, h3 {
 ::selection { background: var(--accent-wash); }
 
 .hidden { display: none !important; }
+
+/* visually hidden, available to screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* skip link: offscreen until keyboard-focused */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 0 0 2px 0;
+}
+.skip-link:focus { left: 0; }
+
+/* toasts: non-blocking error/status messages */
+#toasts {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  z-index: 200;
+  pointer-events: none;
+}
+.toast {
+  background: var(--paper-1);
+  color: var(--ink-900);
+  border: 1px solid var(--rule-strong);
+  border-left: 3px solid var(--error);
+  box-shadow: 4px 4px 0 var(--shadow-hard);
+  border-radius: 2px;
+  padding: 8px 14px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  max-width: min(520px, 90vw);
+  word-break: break-word;
+}
+.toast.ok, .toast.status { border-left-color: var(--success); }
+
+/* styled confirm/alert — replaces native confirm()/alert() */
+dialog.kk-dialog {
+  margin: auto; /* the global reset zeroes margins — restore native centering */
+  background: var(--paper-1);
+  color: var(--ink-900);
+  border: 2px solid var(--rule-strong);
+  border-radius: 4px;
+  box-shadow: 6px 6px 0 var(--shadow-hard);
+  padding: 20px;
+  max-width: min(440px, 90vw);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+}
+dialog.kk-dialog::backdrop { background: rgba(26, 23, 20, 0.45); }
+dialog.kk-dialog p { margin-bottom: 6px; white-space: pre-wrap; word-break: break-word; line-height: 1.55; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -266,7 +336,7 @@ input.tiny { width: 60px; }
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 10.5px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--ink-600);
@@ -364,6 +434,7 @@ input.tiny { width: 60px; }
    ============================================================ */
 .app-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   font-size: 0.875rem;
@@ -414,7 +485,7 @@ input.tiny { width: 60px; }
   color: var(--ink-400);
 }
 .theme-toggle {
-  width: 30px; height: 30px;
+  width: 34px; height: 34px;
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -496,6 +567,7 @@ input.tiny { width: 60px; }
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 150px);
+  max-height: calc(100dvh - 150px); /* stable under mobile Safari's dynamic chrome */
 }
 .column[data-status='backlog'] { --belt: var(--belt-todo); }
 .column[data-status='queued'] { --belt: var(--belt-queued); }
@@ -557,25 +629,25 @@ input.tiny { width: 60px; }
   overflow: hidden;
 }
 
-/* the quick-run key: hidden until the card is touched by mouse or keyboard;
-   always visible on touch screens, where hover doesn't exist */
+/* the quick-run key: always discoverable (dimmed), full-strength when the
+   card is touched by mouse or keyboard; larger on touch screens */
 .card-run {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 11px;
   border: 1px solid var(--rule);
   background: var(--paper-1);
   color: var(--ink-600);
   border-radius: 2px;
-  opacity: 0;
+  opacity: 0.55;
   transition: opacity 120ms var(--ease), background 120ms var(--ease), transform 120ms var(--ease);
 }
-.card:hover .card-run, .card:focus-within .card-run { opacity: 1; }
+.card:hover .card-run, .card:focus-within .card-run, .card-run:focus-visible { opacity: 1; }
 .card-run:hover {
   background: var(--accent);
   border-color: var(--accent-ink);
@@ -599,7 +671,10 @@ input.tiny { width: 60px; }
   border-color: var(--error);
   color: var(--error);
 }
-@media (hover: none) { .card-run { opacity: 1; } }
+@media (hover: none) {
+  .card-run { opacity: 1; width: 36px; height: 36px; font-size: 13px; }
+  .theme-toggle { width: 38px; height: 38px; }
+}
 .card .title .antenna { margin-right: 6px; vertical-align: 1px; }
 .card .meta {
   display: flex;
@@ -611,7 +686,7 @@ input.tiny { width: 60px; }
 .card.running-card { padding-bottom: 12px; }
 .card .runword {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--accent-ink);
 }
 .card.done-card .title, .card.done-card .meta { opacity: 0.6; }
@@ -625,7 +700,7 @@ input.tiny { width: 60px; }
 }
 .card .failword {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--error);
 }
 .card.failed-card { border-left: 3px solid var(--error); }
@@ -636,13 +711,14 @@ input.tiny { width: 60px; }
   background: linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat;
 }
 
-/* priority: the vermillion square */
+/* priority: the vermillion square (P3+ gets the double-ring urgent mark) */
 .prio-high {
   display: inline-block;
   width: 8px; height: 8px;
   background: var(--accent);
   flex: none;
 }
+.prio-high.prio-urgent { outline: 1px solid var(--accent); outline-offset: 2px; }
 
 /* skill chips in the card editor */
 .skill-picker {
@@ -734,7 +810,7 @@ textarea.mono { font-family: var(--font-mono); font-size: 12.5px; line-height: 1
 .usage-grid { grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); }
 .u-stat span {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-400);
@@ -757,6 +833,27 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
   color: var(--success);
   margin-right: auto;
   align-self: center;
+}
+.import-result.err { color: var(--error); }
+
+/* inline safety copy for permission modes — too important for a tooltip */
+.perm-warn { color: var(--warning); }
+
+/* board text filter */
+.filter {
+  width: 160px;
+  padding: 5px 9px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* boot states: loading + unreachable-server */
+.boot-state .boot-msg { font-family: var(--font-mono); color: var(--ink-400); }
+.boot-state .boot-err {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--error);
+  word-break: break-word;
 }
 
 /* board empty state — the dojo is quiet */
@@ -1101,8 +1198,20 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 /* responsive */
 @media (max-width: 900px) {
   .board { grid-template-columns: repeat(5, minmax(220px, 1fr)); }
-  .app-status .status-chip { display: none; }
+  .app-status { gap: 6px; }
   .toolbar { flex-wrap: wrap; }
+  .filter { width: 130px; }
+}
+/* phones: the board stacks — every column reachable by vertical scroll, no
+   1100px sideways trek; status chips stay so the header keeps its counts */
+@media (max-width: 700px) {
+  .board { display: flex; flex-direction: column; overflow-x: visible; }
+  .toolbar-actions { flex-wrap: wrap; justify-content: flex-end; }
+  .board.is-empty { display: flex; }
+  .column { max-height: none; min-width: 0; }
+  .col-body { overflow-y: visible; }
+  .usage-chip, .model-chip { display: none; } /* supplementary; counts + cooldown stay */
+  .filter { flex: 1; min-width: 100px; }
 }
 @media (max-width: 560px) {
   .app-header { gap: 8px; padding: 0 12px; }

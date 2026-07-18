@@ -15,19 +15,130 @@ let editingId = null;
 let drawerId = null;
 
 const $ = (s) => document.querySelector(s);
+
+// ---------- toasts: non-blocking error/status surface ----------
+function toast(msg, kind = 'error', ms = 5000) {
+  let holder = $('#toasts');
+  if (!holder) {
+    holder = document.createElement('div');
+    holder.id = 'toasts';
+    document.body.appendChild(holder);
+  }
+  const t = document.createElement('div');
+  t.className = `toast ${kind}`;
+  t.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+  t.textContent = msg;
+  holder.appendChild(t);
+  setTimeout(() => t.remove(), ms);
+}
+
+// Every response is inspected; errors surface as a toast unless the call site
+// renders them itself ({quiet: true}). Never returns a rejected promise.
 const api = async (url, opts = {}) => {
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json' },
+      ...opts,
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+  } catch (e) {
+    const error = `network error — ${e.message || e}`;
+    if (!opts.quiet) toast(`✕ ${error}`);
+    return { error };
+  }
   if (res.status === 401) { location.href = '/login'; return {}; }
-  return res.json();
+  let data;
+  try { data = await res.json(); } catch { data = {}; }
+  if (!res.ok && !data.error) data.error = `request failed (${res.status})`;
+  if (data.error && !opts.quiet) toast(`✕ ${data.error}`);
+  return data;
 };
 
+// ---------- styled confirm/alert (replaces native dialogs) ----------
+function showDialog({ text, confirmLabel = 'OK', cancelLabel = 'Cancel', danger = false, alertOnly = false }) {
+  return new Promise((resolve) => {
+    const dlg = document.createElement('dialog');
+    dlg.className = 'kk-dialog';
+    // resolve from the handlers themselves — some engines skip the dialog
+    // 'close' event, which would leave this promise (and the UI) hanging
+    let settled = false;
+    const done = (val) => {
+      if (settled) return;
+      settled = true;
+      try { dlg.close(); } catch {}
+      dlg.remove();
+      resolve(val);
+    };
+    const p = document.createElement('p');
+    p.textContent = text;
+    const row = document.createElement('div');
+    row.className = 'modal-actions';
+    const ok = document.createElement('button');
+    ok.className = danger ? 'danger' : 'primary';
+    ok.textContent = confirmLabel;
+    ok.addEventListener('click', () => done(true));
+    if (!alertOnly) {
+      const no = document.createElement('button');
+      no.className = 'ghost';
+      no.textContent = cancelLabel;
+      no.addEventListener('click', () => done(false));
+      row.append(no);
+    }
+    row.append(ok);
+    dlg.append(p, row);
+    dlg.addEventListener('cancel', () => done(false)); // Escape
+    dlg.addEventListener('close', () => done(false));  // any other native close
+    document.body.appendChild(dlg);
+    dlg.showModal();
+    ok.focus();
+  });
+}
+const confirmDlg = (text, opts = {}) => showDialog({ text, ...opts });
+const alertDlg = (text) => showDialog({ text, alertOnly: true });
+
+// disable a control while its async action runs (double-submit guard)
+async function withBusy(el, fn) {
+  if (!el || el.disabled) return;
+  el.disabled = true;
+  try { return await fn(); } finally { el.disabled = false; }
+}
+
+// auto-scroll only when the reader is already pinned near the bottom
+const nearBottom = (box) => box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+
+function relTime(ts) {
+  if (!ts) return '';
+  const s = Math.round((Date.now() - new Date(ts).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 48) return `${h}h ago`;
+  return `${Math.round(h / 24)}d ago`;
+}
+
 // ---------- board ----------
+// Rebuilding mid-drag kills the drag; defer renders until it ends. Column
+// scroll positions are restored across rebuilds.
+let draggingNow = false;
+let renderQueued = false;
+let filterText = '';
+
+function matchesFilter(t) {
+  if (!filterText) return true;
+  const hay = [t.title, t.prompt, t.cwd, t.model, t.agent, ...(t.skills || [])]
+    .filter(Boolean).join(' ').toLowerCase();
+  return hay.includes(filterText);
+}
+
 function render() {
+  if (draggingNow) { renderQueued = true; return; }
   const board = $('#board');
+  const scrolls = {};
+  for (const c of board.querySelectorAll('.column')) {
+    scrolls[c.dataset.status] = c.querySelector('.col-body').scrollTop;
+  }
   board.innerHTML = '';
   board.classList.toggle('is-empty', !tasks.length);
 
@@ -64,6 +175,7 @@ function render() {
 
   for (const col of COLUMNS) {
     const colTasks = tasks
+      .filter(matchesFilter)
       .filter((t) => (col.key === 'running' ? RUNNING_LIKE[t.status] : t.status === col.key))
       .sort((a, b) => (b.priority || 0) - (a.priority || 0));
     const el = document.createElement('div');
@@ -77,14 +189,23 @@ function render() {
     for (const t of colTasks) body.appendChild(cardEl(t));
 
     if (col.key !== 'running') {
-      el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('drag-over'); });
-      el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+      // depth counter: dragleave fires when crossing into child cards, which
+      // used to strobe the outline
+      let dragDepth = 0;
+      el.addEventListener('dragenter', (e) => { e.preventDefault(); dragDepth++; el.classList.add('drag-over'); });
+      el.addEventListener('dragover', (e) => e.preventDefault());
+      el.addEventListener('dragleave', () => {
+        if (--dragDepth <= 0) { dragDepth = 0; el.classList.remove('drag-over'); }
+      });
       el.addEventListener('drop', async (e) => {
         e.preventDefault();
+        dragDepth = 0;
         el.classList.remove('drag-over');
         const id = e.dataTransfer.getData('text/plain');
         const t = tasks.find((x) => x.id === id);
-        if (!t || RUNNING_LIKE[t.status]) return;
+        if (!t || RUNNING_LIKE[t.status] || t.status === col.key) return;
+        if (col.key === 'done'
+          && !(await confirmDlg(`Mark "${t.title}" as Done? No run happens — the card just ships.`, { confirmLabel: '✓ Ship it' }))) return;
         if (col.key === 'queued') {
           await api(`/api/tasks/${id}/run`, { method: 'POST' });
         } else {
@@ -93,6 +214,8 @@ function render() {
       });
     }
     board.appendChild(el);
+    const body2 = el.querySelector('.col-body');
+    if (scrolls[col.key]) body2.scrollTop = scrolls[col.key];
   }
 }
 
@@ -123,11 +246,22 @@ function cardEl(t) {
     + (t.status === 'done' ? ' done-card' : '')
     + (t.error && t.status === 'review' ? ' failed-card' : '');
   el.draggable = !isRunning;
-  el.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', t.id));
+  el.tabIndex = 0;
+  el.setAttribute('role', 'button');
+  el.setAttribute('aria-label', `Open card: ${t.title}`);
+  if (t.createdAt) el.title = `created ${relTime(t.createdAt)}${t.updatedAt ? ` · updated ${relTime(t.updatedAt)}` : ''}`;
+  el.addEventListener('dragstart', (e) => { draggingNow = true; e.dataTransfer.setData('text/plain', t.id); });
+  el.addEventListener('dragend', () => {
+    draggingNow = false;
+    if (renderQueued) { renderQueued = false; render(); }
+  });
   el.addEventListener('click', () => openDrawer(t.id));
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(t.id); }
+  });
 
   const meta = [];
-  if (t.priority >= 2) meta.push(`<span class="prio-high" title="P${t.priority}"></span>`);
+  if (t.priority >= 2) meta.push(`<span class="prio-high${t.priority >= 3 ? ' prio-urgent' : ''}" title="P${t.priority}"><span class="sr-only">priority P${t.priority}</span></span>`);
   if (t.createdBy === 'manager') meta.push('<span class="badge wt">sensei</span>');
   if (t.createdBy === 'import') meta.push('<span class="badge">import</span>');
   if (t.createdBy === 'auto') meta.push('<span class="badge skillauto">auto-fix</span>');
@@ -146,7 +280,7 @@ function cardEl(t) {
   if (isRunning) {
     meta.push('<span class="runword">training…</span>');
     if (t.liveOut) meta.push(`<span class="badge">${fmtTok(t.liveOut)} out</span>`);
-    if (t.ctxTokens) meta.push(`<span class="badge" title="Session context used (of ~200k)">ctx ${Math.round(t.ctxTokens / 2000)}%</span>`);
+    if (t.ctxTokens) meta.push(`<span class="badge" title="Session context used (of the ~${fmtTok(CTX_WINDOW)} window)">ctx ${Math.round((t.ctxTokens / CTX_WINDOW) * 100)}%</span>`);
   } else if (t.stats && t.stats.turns) meta.push(`<span class="badge">${t.stats.turns} turns</span>`);
 
   const antenna = isRunning ? '<span class="antenna lit"></span>' : '';
@@ -167,19 +301,27 @@ function cardEl(t) {
   const pr = el.querySelector('.pr-link');
   if (pr) pr.addEventListener('click', (e) => e.stopPropagation());
   const qb = el.querySelector('.card-run');
-  if (qb) qb.addEventListener('click', async (e) => {
+  if (qb) qb.addEventListener('click', (e) => {
     e.stopPropagation();
-    const act = qb.dataset.act;
-    if (act === 'run') api(`/api/tasks/${t.id}/run`, { method: 'POST' });
-    else if (act === 'unqueue') api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: 'backlog' } });
-    else if (act === 'approve') api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: 'done' } });
-    else if (act === 'delete') {
-      if (!confirm('Delete this card?')) return;
-      await api(`/api/tasks/${t.id}`, { method: 'DELETE' });
-    }
+    withBusy(qb, async () => {
+      const act = qb.dataset.act;
+      if (act === 'run') await api(`/api/tasks/${t.id}/run`, { method: 'POST' });
+      else if (act === 'unqueue') await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: 'backlog' } });
+      else if (act === 'approve') {
+        if (!(await confirmDlg(`Approve "${t.title}" — stamp it Done?`, { confirmLabel: '✓ Approve' }))) return;
+        await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: 'done' } });
+      } else if (act === 'delete') {
+        if (!(await confirmDlg('Delete this card and its transcript?', { confirmLabel: 'Delete', danger: true }))) return;
+        await api(`/api/tasks/${t.id}`, { method: 'DELETE' });
+      }
+    });
   });
   return el;
 }
+
+// Context-window size the ctx % is measured against. All current Claude Code
+// models ship a 200k window; adjust here if that changes.
+const CTX_WINDOW = 200_000;
 
 function esc(s) {
   return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -202,7 +344,44 @@ function scheduleToInput(sc) {
 }
 
 // ---------- card modal ----------
+// A chip toggles by click, Enter, or Space, and reports its state to AT.
+function chipify(chip) {
+  chip.tabIndex = 0;
+  chip.setAttribute('role', 'button');
+  chip.setAttribute('aria-pressed', chip.classList.contains('on') ? 'true' : 'false');
+  const toggle = () => {
+    chip.classList.toggle('on');
+    chip.setAttribute('aria-pressed', chip.classList.contains('on') ? 'true' : 'false');
+  };
+  chip.addEventListener('click', toggle);
+  chip.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+}
+
+let modalSnapshot = '';
+let modalReturnFocus = null;
+
+function taskFormSnapshot() {
+  const f = $('#taskForm');
+  return JSON.stringify([
+    f.title.value, f.prompt.value, f.cwd.value, f.model.value, f.effort.value,
+    f.permissionMode.value, f.agent.value, f.worktree.checked, f.openPr.checked,
+    f.priority.value, f.acceptanceCriteria.value, f.schedule.value,
+    [...document.querySelectorAll('#skillPicker .skill-chip.on')].map((c) => c.dataset.name || 'auto'),
+  ]);
+}
+
+async function closeTaskModal(force = false) {
+  if (!force && taskFormSnapshot() !== modalSnapshot) {
+    if (!(await confirmDlg('Discard unsaved changes to this card?', { confirmLabel: 'Discard', danger: true }))) return;
+  }
+  $('#modalBackdrop').classList.add('hidden');
+  if (modalReturnFocus) { try { modalReturnFocus.focus(); } catch {} modalReturnFocus = null; }
+}
+
 function openModal(task) {
+  modalReturnFocus = document.activeElement;
   editingId = task ? task.id : null;
   $('#modalTitle').textContent = task ? 'Edit card' : 'New card';
   const f = $('#taskForm');
@@ -241,7 +420,7 @@ function openModal(task) {
   auto.textContent = '✦ auto-select';
   auto.title = 'Let the agent pick relevant skills itself';
   auto.dataset.auto = '1';
-  auto.addEventListener('click', () => auto.classList.toggle('on'));
+  chipify(auto);
   picker.appendChild(auto);
   const selected = new Set(task ? task.skills || [] : []);
   for (const s of config.skills) {
@@ -250,11 +429,12 @@ function openModal(task) {
     chip.textContent = s.name;
     chip.title = s.description || '';
     chip.dataset.name = s.name;
-    chip.addEventListener('click', () => chip.classList.toggle('on'));
+    chipify(chip);
     picker.appendChild(chip);
   }
   $('#modalBackdrop').classList.remove('hidden');
   f.title.focus();
+  modalSnapshot = taskFormSnapshot();
 }
 
 function fillSelect(sel, opts, value) {
@@ -268,9 +448,10 @@ function fillSelect(sel, opts, value) {
   sel.value = value || opts[0] || '';
 }
 
-$('#taskForm').addEventListener('submit', async (e) => {
+$('#taskForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const f = e.target;
+  withBusy(f.querySelector('button[type="submit"]'), async () => {
   const body = {
     title: f.title.value,
     prompt: f.prompt.value,
@@ -287,23 +468,44 @@ $('#taskForm').addEventListener('submit', async (e) => {
     skills: [...document.querySelectorAll('.skill-chip.on')].filter((c) => !c.dataset.auto).map((c) => c.dataset.name),
     skillsAuto: !!document.querySelector('.skill-chip.auto.on'),
   };
-  if (editingId) await api(`/api/tasks/${editingId}`, { method: 'PATCH', body });
-  else await api('/api/tasks', { method: 'POST', body });
-  $('#modalBackdrop').classList.add('hidden');
+  const r = editingId
+    ? await api(`/api/tasks/${editingId}`, { method: 'PATCH', body })
+    : await api('/api/tasks', { method: 'POST', body });
+  if (r.error) return; // api() already toasted — keep the modal open, nothing is lost
+  closeTaskModal(true);
   await loadTasks();
+  });
 });
 
 $('#newTaskBtn').addEventListener('click', () => openModal(null));
-$('#cancelBtn').addEventListener('click', () => $('#modalBackdrop').classList.add('hidden'));
+$('#cancelBtn').addEventListener('click', () => closeTaskModal());
 $('#modalBackdrop').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) $('#modalBackdrop').classList.add('hidden');
+  if (e.target === e.currentTarget) closeTaskModal();
 });
 
 // ---------- import modal ----------
 let draftSessionId = null;
+let importReturnFocus = null;
+
+// One channel for import feedback; errors get the error color, not success green.
+function importResult(text, isErr = false) {
+  const el = $('#importResult');
+  el.textContent = text;
+  el.classList.toggle('err', isErr);
+}
+
+async function closeImportModal(force = false) {
+  const hasDraft = $('#importText').value.trim();
+  if (!force && hasDraft
+    && !(await confirmDlg('Close and discard the draft in the import box?', { confirmLabel: 'Discard', danger: true }))) return;
+  if (importOp) importOp.ctrl.abort(); // closing the modal cancels in-flight work
+  $('#importBackdrop').classList.add('hidden');
+  if (importReturnFocus) { try { importReturnFocus.focus(); } catch {} importReturnFocus = null; }
+}
 
 $('#importBtn').addEventListener('click', () => {
-  $('#importResult').textContent = '';
+  importReturnFocus = document.activeElement;
+  importResult('');
   draftSessionId = null;
   $('#refineRow').classList.add('hidden');
   const dr = $('#draftRepo');
@@ -341,14 +543,9 @@ function updatePreview() {
   }, 400);
 }
 $('#importText').addEventListener('input', updatePreview);
-$('#importCancelBtn').addEventListener('click', () => {
-  if (importOp) importOp.ctrl.abort(); // closing the modal cancels in-flight work
-  $('#importBackdrop').classList.add('hidden');
-});
+$('#importCancelBtn').addEventListener('click', () => closeImportModal());
 $('#importBackdrop').addEventListener('click', (e) => {
-  if (e.target !== e.currentTarget) return;
-  if (importOp) importOp.ctrl.abort();
-  $('#importBackdrop').classList.add('hidden');
+  if (e.target === e.currentTarget) closeImportModal();
 });
 // One import-modal operation at a time. The active button becomes ✕ cancel;
 // cancelling aborts the request, which also kills the server-side claude
@@ -374,7 +571,7 @@ async function runImportOp(btn, busyMsg, url, body) {
   importOp = { ctrl, btn, orig: btn.textContent };
   for (const b of importOpBtns()) b.disabled = b !== btn;
   btn.textContent = '✕ cancel';
-  $('#importResult').textContent = busyMsg;
+  importResult(busyMsg);
   let r;
   try {
     const res = await fetch(url, {
@@ -399,7 +596,7 @@ $('#draftBtn').addEventListener('click', async (e) => {
   const explore = $('#exploreToggle').checked;
   const repoPath = $('#draftRepo').value || null;
   if (explore && !repoPath) {
-    $('#importResult').textContent = '✕ 🔍 explore needs a repo — pick one in the dropdown first';
+    importResult('✕ 🔍 explore needs a repo — pick one in the dropdown first', true);
     return;
   }
   const r = await runImportOp(
@@ -413,10 +610,10 @@ $('#draftBtn').addEventListener('click', async (e) => {
     $('#importText').value = r.markdown;
     draftSessionId = r.sessionId || draftSessionId;
     $('#refineRow').classList.toggle('hidden', !draftSessionId);
-    $('#importResult').textContent = '✓ draft ready — review, edit (or ↻ refine), then Import';
+    importResult('✓ draft ready — review, edit (or ↻ refine), then Import');
     updatePreview();
   } else {
-    $('#importResult').textContent = r.error === 'cancelled' ? '✕ cancelled' : `✕ ${r.error || 'draft failed'}`;
+    importResult(r.error === 'cancelled' ? '✕ cancelled' : `✕ ${r.error || 'draft failed'}`, true);
   }
 });
 
@@ -430,24 +627,24 @@ $('#refineBtn').addEventListener('click', async (e) => {
     $('#refinePrompt').value = '';
     $('#importText').value = r.markdown;
     draftSessionId = r.sessionId || draftSessionId;
-    $('#importResult').textContent = '✓ refined — review, then Import';
+    importResult('✓ refined — review, then Import');
     updatePreview();
   } else {
-    $('#importResult').textContent = r.error === 'cancelled' ? '✕ cancelled' : `✕ ${r.error || 'refine failed'}`;
+    importResult(r.error === 'cancelled' ? '✕ cancelled' : `✕ ${r.error || 'refine failed'}`, true);
   }
 });
 
 $('#issuesBtn').addEventListener('click', async (e) => {
   if (cancelIfBusy(e.target)) return;
   const repoPath = $('#draftRepo').value;
-  if (!repoPath) { $('#importResult').textContent = '✕ pick a repo first'; return; }
+  if (!repoPath) { importResult('✕ pick a repo first', true); return; }
   const r = await runImportOp(e.target, '⇣ fetching open issues — tap ✕ to cancel', '/api/import/issues', { repoPath });
   if (!r) return;
-  if (r.error) $('#importResult').textContent = r.error === 'cancelled' ? '✕ cancelled' : `✕ ${r.error}`;
-  else if (!r.count) $('#importResult').textContent = 'no open issues in that repo';
+  if (r.error) importResult(r.error === 'cancelled' ? '✕ cancelled' : `✕ ${r.error}`, true);
+  else if (!r.count) importResult('no open issues in that repo');
   else {
     $('#importText').value = r.markdown;
-    $('#importResult').textContent = `✓ ${r.count} issue${r.count === 1 ? '' : 's'} → review, then Import (PRs will say Fixes #N)`;
+    importResult(`✓ ${r.count} issue${r.count === 1 ? '' : 's'} → review, then Import (PRs will say Fixes #N)`);
     updatePreview();
   }
 });
@@ -456,9 +653,9 @@ $('#fmtExample').addEventListener('click', async (e) => {
   const pre = e.currentTarget;
   try {
     await navigator.clipboard.writeText(pre.textContent);
-    $('#importResult').textContent = '✓ template copied';
+    importResult('✓ template copied');
   } catch {
-    $('#importResult').textContent = '✕ copy blocked by browser';
+    importResult('✕ copy blocked by browser', true);
   }
   pre.classList.add('copied');
   setTimeout(() => pre.classList.remove('copied'), 1200);
@@ -471,27 +668,37 @@ $('#importFile').addEventListener('change', (e) => {
   reader.onload = () => { $('#importText').value = reader.result; updatePreview(); };
   reader.readAsText(file);
 });
-$('#importForm').addEventListener('submit', async (e) => {
+$('#importForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const md = $('#importText').value;
   if (!md.trim()) return;
-  const r = await api('/api/import', { method: 'POST', body: { markdown: md } });
-  const out = $('#importResult');
-  if (r.error) {
-    out.textContent = `✕ ${r.error}`;
-  } else if (!r.created) {
-    out.textContent = '✕ no cards found — need ## headings or - [ ] items';
-  } else {
-    out.textContent = `✓ ${r.created} card${r.created === 1 ? '' : 's'} created`;
-    $('#importText').value = '';
-    $('#importFile').value = '';
-    await loadTasks();
-    setTimeout(() => $('#importBackdrop').classList.add('hidden'), 900);
-  }
+  withBusy(e.target.querySelector('button[type="submit"]'), async () => {
+    const r = await api('/api/import', { method: 'POST', body: { markdown: md }, quiet: true });
+    if (r.error) {
+      importResult(`✕ ${r.error}`, true);
+    } else if (!r.created) {
+      importResult('✕ no cards found — need ## headings or - [ ] items', true);
+    } else {
+      importResult(`✓ ${r.created} card${r.created === 1 ? '' : 's'} created`);
+      $('#importText').value = '';
+      $('#importFile').value = '';
+      await loadTasks();
+      setTimeout(() => closeImportModal(true), 900);
+    }
+  });
 });
 
 // ---------- settings modal ----------
+let settingsReturnFocus = null;
+
+function closeSettings() {
+  $('#settingsBackdrop').classList.add('hidden');
+  if (settingsReturnFocus) { try { settingsReturnFocus.focus(); } catch {} settingsReturnFocus = null; }
+}
+
 function openSettings() {
+  settingsReturnFocus = document.activeElement;
+  $('#logoutBtn').classList.toggle('hidden', !config.authGate);
   const f = $('#settingsForm');
   f.defaultCwd.value = config.settings.defaultCwd || '';
   f.reposDir.value = config.settings.reposDir || '';
@@ -532,9 +739,14 @@ $('#skillInstallBtn').addEventListener('click', async () => {
 });
 
 $('#settingsBtn').addEventListener('click', openSettings);
-$('#settingsCancelBtn').addEventListener('click', () => $('#settingsBackdrop').classList.add('hidden'));
+$('#settingsCancelBtn').addEventListener('click', closeSettings);
 $('#settingsBackdrop').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) $('#settingsBackdrop').classList.add('hidden');
+  if (e.target === e.currentTarget) closeSettings();
+});
+$('#logoutBtn').addEventListener('click', async () => {
+  if (!(await confirmDlg('Sign out on this device? You will need the access token to get back in.', { confirmLabel: 'Sign out' }))) return;
+  try { await fetch('/logout', { method: 'POST' }); } catch {}
+  location.href = '/login';
 });
 $('#notifyTestBtn').addEventListener('click', async (e) => {
   // Save the current topic first so the test uses what's in the field.
@@ -565,7 +777,7 @@ $('#settingsForm').addEventListener('submit', async (e) => {
     },
   });
   config = await api('/api/config'); // re-scan repos for the picker
-  $('#settingsBackdrop').classList.add('hidden');
+  closeSettings();
 });
 
 // ---------- subscription cooldown + model fallback chips ----------
@@ -611,6 +823,9 @@ function paintThemeToggle() {
   const btn = $('#themeToggle');
   btn.textContent = light ? '☾' : '☀';
   btn.title = light ? 'Enter the night dojo' : 'Enter the day dojo';
+  btn.setAttribute('aria-pressed', light ? 'true' : 'false');
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = light ? '#F6F2E9' : '#141210';
 }
 $('#themeToggle').addEventListener('click', () => {
   const next = !(document.documentElement.dataset.theme === 'light');
@@ -622,7 +837,20 @@ $('#themeToggle').addEventListener('click', () => {
 paintThemeToggle();
 
 // ---------- drawer ----------
+let drawerReturnFocus = null;
+
+async function closeDrawer(force = false) {
+  const t = tasks.find((x) => x.id === drawerId);
+  if (!force && t && !$('#promptSaveBtn').classList.contains('hidden')
+    && $('#promptEdit').value !== t.prompt
+    && !(await confirmDlg('Discard the unsaved prompt edit?', { confirmLabel: 'Discard', danger: true }))) return;
+  $('#drawer').classList.add('hidden');
+  drawerId = null;
+  if (drawerReturnFocus) { try { drawerReturnFocus.focus(); } catch {} drawerReturnFocus = null; }
+}
+
 async function openDrawer(id) {
+  drawerReturnFocus = document.activeElement;
   drawerId = id;
   const t = tasks.find((x) => x.id === id);
   if (!t) return;
@@ -651,6 +879,7 @@ async function openDrawer(id) {
   $('#promptSaveBtn').classList.add('hidden');
 
   $('#drawer').classList.remove('hidden');
+  $('#drawerClose').focus();
   box.scrollTop = box.scrollHeight;
 }
 
@@ -667,14 +896,18 @@ $('#promptSaveBtn').addEventListener('click', async () => {
 $('#followForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const input = e.target.message;
+  const btn = e.target.querySelector('button[type="submit"]');
   const msg = input.value.trim();
-  if (!msg || !drawerId) return;
+  if (!msg || !drawerId || (btn && btn.disabled)) return;
   input.value = '';
-  const r = await api(`/api/tasks/${drawerId}/followup`, { method: 'POST', body: { message: msg } });
+  if (btn) btn.disabled = true;
+  const r = await api(`/api/tasks/${drawerId}/followup`, { method: 'POST', body: { message: msg }, quiet: true });
+  if (btn) btn.disabled = false;
   if (r.error) {
     const box = $('#transcript');
+    const pinned = nearBottom(box);
     box.appendChild(entryEl({ kind: 'error', text: r.error }));
-    box.scrollTop = box.scrollHeight;
+    if (pinned) box.scrollTop = box.scrollHeight;
   }
 });
 
@@ -708,7 +941,9 @@ function renderDrawerMeta(t) {
   mkSel('perms', config.permissionModes, t.permissionMode, 'permissionMode');
 
   const bits = [`cwd: ${t.cwd}`];
-  if (t.ctxTokens) bits.push(`ctx: ${fmtTok(t.ctxTokens)} (${Math.round(t.ctxTokens / 2000)}% of 200k)`);
+  if (t.createdAt) bits.push(`created ${relTime(t.createdAt)}`);
+  if (t.updatedAt && t.updatedAt !== t.createdAt) bits.push(`updated ${relTime(t.updatedAt)}`);
+  if (t.ctxTokens) bits.push(`ctx: ${fmtTok(t.ctxTokens)} (${Math.round((t.ctxTokens / CTX_WINDOW) * 100)}% of ${fmtTok(CTX_WINDOW)})`);
   if (t.modelUsed && t.model !== 'default' && !t.modelUsed.includes(t.model)) bits.unshift(`ran on: ${t.modelUsed}`);
   if (t.skills && t.skills.length) bits.push(`skills: ${t.skills.join(', ')}`);
   if (t.stats) {
@@ -720,6 +955,7 @@ function renderDrawerMeta(t) {
     const span = document.createElement('span');
     span.className = 'badge';
     span.textContent = b;
+    span.title = b; // long values (cwd paths) ellipsize — the tooltip has it all
     box.appendChild(span);
   }
   if (t.sessionId) {
@@ -729,6 +965,7 @@ function renderDrawerMeta(t) {
     b.className = 'badge copyable';
     b.title = `Click to copy (sessions are per-directory, so this cd's into the run dir first):\n${cmd}`;
     b.textContent = `resume: claude -r ${t.sessionId}`;
+    const idle = `resume: claude -r ${t.sessionId}`;
     b.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(cmd);
@@ -736,7 +973,7 @@ function renderDrawerMeta(t) {
       } catch {
         b.textContent = '✕ copy blocked';
       }
-      setTimeout(() => { b.textContent = `resume: ${cmd}`; }, 1200);
+      setTimeout(() => { b.textContent = idle; }, 1200);
     });
     box.appendChild(b);
   }
@@ -759,39 +996,70 @@ function renderDrawerActions(t) {
     b.textContent = label;
     if (cls) b.className = cls;
     if (title) b.title = title;
-    b.addEventListener('click', fn);
+    b.addEventListener('click', () => withBusy(b, fn));
     box.appendChild(b);
   };
   if (RUNNING_LIKE[t.status]) {
     mk('⏹ Stop', 'danger', 'Stop the agent (SIGTERM; the partial transcript is kept)', () => api(`/api/tasks/${t.id}/stop`, { method: 'POST' }));
   } else {
-    mk('▶ Run', 'primary', 'Launch now — re-running clears the previous transcript and result', () => {
-      if (t.resultText && !confirm('Re-running clears the previous transcript and result. Continue?')) return;
-      api(`/api/tasks/${t.id}/run`, { method: 'POST' });
+    mk('▶ Run', 'primary', 'Launch now — re-running clears the previous transcript and result', async () => {
+      if (t.resultText && !(await confirmDlg('Re-running clears the previous transcript and result. Continue?', { confirmLabel: '▶ Run' }))) return;
+      await api(`/api/tasks/${t.id}/run`, { method: 'POST' });
     });
-    mk('Edit', 'ghost', 'Edit the card (prompt, model, schedule, …)', () => { $('#drawer').classList.add('hidden'); openModal(t); });
+    mk('Edit', 'ghost', 'Edit the card (prompt, model, schedule, …)', () => { closeDrawer(true); openModal(t); });
     if (t.status === 'review') mk('✓ Done', '', 'Stamp it shipped — moves the card to Done', async () => {
+      if (!(await confirmDlg(`Approve "${t.title}" — stamp it Done?`, { confirmLabel: '✓ Approve' }))) return;
       await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: 'done' } });
-      $('#drawer').classList.add('hidden');
+      closeDrawer(true);
     });
     if (t.prUrl && t.status !== 'done') {
       mk('⇉ Merge PR', '', 'Merge the pull request on GitHub (merge commit) and stamp the card Done', async () => {
-        if (!confirm(`Merge this PR?\n${t.prUrl}`)) return;
-        const r = await api(`/api/tasks/${t.id}/pr`, { method: 'POST', body: { action: 'merge' } });
-        if (r.error) alert(`Merge failed: ${r.error}`);
+        if (!(await confirmDlg(`Merge this PR?\n${t.prUrl}`, { confirmLabel: '⇉ Merge' }))) return;
+        const r = await api(`/api/tasks/${t.id}/pr`, { method: 'POST', body: { action: 'merge' }, quiet: true });
+        if (r.error) await alertDlg(`Merge failed: ${r.error}\n\nThe PR is untouched — resolve it on GitHub or retry.`);
       });
       mk('Close PR', 'ghost', 'Close the pull request on GitHub without merging (the branch and work remain)', async () => {
-        if (!confirm(`Close this PR without merging?\n${t.prUrl}`)) return;
-        const r = await api(`/api/tasks/${t.id}/pr`, { method: 'POST', body: { action: 'close' } });
-        if (r.error) alert(`Close failed: ${r.error}`);
+        if (!(await confirmDlg(`Close this PR without merging?\n${t.prUrl}`, { confirmLabel: 'Close PR', danger: true }))) return;
+        const r = await api(`/api/tasks/${t.id}/pr`, { method: 'POST', body: { action: 'close' }, quiet: true });
+        if (r.error) await alertDlg(`Close failed: ${r.error}`);
       });
     }
     mk('Delete', 'danger', 'Delete the card and its transcript (does not touch git or PRs)', async () => {
-      if (!confirm('Delete this card?')) return;
+      if (!(await confirmDlg('Delete this card and its transcript?', { confirmLabel: 'Delete', danger: true }))) return;
       await api(`/api/tasks/${t.id}`, { method: 'DELETE' });
-      $('#drawer').classList.add('hidden');
+      closeDrawer(true);
       await loadTasks();
     });
+
+    // move-to-column: the touch-friendly (and keyboard-friendly) alternative
+    // to drag & drop — phones can't drag HTML5 cards at all
+    const wrap = document.createElement('label');
+    wrap.className = 'drawer-pick';
+    wrap.append('column ');
+    const sel = document.createElement('select');
+    sel.title = 'Move the card to another column (Queued launches it when a slot frees up)';
+    for (const c of COLUMNS) {
+      if (c.key === 'running') continue;
+      const op = document.createElement('option');
+      op.value = c.key;
+      op.textContent = c.label;
+      sel.appendChild(op);
+    }
+    sel.value = t.status;
+    sel.addEventListener('change', async () => {
+      const to = sel.value;
+      if (to === t.status) return;
+      if (to === 'done' && !(await confirmDlg(`Mark "${t.title}" as Done? No run happens — the card just ships.`, { confirmLabel: '✓ Ship it' }))) {
+        sel.value = t.status;
+        return;
+      }
+      const r = to === 'queued'
+        ? await api(`/api/tasks/${t.id}/run`, { method: 'POST' })
+        : await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: to } });
+      if (r.error) sel.value = t.status;
+    });
+    wrap.appendChild(sel);
+    box.appendChild(wrap);
   }
 }
 
@@ -877,7 +1145,32 @@ function mdToHtml(raw) {
   return out.join('\n');
 }
 
-$('#drawerClose').addEventListener('click', () => { $('#drawer').classList.add('hidden'); drawerId = null; });
+$('#drawerClose').addEventListener('click', () => closeDrawer());
+
+// ---------- Escape + focus trap for modals, the drawer, and dialogs ----------
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (document.querySelector('dialog.kk-dialog[open]')) return; // <dialog> closes itself
+    if (!$('#modalBackdrop').classList.contains('hidden')) { e.preventDefault(); closeTaskModal(); }
+    else if (!$('#importBackdrop').classList.contains('hidden')) { e.preventDefault(); closeImportModal(); }
+    else if (!$('#settingsBackdrop').classList.contains('hidden')) { e.preventDefault(); closeSettings(); }
+    else if (!$('#drawer').classList.contains('hidden')) { e.preventDefault(); closeDrawer(); }
+    return;
+  }
+  if (e.key !== 'Tab') return;
+  const overlay = document.querySelector('.backdrop:not(.hidden) .modal') || (!$('#drawer').classList.contains('hidden') ? $('#drawer') : null);
+  if (!overlay) return;
+  const foci = [...overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+    .filter((el) => !el.disabled && el.offsetParent !== null);
+  if (!foci.length) return;
+  const first = foci[0];
+  const last = foci[foci.length - 1];
+  if (e.shiftKey && (document.activeElement === first || !overlay.contains(document.activeElement))) {
+    e.preventDefault(); last.focus();
+  } else if (!e.shiftKey && (document.activeElement === last || !overlay.contains(document.activeElement))) {
+    e.preventDefault(); first.focus();
+  }
+});
 
 // ---------- manager tab ----------
 let mgrState = null;
@@ -886,38 +1179,68 @@ function showTab(which) {
   $('#board').classList.toggle('hidden', which !== 'board');
   $('#boardToolbar').classList.toggle('hidden', which !== 'board');
   $('#managerView').classList.toggle('hidden', which !== 'manager');
-  $('#tabBoard').classList.toggle('active', which === 'board');
-  $('#tabManager').classList.toggle('active', which === 'manager');
+  for (const [id, key] of [['#tabBoard', 'board'], ['#tabManager', 'manager']]) {
+    const tab = $(id);
+    tab.classList.toggle('active', which === key);
+    tab.setAttribute('aria-selected', which === key ? 'true' : 'false');
+    tab.tabIndex = which === key ? 0 : -1;
+  }
   if (which === 'manager') loadManager();
 }
 $('#tabBoard').addEventListener('click', () => showTab('board'));
 $('#tabManager').addEventListener('click', () => showTab('manager'));
+// roving arrow-key navigation between the two tabs
+document.querySelector('.app-tabs').addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const other = document.activeElement === $('#tabBoard') ? $('#tabManager') : $('#tabBoard');
+  e.preventDefault();
+  other.focus();
+  other.click();
+});
 
 async function loadManager() {
   mgrState = await api('/api/manager');
   renderManager();
 }
 
+// SSE refreshes rewrite the settings form from server state — but never while
+// the user has unsaved edits mid-form (that silently threw their input away).
+let mgrFormDirty = false;
+$('#mgrForm').addEventListener('input', () => { mgrFormDirty = true; });
+
+function setMgrBusy(busy) {
+  $('#mgrBusy').classList.toggle('hidden', !busy);
+  const form = $('#mgrChatForm');
+  form.message.disabled = !!busy;
+  form.querySelector('button[type="submit"]').disabled = !!busy;
+  form.message.placeholder = busy
+    ? 'the Sensei is thinking — one run at a time…'
+    : "e.g. plan the auth refactor into cards, or: what's blocking?";
+}
+
 function renderManager() {
   if (!mgrState) return;
   const c = mgrState.config;
   const f = $('#mgrForm');
-  f.enabled.checked = !!c.enabled;
-  fillSelect(f.model, config.models, c.model);
-  fillSelect(f.effort, config.efforts, c.effort);
-  f.autonomy.value = c.autonomy;
-  f.stylePrompt.value = c.stylePrompt || '';
-  f.onFinish.checked = !!c.triggers.onFinish;
-  f.onNewCard.checked = !!c.triggers.onNewCard;
-  f.intervalMin.value = c.triggers.intervalMin || 0;
-  f.maxLaunchesPerHour.value = c.maxLaunchesPerHour;
-  f.maxRetries.value = c.maxRetries;
-  fillSelect(f.permissionCeiling, config.permissionModes, c.permissionCeiling);
+  if (!mgrFormDirty) {
+    f.enabled.checked = !!c.enabled;
+    fillSelect(f.model, config.models, c.model);
+    fillSelect(f.effort, config.efforts, c.effort);
+    f.autonomy.value = c.autonomy;
+    f.stylePrompt.value = c.stylePrompt || '';
+    f.onFinish.checked = !!c.triggers.onFinish;
+    f.onNewCard.checked = !!c.triggers.onNewCard;
+    f.intervalMin.value = c.triggers.intervalMin || 0;
+    f.maxLaunchesPerHour.value = c.maxLaunchesPerHour;
+    f.maxRetries.value = c.maxRetries;
+    fillSelect(f.permissionCeiling, config.permissionModes, c.permissionCeiling);
+  }
 
-  $('#mgrBusy').classList.toggle('hidden', !mgrState.busy);
+  setMgrBusy(mgrState.busy);
 
   // chat
   const chat = $('#mgrChat');
+  const pinned = !chat.children.length || nearBottom(chat);
   chat.innerHTML = '';
   for (const m of mgrState.chat) {
     const div = document.createElement('div');
@@ -925,7 +1248,7 @@ function renderManager() {
     div.textContent = m.text;
     chat.appendChild(div);
   }
-  chat.scrollTop = chat.scrollHeight;
+  if (pinned) chat.scrollTop = chat.scrollHeight;
 
   // suggestions
   const sug = $('#mgrSuggestions');
@@ -945,17 +1268,16 @@ function renderManager() {
     const ok = document.createElement('button');
     ok.className = 'primary';
     ok.textContent = '✓ Approve';
-    ok.addEventListener('click', async () => {
-      await api(`/api/manager/suggestions/${s.id}`, { method: 'POST', body: { approve: true } });
-      await Promise.all([loadManager(), loadTasks()]);
-    });
     const no = document.createElement('button');
     no.className = 'danger';
     no.textContent = '✗ Reject';
-    no.addEventListener('click', async () => {
-      await api(`/api/manager/suggestions/${s.id}`, { method: 'POST', body: { approve: false } });
-      await loadManager();
-    });
+    const decide = async (approve) => {
+      ok.disabled = no.disabled = true;
+      await api(`/api/manager/suggestions/${s.id}`, { method: 'POST', body: { approve } });
+      await Promise.all([loadManager(), approve ? loadTasks() : Promise.resolve()]);
+    };
+    ok.addEventListener('click', () => decide(true));
+    no.addEventListener('click', () => decide(false));
     actions.append(ok, no);
     div.append(head, why, actions);
     sug.appendChild(div);
@@ -970,9 +1292,16 @@ function renderManager() {
   for (const e of mgrState.log) {
     const div = document.createElement('div');
     div.className = `log-entry ${e.kind}`;
-    div.textContent = `${new Date(e.ts).toLocaleTimeString()} · ${e.kind} · ${e.text}`;
+    div.textContent = `${fmtLogTs(e.ts)} · ${e.kind} · ${e.text}`;
     logBox.appendChild(div);
   }
+}
+
+// log timestamps: time-of-day today, date + time otherwise (no ambiguity after midnight)
+function fmtLogTs(ts) {
+  const d = new Date(ts);
+  if (d.toDateString() === new Date().toDateString()) return d.toLocaleTimeString();
+  return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function describeAction(a) {
@@ -1011,32 +1340,55 @@ $('#mgrForm').addEventListener('submit', async (e) => {
       permissionCeiling: f.permissionCeiling.value,
     },
   });
+  mgrFormDirty = false;
   await loadManager();
 });
 
-$('#clearChatBtn').addEventListener('click', async () => {
-  if (!confirm('Clear the Sensei chat history?')) return;
-  await api('/api/manager/clear', { method: 'POST', body: { chat: true } });
-  await loadManager();
+$('#clearChatBtn').addEventListener('click', async (e) => {
+  if (!(await confirmDlg('Clear the Sensei chat history?', { confirmLabel: 'Clear', danger: true }))) return;
+  await withBusy(e.target, async () => {
+    await api('/api/manager/clear', { method: 'POST', body: { chat: true } });
+    await loadManager();
+  });
 });
-$('#clearLogBtn').addEventListener('click', async () => {
-  if (!confirm('Clear the activity log?')) return;
-  await api('/api/manager/clear', { method: 'POST', body: { log: true } });
-  await loadManager();
+$('#clearLogBtn').addEventListener('click', async (e) => {
+  if (!(await confirmDlg('Clear the activity log?', { confirmLabel: 'Clear', danger: true }))) return;
+  await withBusy(e.target, async () => {
+    await api('/api/manager/clear', { method: 'POST', body: { log: true } });
+    await loadManager();
+  });
 });
 
-$('#mgrChatForm').addEventListener('submit', async (e) => {
+$('#mgrChatForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const input = e.target.message;
   const msg = input.value.trim();
-  if (!msg) return;
+  if (!msg || input.disabled || (mgrState && mgrState.busy)) return;
   input.value = '';
-  await api('/api/manager/chat', { method: 'POST', body: { message: msg } });
-  await loadManager();
+  setMgrBusy(true); // one Sensei run at a time — each is a paid subscription call
+  (async () => {
+    await api('/api/manager/chat', { method: 'POST', body: { message: msg } });
+    await loadManager(); // renderManager restores the real busy state
+  })();
 });
 
 // ---------- live updates ----------
 const es = new EventSource('/api/events');
+// EventSource reconnects on its own; surface the gap so a stale board is
+// visibly stale, and refetch on recovery to close it.
+let sseWasDown = false;
+es.addEventListener('error', () => {
+  sseWasDown = true;
+  $('#sseChip').classList.remove('hidden');
+});
+es.addEventListener('open', () => {
+  $('#sseChip').classList.add('hidden');
+  if (sseWasDown) {
+    sseWasDown = false;
+    loadTasks();
+    if (!$('#managerView').classList.contains('hidden')) loadManager();
+  }
+});
 es.onmessage = (msg) => {
   const evt = JSON.parse(msg.data);
   if (evt.type === 'cooldown') {
@@ -1050,7 +1402,7 @@ es.onmessage = (msg) => {
   if (evt.type === 'manager') {
     if (evt.event === 'busy' && mgrState) {
       mgrState.busy = evt.busy;
-      $('#mgrBusy').classList.toggle('hidden', !evt.busy);
+      setMgrBusy(evt.busy);
       if (!evt.busy) loadManager();
     } else if (!$('#managerView').classList.contains('hidden')) {
       loadManager();
@@ -1074,10 +1426,17 @@ es.onmessage = (msg) => {
     render();
   } else if (evt.type === 'output' && drawerId === evt.taskId) {
     const box = $('#transcript');
+    const pinned = nearBottom(box); // don't yank the reader back down mid-scrollback
     box.appendChild(entryEl(evt.entry));
-    box.scrollTop = box.scrollHeight;
+    if (pinned) box.scrollTop = box.scrollHeight;
   }
 };
+
+// ---------- board filter ----------
+$('#filterInput').addEventListener('input', (e) => {
+  filterText = e.target.value.trim().toLowerCase();
+  render();
+});
 
 // ---------- settings ----------
 $('#maxConcurrent').addEventListener('change', async (e) => {
@@ -1086,8 +1445,11 @@ $('#maxConcurrent').addEventListener('change', async (e) => {
 
 // ---------- init ----------
 async function loadTasks() {
-  tasks = await api('/api/tasks');
+  const r = await api('/api/tasks');
+  if (!Array.isArray(r)) return false; // error already toasted; keep the last good board
+  tasks = r;
   render();
+  return true;
 }
 // ---------- 5-hour usage chip ----------
 function fmtTok(n) {
@@ -1179,27 +1541,29 @@ async function renderHealth() {
   const upBtn = h.claude.ok
     ? ' <button id="updateClaudeBtn" class="ghost mini" title="Update the Claude Code CLI in place (runs claude update)">↑ update</button>'
     : '';
+  // "2.1.212 (Claude Code)" → "claude 2.1.212" — the parenthetical is noise here
+  const claudeVer = `claude ${esc((h.claude.out || '').replace(/\s*\(.*\)$/, '') || '?')}`;
   const boardVer = v && v.version
-    ? `kungfu v${esc(v.version)}${v.behind > 0
+    ? `kungfu v${esc(v.version)}${v.updateAvailable
       ? ` <button id="updateBoardBtn" class="ghost mini warn" title="Your clone is ${v.behind} commit${v.behind > 1 ? 's' : ''} behind origin — pulls fast-forward and restarts the board">⬆ ${v.remoteVersion ? `v${esc(v.remoteVersion)}` : 'update'} available</button>`
       : ''} · `
     : '';
   if (h.claude.ok && h.gh.ok) {
-    el.innerHTML = `${boardVer}on your subscription · ${dot(true)} ${esc(h.claude.out || 'claude')}${upBtn} · ${dot(true)} gh`;
+    el.innerHTML = `${boardVer}${dot(true)} ${claudeVer}${upBtn} · ${dot(true)} gh`;
   } else {
     el.innerHTML = boardVer + [
-      h.claude.ok ? `${dot(true)} ${esc(h.claude.out)}${upBtn}` : `${dot(false)} claude CLI not working — cards can't run`,
+      h.claude.ok ? `${dot(true)} ${claudeVer}${upBtn}` : `${dot(false)} claude CLI not working — cards can't run`,
       h.gh.ok ? `${dot(true)} gh` : `${dot(false)} gh not authed — PR features off`,
     ].join(' · ');
   }
   const bb = $('#updateBoardBtn');
   if (bb) bb.addEventListener('click', async () => {
-    if (!confirm('Update the board to the latest code? It pulls from origin and restarts itself (blocked while cards are running). Under plain `npm start` the server stops instead — restart it after.')) return;
+    if (!(await confirmDlg('Update the board to the latest code? It pulls from origin and restarts itself (blocked while cards are running). Under plain `npm start` the server stops instead — restart it after.', { confirmLabel: '⬆ Update' }))) return;
     bb.disabled = true;
     bb.textContent = '⬆ updating…';
-    const r = await api('/api/system/update-board', { method: 'POST' });
+    const r = await api('/api/system/update-board', { method: 'POST', quiet: true });
     if (r.error) {
-      alert(`Update failed: ${r.error}`);
+      await alertDlg(`Update failed: ${r.error}`);
       renderHealth();
       return;
     }
@@ -1217,21 +1581,52 @@ async function renderHealth() {
   });
   const ub = $('#updateClaudeBtn');
   if (ub) ub.addEventListener('click', async () => {
-    if (!confirm('Update the Claude Code CLI now? Running agents finish on the old version; new runs use the new one.')) return;
+    if (!(await confirmDlg('Update the Claude Code CLI now? Running agents finish on the old version; new runs use the new one.', { confirmLabel: '↑ Update' }))) return;
     ub.disabled = true;
     ub.textContent = '↑ updating…';
-    const r = await api('/api/system/update-claude', { method: 'POST' });
-    alert(r.ok ? (r.output || 'Updated.') : `Update failed: ${r.error || 'unknown error'}`);
+    const r = await api('/api/system/update-claude', { method: 'POST', quiet: true });
+    await alertDlg(r.ok ? (r.output || 'Updated.') : `Update failed: ${r.error || 'unknown error'}`);
     renderHealth();
   });
 }
+// the tooltip promises "checked every few minutes" — keep that promise
+setInterval(renderHealth, 5 * 60_000);
+
+// ---------- boot: visible loading + a real error state ----------
+function bootError(msg) {
+  $('#board').innerHTML = `
+    <div class="dojo-empty boot-state">
+      <h3>Can't reach the dojo</h3>
+      <p class="boot-err"></p>
+      <div class="empty-actions"><button class="primary" onclick="location.reload()">↻ Retry</button></div>
+    </div>`;
+  $('#board').classList.add('is-empty');
+  $('#board').querySelector('.boot-err').textContent = msg;
+}
 
 (async () => {
-  config = await api('/api/config');
+  $('#board').innerHTML = '<div class="dojo-empty boot-state"><p class="boot-msg">contacting the dojo…</p></div>';
+  $('#board').classList.add('is-empty');
+  let cfg;
+  try {
+    cfg = await api('/api/config', { quiet: true });
+  } catch (e) {
+    cfg = { error: String(e.message || e) };
+  }
+  if (!cfg || cfg.error || !cfg.settings) {
+    bootError(cfg && cfg.error ? cfg.error : 'the server did not answer — is it running?');
+    return;
+  }
+  config = cfg;
+  $('#board').classList.remove('is-empty');
   $('#maxConcurrent').value = config.settings.maxConcurrent || 2;
   applyCooldown(config.cooldownUntil || 0);
   applyModelBlocks(config.modelBlocks || {});
-  await loadTasks();
+  if (!(await loadTasks())) { bootError('loaded config, but the task list failed — retry?'); return; }
   renderHealth();
   renderUsage();
 })();
+
+// minimal service worker: makes "add to home screen" a real PWA (cached shell
+// when offline); it never intercepts /api/, so live data stays live
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});

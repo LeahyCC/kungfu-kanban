@@ -80,12 +80,17 @@ app.get('/api/config', (req, res) => {
     settings: { ...state.settings, reposDir: reposDir() },
     cooldownUntil: cooldown.active() ? state.settings.cooldownUntil : 0,
     modelBlocks: models.blocks(),
+    authGate: !!auth.getToken(), // the UI shows Sign out only when a gate exists
   });
 });
 
 app.put('/api/settings', (req, res) => {
   const { maxConcurrent, defaultCwd, archiveDays, ntfyTopic, notifyMac, reposDir: rd, prWatchMin, prWatchAutoFix } = req.body || {};
-  if (typeof rd === 'string' && rd) state.settings.reposDir = rd;
+  // an empty string clears the setting (falls back to the default scan dir)
+  if (typeof rd === 'string') {
+    if (rd.trim()) state.settings.reposDir = rd.trim();
+    else delete state.settings.reposDir;
+  }
   if (Number.isInteger(prWatchMin) && prWatchMin >= 0 && prWatchMin <= 120) {
     state.settings.prWatchMin = prWatchMin;
     prwatch.applyInterval();
@@ -98,7 +103,7 @@ app.put('/api/settings', (req, res) => {
   if (Number.isInteger(maxConcurrent) && maxConcurrent >= 1 && maxConcurrent <= 8) {
     state.settings.maxConcurrent = maxConcurrent;
   }
-  if (typeof defaultCwd === 'string' && defaultCwd) state.settings.defaultCwd = defaultCwd;
+  if (typeof defaultCwd === 'string') state.settings.defaultCwd = defaultCwd.trim(); // empty clears it
   if (Number.isInteger(archiveDays) && archiveDays >= 0 && archiveDays <= 365) {
     state.settings.archiveDays = archiveDays;
   }
