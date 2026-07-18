@@ -8,6 +8,10 @@ compares your clone against `origin/main` and offers a one-click update.
 ## [Unreleased]
 
 ### Fixed
+- App icons and favicons regenerated from the transparent logo — no more white
+  box around the robot in browser tabs and bookmarks. Home-screen tiles
+  (apple/ms icons) get the app's dark background instead, since iOS renders
+  transparency as black.
 - A permission-blocked card can no longer be misread as a subscription or model
   outage. Its error embeds the denied command, so a benign block on a command
   whose text contains a phrase like "rate limit" (or a model name) previously
@@ -22,6 +26,11 @@ compares your clone against `origin/main` and offers a one-click update.
 - Landing page leans into full-auto: the four forms are now say-it → Sensei
   routes → dojo runs itself → PRs arrive shipped, and the hero + import copy
   no longer read like you write and route cards by hand.
+- The board leads with the auto path: ⇪ Import is the primary toolbar button
+  (＋ New card is the ghost fallback), the empty state shows the terminal
+  prompt that creates cards ("create a kungfu todo for …") with Import/draft
+  as the main button and hand-writing as the fallback, and the import modal's
+  footnote mentions you can skip it entirely from any Claude Code session.
 
 ## [0.3.0] — 2026-07-17
 

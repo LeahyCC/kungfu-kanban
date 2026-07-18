@@ -48,9 +48,11 @@
     <span class="sub" id="sysStatus" title="System status: the claude CLI runs your cards; gh opens and merges PRs. Checked every few minutes.">on your subscription · via claude code cli</span>
     <div class="toolbar-actions">
       <label class="conc" title="How many agent sessions may run at once — extras wait in Queued. Keeps parallel cards from burning your subscription rate limits.">parallel <input id="maxConcurrent" type="number" min="1" max="8" /></label>
-      <button id="importBtn" class="ghost" title="Import cards from markdown">⇪ Import</button>
       <button id="settingsBtn" class="ghost" title="Settings">⚙ Settings</button>
-      <button id="newTaskBtn" class="primary" title="Write a card by hand — nothing runs until you launch it">＋ New card</button>
+      <button id="newTaskBtn" class="ghost" title="Fallback: write a card by hand — nothing runs until you launch it">＋ New card</button>
+      <button id="importBtn" class="primary"
+        title="The main way in: paste a plan, ✨ describe the work and let the Sensei draft the cards, or pull GitHub issues">⇪
+        Import</button>
     </div>
   </div>
 
@@ -225,7 +227,7 @@ The prompt: self-contained instructions for the executing agent.
 
 ### Acceptance
 - verifiable criteria the Sensei reviews against</pre>
-        <span class="footnote">no <span class="mono">##</span> headings? each <span class="mono">- [ ]</span> item becomes a card · drop .md files into <span class="mono">data/inbox/</span> for hands-free import</span>
+        <span class="footnote">no <span class="mono">##</span> headings? each <span class="mono">- [ ]</span> item becomes a card · drop .md files into <span class="mono">data/inbox/</span> for hands-free import · or skip this modal entirely: say <span class="mono">&ldquo;create a kungfu todo for &hellip;&rdquo;</span> in any Claude Code session</span>
         <div class="modal-actions">
           <span id="importResult" class="import-result"></span>
           <button type="button" id="importCancelBtn" class="ghost" title="Close without creating anything">Cancel</button>
