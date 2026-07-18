@@ -7,6 +7,16 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-07-18
+
+### Fixed — ↑ update button actually updates a Homebrew-installed CLI
+- `claude update` refuses to self-update a brew-managed install — it answers
+  "To update, run: brew upgrade claude-code@latest", and the button just
+  displayed that text. The endpoint now recognizes the instruction and runs
+  the exact prescribed brew command itself (arg-array `execFile`, formula
+  name shape-checked, brew probed at its standard install paths since
+  launchd's PATH lacks it), then reports the new `claude --version`.
+
 ## [0.8.0] — 2026-07-18
 
 ### Added — board-wide default permission mode
