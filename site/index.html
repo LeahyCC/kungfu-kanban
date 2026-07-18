@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kungfu Kanban — every card is a fighter</title>
-  <meta name="description" content="A local kanban board where every card runs a Claude Code agent on your subscription — no API keys, no token billing, no cloud. A Manager triages the queue while you review the PRs.">
+  <meta name="description"
+    content="A local kanban board where every card runs a Claude Code agent on your subscription — no API keys, no token billing, no cloud. A Manager triages the queue while you review the PRs.">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32">
   <link rel="icon" href="/icons/favicon-16x16.png" type="image/png" sizes="16x16">
@@ -12,399 +14,577 @@
   <meta name="theme-color" content="#141210">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
-  <script>try{if(localStorage.getItem('kk-theme')==='light')document.documentElement.dataset.theme='light';}catch(e){}</script>
+  <script>try { if (localStorage.getItem('kk-theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) { }</script>
 </head>
+
 <body>
-<div class="mkt">
+  <div class="mkt">
 
-  <header class="masthead">
-    <div class="mkt-inner">
-      <a href="#" class="wordmark">Kungfu Kanban <span class="antenna" aria-hidden="true"></span></a>
-      <nav aria-label="Site">
-        <a href="#forms">The four forms</a>
-        <a href="#manual">The manual</a>
-        <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer">GitHub</a>
-        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Day / night dojo">☀</button>
-        <a href="#manual" class="btn ink">Build the dojo</a>
-      </nav>
-    </div>
-  </header>
+    <header class="masthead">
+      <div class="mkt-inner">
+        <a href="#" class="wordmark">Kungfu Kanban <span class="antenna" aria-hidden="true"></span></a>
+        <nav aria-label="Site">
+          <a href="#forms">The four forms</a>
+          <a href="#manual">The manual</a>
+          <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer">GitHub</a>
+          <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"
+            title="Day / night dojo">☀</button>
+          <a href="#manual" class="btn ink">Build the dojo</a>
+        </nav>
+      </div>
+    </header>
 
-  <main>
-    <!-- HERO -->
-    <section class="hero">
-      <div class="mkt-inner hero-grid">
-        <div>
-          <h1>
-            <span class="line"><span style="--i:0">Every card</span></span>
-            <span class="line"><span style="--i:1">is a fighter.</span></span>
-            <span class="line"><span style="--i:2">The master</span></span>
-            <span class="line">
-              <span style="--i:3">
-                works for you.
-                <span class="seal hero-seal">Local‑first</span>
+    <main>
+      <!-- HERO -->
+      <section class="hero">
+        <div class="mkt-inner hero-grid">
+          <div>
+            <h1>
+              <span class="line"><span style="--i:0">Every card</span></span>
+              <span class="line"><span style="--i:1">is a fighter.</span></span>
+              <span class="line"><span style="--i:2">The master</span></span>
+              <span class="line">
+                <span style="--i:3">
+                  works for you.
+                  <span class="seal hero-seal">Local‑first</span>
+                </span>
               </span>
-            </span>
-          </h1>
-          <p class="hero-sub">
-            Kungfu Kanban is a kanban board that runs on your machine, where each card is a
-            Claude Code agent on your subscription login — no API keys, no token billing,
-            no cloud. A Manager triages the queue while you review the PRs.
+            </h1>
+            <p class="hero-sub">
+              Kungfu Kanban is a kanban board that runs on your machine, where each card is a
+              Claude Code agent on your subscription login — no API keys, no token billing,
+              no cloud. A Manager triages the queue while you review the PRs.
+            </p>
+            <div class="hero-ctas">
+              <a href="#manual" class="btn primary">Set it up — it&rsquo;s yours</a>
+              <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer" class="btn ghost">Read
+                the source</a>
+            </div>
+          </div>
+          <figure class="hero-figure">
+            <img src="/logo.png" alt="The Kungfu Kanban master — a cardboard box robot held together with duct tape"
+              width="200" height="200">
+            <figcaption class="fig-caption">fig. 1 — the master. cardboard, tape, runs the dojo.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- THE FOUR FORMS -->
+      <section class="forms-section section-pad" id="forms">
+        <div class="mkt-inner">
+          <h2 class="section-title">The four forms.</h2>
+          <div class="form-band">
+            <div class="form-num" aria-hidden="true">01</div>
+            <div class="form-body">
+              <h3>Write the card</h3>
+              <p>Title, acceptance criteria, priority. The brief is the discipline.</p>
+            </div>
+          </div>
+          <div class="form-band">
+            <div class="form-num" aria-hidden="true">02</div>
+            <div class="form-body">
+              <h3>Choose the fighter</h3>
+              <p>Pick the model and effort per card. Haiku for drills, Fable for the tournament.</p>
+            </div>
+          </div>
+          <div class="form-band">
+            <div class="form-num" aria-hidden="true">03</div>
+            <div class="form-body">
+              <h3>The Manager dispatches</h3>
+              <p>Suggest, semi, or full auto. The sensei watches the queue.</p>
+            </div>
+          </div>
+          <div class="form-band">
+            <div class="form-num" aria-hidden="true">04</div>
+            <div class="form-body">
+              <h3>Review and ship</h3>
+              <p>Repo cards open real PRs. You hold the merge button.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LIVE BOARD REPLICA -->
+      <section class="live-band">
+        <div class="mkt-inner">
+          <h2>It is a kanban board.<br>The cards do the work.</h2>
+          <div class="live-board" aria-label="Product preview: the kanban board">
+            <div class="column" data-status="backlog">
+              <div class="col-head"><span class="col-name">Backlog</span><span class="col-count">2</span></div>
+              <div class="col-body">
+                <div class="card">
+                  <div class="title">Summarize the week&rsquo;s PR review comments</div>
+                  <div class="meta"><span class="badge model">haiku</span><span class="stripes" title="effort 1/4"><i
+                        class="on"></i><i></i><i></i><i></i></span><span class="badge">⏱ mon 09:00</span></div>
+                </div>
+                <div class="card">
+                  <div class="title">Draft onboarding email sequence</div>
+                  <div class="meta"><span class="badge model">sonnet</span><span class="stripes" title="effort 2/4"><i
+                        class="on"></i><i class="on"></i><i></i><i></i></span></div>
+                </div>
+              </div>
+            </div>
+            <div class="column" data-status="queued">
+              <div class="col-head"><span class="col-name">Queued</span><span class="col-count">1</span></div>
+              <div class="col-body">
+                <div class="card">
+                  <div class="title">Summarize competitor pricing pages</div>
+                  <div class="meta"><span class="badge model">haiku</span><span class="stripes" title="effort 1/4"><i
+                        class="on"></i><i></i><i></i><i></i></span></div>
+                </div>
+              </div>
+            </div>
+            <div class="column" data-status="running">
+              <div class="col-head"><span class="col-name">Running</span><span class="col-count">1</span></div>
+              <div class="col-body">
+                <div class="card running-card brush">
+                  <div class="title"><span class="antenna lit" aria-hidden="true"></span>Fix flaky auth test in CI</div>
+                  <div class="meta"><span class="badge model">opus</span><span class="stripes" title="effort 3/4"><i
+                        class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="prio-high"
+                      title="High priority"></span><span class="runword">running</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="column" data-status="review">
+              <div class="col-head"><span class="col-name">Review</span><span class="col-count">2</span></div>
+              <div class="col-body">
+                <div class="card">
+                  <div class="title">Add healthcheck endpoint</div>
+                  <div class="meta"><span class="badge model">sonnet</span><span class="stripes" title="effort 2/4"><i
+                        class="on"></i><i class="on"></i><i></i><i></i></span><span class="pr-link">PR #142</span></div>
+                </div>
+                <div class="card failed-card">
+                  <div class="title">Migrate icons to SVG sprites</div>
+                  <div class="meta"><span class="badge model">fable</span><span class="stripes" title="effort 2/4"><i
+                        class="on"></i><i class="on"></i><i></i><i></i></span><span class="failword">failed</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="column" data-status="done">
+              <div class="col-head"><span class="col-name">Done</span><span class="col-count">2</span></div>
+              <div class="col-body">
+                <div class="card done-card">
+                  <span class="seal card-seal">Shipped</span>
+                  <div class="title">Refactor webhook retries</div>
+                  <div class="meta"><span class="badge model">opus</span><span class="stripes" title="effort 4/4"><i
+                        class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span
+                      class="pr-link">PR #138</span></div>
+                </div>
+                <div class="card done-card">
+                  <span class="seal card-seal">Shipped</span>
+                  <div class="title">Draft changelog for v0.4</div>
+                  <div class="meta"><span class="badge model">haiku</span><span class="stripes" title="effort 1/4"><i
+                        class="on"></i><i></i><i></i><i></i></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURES — newspaper grid -->
+      <section class="features-section section-pad" id="features">
+        <div class="mkt-inner">
+          <h2 class="section-title">The discipline, itemized.</h2>
+          <div class="paper-grid">
+            <div class="paper-cell">
+              <span class="kicker">Subscription</span>
+              <h3>No API keys. On purpose.</h3>
+              <p>Every card runs the Claude Code CLI on your subscription login. The runner strips
+                <code>ANTHROPIC_API_KEY</code> from the environment, so it can never silently fall back to
+                pay‑per‑token.
+              </p>
+              <span class="footnote">no token billing. ever.</span>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Models</span>
+              <h3>Every fighter on the card</h3>
+              <p>Fable, Opus, Sonnet, Haiku — pick per card. When one model hits a cap or an outage, launches step down
+                the ladder automatically and climb back when it clears.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Effort</span>
+              <h3>Belt‑stripe effort</h3>
+              <p>Low to max, set per card. Spend reasoning where the work deserves it.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Manager</span>
+              <h3>A sensei for the queue</h3>
+              <p>Triages new cards, dispatches runs, reviews results against your acceptance criteria. Three autonomy
+                levels; deleting cards is never on the table.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Worktrees</span>
+              <h3>Repo cards ship PRs</h3>
+              <p>Coding tasks run in an isolated git worktree and open a real pull request via <code>gh</code> when
+                done. PR watch ships merged cards and spawns fix agents for conflicts.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Cooldown</span>
+              <h3>Rate limits, absorbed</h3>
+              <p>Hit a subscription limit and the board requeues the card, pauses all auto flow, shows a countdown, and
+                resumes everything when the window resets. Nothing burns against the wall.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Import</span>
+              <h3>Markdown in, backlog out</h3>
+              <p>Paste a plan or drop a <code>.md</code> file in the inbox folder — every heading or checklist item
+                becomes a card, with model, priority, and acceptance criteria parsed from the text.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Phone</span>
+              <h3>The dojo in your pocket</h3>
+              <p>Token gate + Tailscale serve puts the board on your phone, tailnet‑only. ntfy pushes tell you when a
+                card lands in Review. Installs as a PWA.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Local</span>
+              <h3>Everything on the record</h3>
+              <p>One Express server, plain JSON files in <code>data/</code>, every transcript and manager decision on
+                disk. Back up a folder, own your board.</p>
+              <span class="footnote">your machine. your files. obviously.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- THE INK BAND — the sensei -->
+      <section class="ink-band">
+        <div class="mkt-inner">
+          <div>
+            <h2>A sensei for the queue.</h2>
+            <p>
+              The Manager reads every card, routes it to the right model, launches runs,
+              and reviews the results against your acceptance criteria. You choose how
+              much rope it gets.
+            </p>
+          </div>
+          <div class="ladder-demo" aria-label="Autonomy levels">
+            <div class="rung">
+              <b>Suggest</b>
+              <div class="bar"></div>
+              <small>every action waits for your approval</small>
+            </div>
+            <div class="rung">
+              <b>Semi</b>
+              <div class="bar"></div>
+              <small>creates and runs cards; verdicts need your sign-off</small>
+            </div>
+            <div class="rung">
+              <b>Auto</b>
+              <div class="bar"></div>
+              <small>full autopilot, inside your guardrails</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- THE MANUAL — full setup -->
+      <section class="manual-section section-pad" id="manual">
+        <div class="mkt-inner">
+          <h2 class="section-title">The manual.</h2>
+          <p class="manual-sub">
+            Complete setup, every feature. It&rsquo;s one Express server and a folder of JSON —
+            ten minutes to a working dojo, an evening to master it.
           </p>
-          <div class="hero-ctas">
-            <a href="#manual" class="btn primary">Set it up — it&rsquo;s yours</a>
-            <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer" class="btn ghost">Read the source</a>
-          </div>
-        </div>
-        <figure class="hero-figure">
-          <img src="/icons/ms-icon-310x310.png" alt="The Kungfu Kanban master — a cardboard box robot held together with duct tape" width="200" height="200">
-          <figcaption class="fig-caption">fig. 1 — the master. cardboard, tape, runs the dojo.</figcaption>
-        </figure>
-      </div>
-    </section>
+          <div class="manual-grid">
+            <nav class="manual-toc" aria-label="Manual chapters">
+              <a href="#m-requirements"><b>01</b>Requirements</a>
+              <a href="#m-install"><b>02</b>Install &amp; run</a>
+              <a href="#m-board"><b>03</b>The board</a>
+              <a href="#m-cards"><b>04</b>Card fields</a>
+              <a href="#m-prs"><b>05</b>Repo cards → PRs</a>
+              <a href="#m-manager"><b>06</b>The Manager</a>
+              <a href="#m-import"><b>07</b>Markdown import</a>
+              <a href="#m-schedule"><b>08</b>Scheduled cards</a>
+              <a href="#m-notify"><b>09</b>Notifications</a>
+              <a href="#m-phone"><b>10</b>Phone access</a>
+              <a href="#m-limits"><b>11</b>Limits &amp; fallback</a>
+              <a href="#m-launchd"><b>12</b>Run at login</a>
+              <a href="#m-config"><b>13</b>Configuration</a>
+              <a href="#m-trouble"><b>14</b>Troubleshooting</a>
+              <a href="#m-security"><b>15</b>Security</a>
+            </nav>
+            <div class="manual-body">
 
-    <!-- THE FOUR FORMS -->
-    <section class="forms-section section-pad" id="forms">
-      <div class="mkt-inner">
-        <h2 class="section-title">The four forms.</h2>
-        <div class="form-band">
-          <div class="form-num" aria-hidden="true">01</div>
-          <div class="form-body">
-            <h3>Write the card</h3>
-            <p>Title, acceptance criteria, priority. The brief is the discipline.</p>
-          </div>
-        </div>
-        <div class="form-band">
-          <div class="form-num" aria-hidden="true">02</div>
-          <div class="form-body">
-            <h3>Choose the fighter</h3>
-            <p>Pick the model and effort per card. Haiku for drills, Fable for the tournament.</p>
-          </div>
-        </div>
-        <div class="form-band">
-          <div class="form-num" aria-hidden="true">03</div>
-          <div class="form-body">
-            <h3>The Manager dispatches</h3>
-            <p>Suggest, semi, or full auto. The sensei watches the queue.</p>
-          </div>
-        </div>
-        <div class="form-band">
-          <div class="form-num" aria-hidden="true">04</div>
-          <div class="form-body">
-            <h3>Review and ship</h3>
-            <p>Repo cards open real PRs. You hold the merge button.</p>
-          </div>
-        </div>
-      </div>
-    </section>
+              <div class="chapter" id="m-requirements">
+                <span class="kicker">§ 01</span>
+                <h3>Requirements</h3>
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th>Thing</th>
+                      <th>Why</th>
+                      <th>Check</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>Node 20+</strong></td>
+                      <td>server runtime (uses global <code>fetch</code>)</td>
+                      <td><code>node -v</code></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Claude Code CLI</strong>, logged in on your subscription</td>
+                      <td>runs every card</td>
+                      <td><code>claude --version</code>, then <code>claude</code> → <code>/login</code></td>
+                    </tr>
+                    <tr>
+                      <td><strong>git</strong></td>
+                      <td>worktree isolation for repo cards</td>
+                      <td><code>git -v</code></td>
+                    </tr>
+                    <tr>
+                      <td><strong>GitHub CLI (<code>gh</code>)</strong>, authed</td>
+                      <td>only for &ldquo;Open PR when done&rdquo;</td>
+                      <td><code>gh auth status</code></td>
+                    </tr>
+                    <tr>
+                      <td><strong>macOS</strong></td>
+                      <td>desktop notifications (<code>osascript</code>); the rest works anywhere</td>
+                      <td>—</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Tailscale</strong> <em>(optional)</em></td>
+                      <td>use the board from your phone</td>
+                      <td><code>tailscale status</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
 
-    <!-- LIVE BOARD REPLICA -->
-    <section class="live-band">
-      <div class="mkt-inner">
-        <h2>It is a kanban board.<br>The cards do the work.</h2>
-        <div class="live-board" aria-label="Product preview: the kanban board">
-          <div class="column" data-status="backlog">
-            <div class="col-head"><span class="col-name">Backlog</span><span class="col-count">2</span></div>
-            <div class="col-body">
-              <div class="card">
-                <div class="title">Summarize the week&rsquo;s PR review comments</div>
-                <div class="meta"><span class="badge model">haiku</span><span class="stripes" title="effort 1/4"><i class="on"></i><i></i><i></i><i></i></span><span class="badge">⏱ mon 09:00</span></div>
-              </div>
-              <div class="card">
-                <div class="title">Draft onboarding email sequence</div>
-                <div class="meta"><span class="badge model">sonnet</span><span class="stripes" title="effort 2/4"><i class="on"></i><i class="on"></i><i></i><i></i></span></div>
-              </div>
-            </div>
-          </div>
-          <div class="column" data-status="queued">
-            <div class="col-head"><span class="col-name">Queued</span><span class="col-count">1</span></div>
-            <div class="col-body">
-              <div class="card">
-                <div class="title">Summarize competitor pricing pages</div>
-                <div class="meta"><span class="badge model">haiku</span><span class="stripes" title="effort 1/4"><i class="on"></i><i></i><i></i><i></i></span></div>
-              </div>
-            </div>
-          </div>
-          <div class="column" data-status="running">
-            <div class="col-head"><span class="col-name">Running</span><span class="col-count">1</span></div>
-            <div class="col-body">
-              <div class="card running-card brush">
-                <div class="title"><span class="antenna lit" aria-hidden="true"></span>Fix flaky auth test in CI</div>
-                <div class="meta"><span class="badge model">opus</span><span class="stripes" title="effort 3/4"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="prio-high" title="High priority"></span><span class="runword">running</span></div>
-              </div>
-            </div>
-          </div>
-          <div class="column" data-status="review">
-            <div class="col-head"><span class="col-name">Review</span><span class="col-count">2</span></div>
-            <div class="col-body">
-              <div class="card">
-                <div class="title">Add healthcheck endpoint</div>
-                <div class="meta"><span class="badge model">sonnet</span><span class="stripes" title="effort 2/4"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="pr-link">PR #142</span></div>
-              </div>
-              <div class="card failed-card">
-                <div class="title">Migrate icons to SVG sprites</div>
-                <div class="meta"><span class="badge model">fable</span><span class="stripes" title="effort 2/4"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="failword">failed</span></div>
-              </div>
-            </div>
-          </div>
-          <div class="column" data-status="done">
-            <div class="col-head"><span class="col-name">Done</span><span class="col-count">2</span></div>
-            <div class="col-body">
-              <div class="card done-card">
-                <span class="seal card-seal">Shipped</span>
-                <div class="title">Refactor webhook retries</div>
-                <div class="meta"><span class="badge model">opus</span><span class="stripes" title="effort 4/4"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="pr-link">PR #138</span></div>
-              </div>
-              <div class="card done-card">
-                <span class="seal card-seal">Shipped</span>
-                <div class="title">Draft changelog for v0.4</div>
-                <div class="meta"><span class="badge model">haiku</span><span class="stripes" title="effort 1/4"><i class="on"></i><i></i><i></i><i></i></span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- FEATURES — newspaper grid -->
-    <section class="features-section section-pad" id="features">
-      <div class="mkt-inner">
-        <h2 class="section-title">The discipline, itemized.</h2>
-        <div class="paper-grid">
-          <div class="paper-cell">
-            <span class="kicker">Subscription</span>
-            <h3>No API keys. On purpose.</h3>
-            <p>Every card runs the Claude Code CLI on your subscription login. The runner strips <code>ANTHROPIC_API_KEY</code> from the environment, so it can never silently fall back to pay‑per‑token.</p>
-            <span class="footnote">no token billing. ever.</span>
-          </div>
-          <div class="paper-cell">
-            <span class="kicker">Models</span>
-            <h3>Every fighter on the card</h3>
-            <p>Fable, Opus, Sonnet, Haiku — pick per card. When one model hits a cap or an outage, launches step down the ladder automatically and climb back when it clears.</p>
-          </div>
-          <div class="paper-cell">
-            <span class="kicker">Effort</span>
-            <h3>Belt‑stripe effort</h3>
-            <p>Low to max, set per card. Spend reasoning where the work deserves it.</p>
-          </div>
-          <div class="paper-cell">
-            <span class="kicker">Manager</span>
-            <h3>A sensei for the queue</h3>
-            <p>Triages new cards, dispatches runs, reviews results against your acceptance criteria. Three autonomy levels; deleting cards is never on the table.</p>
-          </div>
-          <div class="paper-cell">
-            <span class="kicker">Worktrees</span>
-            <h3>Repo cards ship PRs</h3>
-            <p>Coding tasks run in an isolated git worktree and open a real pull request via <code>gh</code> when done. PR watch ships merged cards and spawns fix agents for conflicts.</p>
-          </div>
-          <div class="paper-cell">
-            <span class="kicker">Cooldown</span>
-            <h3>Rate limits, absorbed</h3>
-            <p>Hit a subscription limit and the board requeues the card, pauses all auto flow, shows a countdown, and resumes everything when the window resets. Nothing burns against the wall.</p>
-          </div>
-          <div class="paper-cell">
-            <span class="kicker">Import</span>
-            <h3>Markdown in, backlog out</h3>
-            <p>Paste a plan or drop a <code>.md</code> file in the inbox folder — every heading or checklist item becomes a card, with model, priority, and acceptance criteria parsed from the text.</p>
-          </div>
-          <div class="paper-cell">
-            <span class="kicker">Phone</span>
-            <h3>The dojo in your pocket</h3>
-            <p>Token gate + Tailscale serve puts the board on your phone, tailnet‑only. ntfy pushes tell you when a card lands in Review. Installs as a PWA.</p>
-          </div>
-          <div class="paper-cell">
-            <span class="kicker">Local</span>
-            <h3>Everything on the record</h3>
-            <p>One Express server, plain JSON files in <code>data/</code>, every transcript and manager decision on disk. Back up a folder, own your board.</p>
-            <span class="footnote">your machine. your files. obviously.</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- THE INK BAND — the sensei -->
-    <section class="ink-band">
-      <div class="mkt-inner">
-        <div>
-          <h2>A sensei for the queue.</h2>
-          <p>
-            The Manager reads every card, routes it to the right model, launches runs,
-            and reviews the results against your acceptance criteria. You choose how
-            much rope it gets.
-          </p>
-        </div>
-        <div class="ladder-demo" aria-label="Autonomy levels">
-          <div class="rung">
-            <b>Suggest</b>
-            <div class="bar"></div>
-            <small>every action waits for your approval</small>
-          </div>
-          <div class="rung">
-            <b>Semi</b>
-            <div class="bar"></div>
-            <small>creates and runs cards; verdicts need your sign-off</small>
-          </div>
-          <div class="rung">
-            <b>Auto</b>
-            <div class="bar"></div>
-            <small>full autopilot, inside your guardrails</small>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- THE MANUAL — full setup -->
-    <section class="manual-section section-pad" id="manual">
-      <div class="mkt-inner">
-        <h2 class="section-title">The manual.</h2>
-        <p class="manual-sub">
-          Complete setup, every feature. It&rsquo;s one Express server and a folder of JSON —
-          ten minutes to a working dojo, an evening to master it.
-        </p>
-        <div class="manual-grid">
-          <nav class="manual-toc" aria-label="Manual chapters">
-            <a href="#m-requirements"><b>01</b>Requirements</a>
-            <a href="#m-install"><b>02</b>Install &amp; run</a>
-            <a href="#m-board"><b>03</b>The board</a>
-            <a href="#m-cards"><b>04</b>Card fields</a>
-            <a href="#m-prs"><b>05</b>Repo cards → PRs</a>
-            <a href="#m-manager"><b>06</b>The Manager</a>
-            <a href="#m-import"><b>07</b>Markdown import</a>
-            <a href="#m-schedule"><b>08</b>Scheduled cards</a>
-            <a href="#m-notify"><b>09</b>Notifications</a>
-            <a href="#m-phone"><b>10</b>Phone access</a>
-            <a href="#m-limits"><b>11</b>Limits &amp; fallback</a>
-            <a href="#m-launchd"><b>12</b>Run at login</a>
-            <a href="#m-config"><b>13</b>Configuration</a>
-            <a href="#m-trouble"><b>14</b>Troubleshooting</a>
-            <a href="#m-security"><b>15</b>Security</a>
-          </nav>
-          <div class="manual-body">
-
-            <div class="chapter" id="m-requirements">
-              <span class="kicker">§ 01</span>
-              <h3>Requirements</h3>
-              <table class="doc-table">
-                <thead><tr><th>Thing</th><th>Why</th><th>Check</th></tr></thead>
-                <tbody>
-                  <tr><td><strong>Node 20+</strong></td><td>server runtime (uses global <code>fetch</code>)</td><td><code>node -v</code></td></tr>
-                  <tr><td><strong>Claude Code CLI</strong>, logged in on your subscription</td><td>runs every card</td><td><code>claude --version</code>, then <code>claude</code> → <code>/login</code></td></tr>
-                  <tr><td><strong>git</strong></td><td>worktree isolation for repo cards</td><td><code>git -v</code></td></tr>
-                  <tr><td><strong>GitHub CLI (<code>gh</code>)</strong>, authed</td><td>only for &ldquo;Open PR when done&rdquo;</td><td><code>gh auth status</code></td></tr>
-                  <tr><td><strong>macOS</strong></td><td>desktop notifications (<code>osascript</code>); the rest works anywhere</td><td>—</td></tr>
-                  <tr><td><strong>Tailscale</strong> <em>(optional)</em></td><td>use the board from your phone</td><td><code>tailscale status</code></td></tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div class="chapter" id="m-install">
-              <span class="kicker">§ 02</span>
-              <h3>Install &amp; run</h3>
-<pre><code>git clone https://github.com/LeahyCC/kungfu-kanban.git &amp;&amp; cd kungfu-kanban
+              <div class="chapter" id="m-install">
+                <span class="kicker">§ 02</span>
+                <h3>Install &amp; run</h3>
+                <pre><code>git clone https://github.com/LeahyCC/kungfu-kanban.git &amp;&amp; cd kungfu-kanban
 npm install
 npm start          <span class="c"># → http://localhost:4747</span></code></pre>
-              <p>That&rsquo;s it for local use. The server binds <code>127.0.0.1</code> only by default — nothing is exposed until you deliberately set up remote access (<a href="#m-phone">chapter 10</a>).</p>
-            </div>
+                <p>That&rsquo;s it for local use. The server binds <code>127.0.0.1</code> only by default — nothing is
+                  exposed until you deliberately set up remote access (<a href="#m-phone">chapter 10</a>).</p>
+              </div>
 
-            <div class="chapter" id="m-board">
-              <span class="kicker">§ 03</span>
-              <h3>The board</h3>
-              <p>Columns: <strong>Backlog → Queued → Running → Review → Done</strong>.</p>
-              <ul>
-                <li><strong>＋ New card</strong> (or drag a card to <strong>Queued</strong>, or ▶ Run in the drawer) launches it.</li>
-                <li><strong>parallel</strong> (toolbar, 1–8, default 2) caps concurrent sessions so you don&rsquo;t burn subscription rate limits; extra launches wait in Queued and start automatically as slots free up.</li>
-                <li>Click any card for the <strong>drawer</strong>: live transcript, token/turn stats, and a <code>claude -r &lt;session-id&gt;</code> command to resume that session in your terminal.</li>
-                <li>Finished runs land in <strong>Review</strong> (with a vermillion error stripe if they failed). <strong>✓ Done</strong> ships them — hanko seal included.</li>
-                <li>If the server restarts mid‑run, orphaned &ldquo;running&rdquo; cards are recovered into Review.</li>
-                <li><strong>⚙ Settings</strong> (toolbar): default working directory, repos directory, ntfy topic, notification toggles, PR watch. <strong>☀ / ☾</strong> toggles the day/night dojo; night is the default.</li>
-              </ul>
-              <h4>Follow-up prompts</h4>
-              <p>Open any card that has run and type in the <strong>follow-up box</strong> under the transcript (&ldquo;fix the bug where…&rdquo;, &ldquo;also add…&rdquo;). The run <strong>resumes the same CLI session</strong> (<code>claude -r</code>), so the agent keeps its full context — and for worktree cards it re‑enters the original worktree, so a follow-up push updates the existing PR. Follow-ups respect the parallel cap and queue like any run.</p>
-            </div>
+              <div class="chapter" id="m-board">
+                <span class="kicker">§ 03</span>
+                <h3>The board</h3>
+                <p>Columns: <strong>Backlog → Queued → Running → Review → Done</strong>.</p>
+                <ul>
+                  <li><strong>＋ New card</strong> (or drag a card to <strong>Queued</strong>, or ▶ Run in the drawer)
+                    launches it.</li>
+                  <li><strong>parallel</strong> (toolbar, 1–8, default 2) caps concurrent sessions so you don&rsquo;t
+                    burn subscription rate limits; extra launches wait in Queued and start automatically as slots free
+                    up.</li>
+                  <li>Click any card for the <strong>drawer</strong>: live transcript, token/turn stats, and a
+                    <code>claude -r &lt;session-id&gt;</code> command to resume that session in your terminal.
+                  </li>
+                  <li>Finished runs land in <strong>Review</strong> (with a vermillion error stripe if they failed).
+                    <strong>✓ Done</strong> ships them — hanko seal included.
+                  </li>
+                  <li>If the server restarts mid‑run, orphaned &ldquo;running&rdquo; cards are recovered into Review.
+                  </li>
+                  <li><strong>⚙ Settings</strong> (toolbar): default working directory, repos directory, ntfy topic,
+                    notification toggles, PR watch. <strong>☀ / ☾</strong> toggles the day/night dojo; night is the
+                    default.</li>
+                </ul>
+                <h4>Follow-up prompts</h4>
+                <p>Open any card that has run and type in the <strong>follow-up box</strong> under the transcript
+                  (&ldquo;fix the bug where…&rdquo;, &ldquo;also add…&rdquo;). The run <strong>resumes the same CLI
+                    session</strong> (<code>claude -r</code>), so the agent keeps its full context — and for worktree
+                  cards it re‑enters the original worktree, so a follow-up push updates the existing PR. Follow-ups
+                  respect the parallel cap and queue like any run.</p>
+              </div>
 
-            <div class="chapter" id="m-cards">
-              <span class="kicker">§ 04</span>
-              <h3>Card fields</h3>
-              <table class="doc-table">
-                <thead><tr><th>Field</th><th>Maps to</th><th>Notes</th></tr></thead>
-                <tbody>
-                  <tr><td>Title</td><td>—</td><td>shown on the card, PR title, notification text</td></tr>
-                  <tr><td>Prompt</td><td>the <code>claude -p</code> prompt</td><td>what the agent should do</td></tr>
-                  <tr><td>Working directory</td><td>process <code>cwd</code></td><td>repo dropdown (scans the ⚙ Settings repos directory for git repos) or any path</td></tr>
-                  <tr><td>Model</td><td><code>--model</code></td><td>default / fable / opus / sonnet / haiku</td></tr>
-                  <tr><td>Effort</td><td><code>--effort</code></td><td>default / low / medium / high / xhigh / max</td></tr>
-                  <tr><td>Permissions</td><td><code>--permission-mode</code></td><td><code>acceptEdits</code> (default), <code>auto</code>, <code>plan</code>, <code>dontAsk</code>, <code>bypassPermissions</code> — see <a href="#m-security">Security</a></td></tr>
-                  <tr><td>Agent</td><td><code>--agent</code></td><td>your custom agents from <code>~/.claude/agents/*.md</code></td></tr>
-                  <tr><td>Git worktree</td><td><code>--worktree</code></td><td>isolates the run on its own branch</td></tr>
-                  <tr><td>Open PR when done</td><td>post-run <code>gh pr create</code></td><td>requires worktree — see <a href="#m-prs">chapter 05</a></td></tr>
-                  <tr><td>Priority</td><td>sort order (0–3)</td><td>2+ shows the vermillion square</td></tr>
-                  <tr><td>Acceptance criteria</td><td>manager review rubric</td><td>the Sensei approves/rejects against this</td></tr>
-                  <tr><td>Repeat</td><td>schedule</td><td><code>6h</code> every 6 hours, <code>14:30</code> daily — see <a href="#m-schedule">chapter 08</a></td></tr>
-                  <tr><td>Skills</td><td>injected into the prompt</td><td>pick from installed skills, or <strong>✦ auto-select</strong> to let the agent choose</td></tr>
-                </tbody>
-              </table>
-              <p>Skills and agents are auto-discovered at load, no config: personal skills from <code>~/.claude/skills/*/SKILL.md</code>, plugin skills from every enabled plugin (namespaced <code>plugin:skill</code>), agents from <code>~/.claude/agents/*.md</code>.</p>
-            </div>
+              <div class="chapter" id="m-cards">
+                <span class="kicker">§ 04</span>
+                <h3>Card fields</h3>
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th>Field</th>
+                      <th>Maps to</th>
+                      <th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Title</td>
+                      <td>—</td>
+                      <td>shown on the card, PR title, notification text</td>
+                    </tr>
+                    <tr>
+                      <td>Prompt</td>
+                      <td>the <code>claude -p</code> prompt</td>
+                      <td>what the agent should do</td>
+                    </tr>
+                    <tr>
+                      <td>Working directory</td>
+                      <td>process <code>cwd</code></td>
+                      <td>repo dropdown (scans the ⚙ Settings repos directory for git repos) or any path</td>
+                    </tr>
+                    <tr>
+                      <td>Model</td>
+                      <td><code>--model</code></td>
+                      <td>default / fable / opus / sonnet / haiku</td>
+                    </tr>
+                    <tr>
+                      <td>Effort</td>
+                      <td><code>--effort</code></td>
+                      <td>default / low / medium / high / xhigh / max</td>
+                    </tr>
+                    <tr>
+                      <td>Permissions</td>
+                      <td><code>--permission-mode</code></td>
+                      <td><code>acceptEdits</code> (default), <code>auto</code>, <code>plan</code>,
+                        <code>dontAsk</code>, <code>bypassPermissions</code> — see <a href="#m-security">Security</a>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Agent</td>
+                      <td><code>--agent</code></td>
+                      <td>your custom agents from <code>~/.claude/agents/*.md</code></td>
+                    </tr>
+                    <tr>
+                      <td>Git worktree</td>
+                      <td><code>--worktree</code></td>
+                      <td>isolates the run on its own branch</td>
+                    </tr>
+                    <tr>
+                      <td>Open PR when done</td>
+                      <td>post-run <code>gh pr create</code></td>
+                      <td>requires worktree — see <a href="#m-prs">chapter 05</a></td>
+                    </tr>
+                    <tr>
+                      <td>Priority</td>
+                      <td>sort order (0–3)</td>
+                      <td>2+ shows the vermillion square</td>
+                    </tr>
+                    <tr>
+                      <td>Acceptance criteria</td>
+                      <td>manager review rubric</td>
+                      <td>the Sensei approves/rejects against this</td>
+                    </tr>
+                    <tr>
+                      <td>Repeat</td>
+                      <td>schedule</td>
+                      <td><code>6h</code> every 6 hours, <code>14:30</code> daily — see <a href="#m-schedule">chapter
+                          08</a></td>
+                    </tr>
+                    <tr>
+                      <td>Skills</td>
+                      <td>injected into the prompt</td>
+                      <td>pick from installed skills, or <strong>✦ auto-select</strong> to let the agent choose</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p>Skills and agents are auto-discovered at load, no config: personal skills from
+                  <code>~/.claude/skills/*/SKILL.md</code>, plugin skills from every enabled plugin (namespaced
+                  <code>plugin:skill</code>), agents from <code>~/.claude/agents/*.md</code>.
+                </p>
+              </div>
 
-            <div class="chapter" id="m-prs">
-              <span class="kicker">§ 05</span>
-              <h3>Repo cards → real PRs</h3>
-              <p>Give a card a working directory that&rsquo;s a git repo with an <code>origin</code> remote, check <strong>Git worktree</strong> + <strong>Open PR when done</strong>, and run it. One-time setup: <code>gh auth login</code> with push scope. After the agent succeeds:</p>
-              <ol>
-                <li>The worktree is located by asking git for the branch named <code>kanban-&lt;card-id&gt;</code> — wherever the CLI put it.</li>
-                <li>Anything the agent left uncommitted is committed.</li>
-                <li>If the branch has no commits beyond the base, the flow stops — no empty PRs.</li>
-                <li>The branch is pushed to <code>origin</code> and <code>gh pr create</code> opens a PR: title = card title, body = prompt + acceptance criteria.</li>
-                <li>The <strong>PR link</strong> lands on the card, in the drawer, and in your phone notification.</li>
-              </ol>
-              <p>Every step logs to the card transcript (<code>⇡</code> lines). Failures (no remote, <code>gh</code> not authed, push rejected…) log an <code>✕</code> line and leave the card in Review — the work is still in the worktree, nothing is lost.</p>
-              <h4>PR watch — merged PRs ship, conflicted PRs self-heal</h4>
-              <p>Every N minutes (⚙ Settings, default 10, 0 = off) the board checks each Review card&rsquo;s PR via <code>gh</code>:</p>
-              <ul>
-                <li><strong>Merged</strong> → the card moves to Done and you get a notification.</li>
-                <li><strong>Closed without merge</strong> → noted once on the card transcript.</li>
-                <li><strong>Conflicting</strong> → with auto-fix on (default), the board spawns a <strong>fix card</strong>: a fresh agent run inside the original worktree that merges the base branch, resolves the conflicts preserving both sides, and pushes — updating the PR in place. Max 2 attempts per PR, one active fixer at a time; after that you get a &ldquo;needs you&rdquo; notification and it stops.</li>
-              </ul>
-              <div class="note"><b>Keep local <code>main</code> pushed.</b> Agent worktrees branch from the default branch, so an unpushed main is how you get avoidable conflicts in the first place.</div>
-            </div>
+              <div class="chapter" id="m-prs">
+                <span class="kicker">§ 05</span>
+                <h3>Repo cards → real PRs</h3>
+                <p>Give a card a working directory that&rsquo;s a git repo with an <code>origin</code> remote, check
+                  <strong>Git worktree</strong> + <strong>Open PR when done</strong>, and run it. One-time setup:
+                  <code>gh auth login</code> with push scope. After the agent succeeds:
+                </p>
+                <ol>
+                  <li>The worktree is located by asking git for the branch named <code>kanban-&lt;card-id&gt;</code> —
+                    wherever the CLI put it.</li>
+                  <li>Anything the agent left uncommitted is committed.</li>
+                  <li>If the branch has no commits beyond the base, the flow stops — no empty PRs.</li>
+                  <li>The branch is pushed to <code>origin</code> and <code>gh pr create</code> opens a PR: title = card
+                    title, body = prompt + acceptance criteria.</li>
+                  <li>The <strong>PR link</strong> lands on the card, in the drawer, and in your phone notification.
+                  </li>
+                </ol>
+                <p>Every step logs to the card transcript (<code>⇡</code> lines). Failures (no remote, <code>gh</code>
+                  not authed, push rejected…) log an <code>✕</code> line and leave the card in Review — the work is
+                  still in the worktree, nothing is lost.</p>
+                <h4>PR watch — merged PRs ship, conflicted PRs self-heal</h4>
+                <p>Every N minutes (⚙ Settings, default 10, 0 = off) the board checks each Review card&rsquo;s PR via
+                  <code>gh</code>:
+                </p>
+                <ul>
+                  <li><strong>Merged</strong> → the card moves to Done and you get a notification.</li>
+                  <li><strong>Closed without merge</strong> → noted once on the card transcript.</li>
+                  <li><strong>Conflicting</strong> → with auto-fix on (default), the board spawns a <strong>fix
+                      card</strong>: a fresh agent run inside the original worktree that merges the base branch,
+                    resolves the conflicts preserving both sides, and pushes — updating the PR in place. Max 2 attempts
+                    per PR, one active fixer at a time; after that you get a &ldquo;needs you&rdquo; notification and it
+                    stops.</li>
+                </ul>
+                <div class="note"><b>Keep local <code>main</code> pushed.</b> Agent worktrees branch from the default
+                  branch, so an unpushed main is how you get avoidable conflicts in the first place.</div>
+              </div>
 
-            <div class="chapter" id="m-manager">
-              <span class="kicker">§ 06</span>
-              <h3>The Manager (the Sensei)</h3>
-              <p>An LLM manager — itself a <code>claude -p</code> structured-output call on your subscription — that triages new cards (model/effort/skills/priority routing), dispatches queued work, reviews finished cards against their acceptance criteria, and answers you in chat (&ldquo;plan the auth refactor into cards&rdquo;, &ldquo;what&rsquo;s blocking?&rdquo;).</p>
-              <h4>Autonomy ladder (Manager tab)</h4>
-              <table class="doc-table">
-                <thead><tr><th>Level</th><th>Can do without you</th></tr></thead>
-                <tbody>
-                  <tr><td><code>suggest</code> <em>(default)</em></td><td>nothing — every action waits for your ✓</td></tr>
-                  <tr><td><code>semi</code></td><td>create / route / run cards; approve-reject verdicts still wait</td></tr>
-                  <tr><td><code>auto</code></td><td>everything, within guardrails</td></tr>
-                </tbody>
-              </table>
-              <p>Deleting cards is never available to the manager, at any level.</p>
-              <h4>Triggers</h4>
-              <p>On task finish (review it), on new card (triage it), every N minutes (0 = off), and chat. Each trigger is one manager invocation — mind your rate limits before enabling the interval.</p>
-              <h4>Guardrails</h4>
-              <ul>
-                <li><strong>Max launches/hour</strong> (default 10).</li>
-                <li><strong>Max retries/task</strong> (default 2) — rejected cards re-run with the manager&rsquo;s feedback appended to the prompt.</li>
-                <li><strong>Permission ceiling</strong> (default <code>acceptEdits</code>) the manager can&rsquo;t assign beyond. Guardrail-blocked actions become suggestions instead of executing.</li>
-              </ul>
-              <p><strong>Management style</strong>: freeform standing instructions (&ldquo;prefer haiku for docs tasks&rdquo;, &ldquo;never auto-approve migrations&rdquo;) — no code changes needed. The manager&rsquo;s own model/effort (default opus/medium) are configurable; it can also be disabled entirely.</p>
-            </div>
+              <div class="chapter" id="m-manager">
+                <span class="kicker">§ 06</span>
+                <h3>The Manager (the Sensei)</h3>
+                <p>An LLM manager — itself a <code>claude -p</code> structured-output call on your subscription — that
+                  triages new cards (model/effort/skills/priority routing), dispatches queued work, reviews finished
+                  cards against their acceptance criteria, and answers you in chat (&ldquo;plan the auth refactor into
+                  cards&rdquo;, &ldquo;what&rsquo;s blocking?&rdquo;).</p>
+                <h4>Autonomy ladder (Manager tab)</h4>
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th>Level</th>
+                      <th>Can do without you</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>suggest</code> <em>(default)</em></td>
+                      <td>nothing — every action waits for your ✓</td>
+                    </tr>
+                    <tr>
+                      <td><code>semi</code></td>
+                      <td>create / route / run cards; approve-reject verdicts still wait</td>
+                    </tr>
+                    <tr>
+                      <td><code>auto</code></td>
+                      <td>everything, within guardrails</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p>Deleting cards is never available to the manager, at any level.</p>
+                <h4>Triggers</h4>
+                <p>On task finish (review it), on new card (triage it), every N minutes (0 = off), and chat. Each
+                  trigger is one manager invocation — mind your rate limits before enabling the interval.</p>
+                <h4>Guardrails</h4>
+                <ul>
+                  <li><strong>Max launches/hour</strong> (default 10).</li>
+                  <li><strong>Max retries/task</strong> (default 2) — rejected cards re-run with the manager&rsquo;s
+                    feedback appended to the prompt.</li>
+                  <li><strong>Permission ceiling</strong> (default <code>acceptEdits</code>) the manager can&rsquo;t
+                    assign beyond. Guardrail-blocked actions become suggestions instead of executing.</li>
+                </ul>
+                <p><strong>Management style</strong>: freeform standing instructions (&ldquo;prefer haiku for docs
+                  tasks&rdquo;, &ldquo;never auto-approve migrations&rdquo;) — no code changes needed. The
+                  manager&rsquo;s own model/effort (default opus/medium) are configurable; it can also be disabled
+                  entirely.</p>
+              </div>
 
-            <div class="chapter" id="m-import">
-              <span class="kicker">§ 07</span>
-              <h3>Importing cards from Markdown</h3>
-              <p>Turn a plan into a backlog in one paste. Two entry points:</p>
-              <ul>
-                <li><strong>⇪ Import</strong> (toolbar): paste markdown or pick a file — works from your phone.</li>
-                <li><strong>Watch folder</strong>: drop <code>.md</code> files into <code>data/inbox/</code> — cards appear automatically and the file is archived to <code>data/inbox/imported/</code>.</li>
-              </ul>
-              <p>Two formats, auto-detected. <strong>Sections</strong> — every <code>## Heading</code> becomes a card: the heading is the title, leading <code>key: value</code> lines set fields, an <code>### Acceptance</code> subsection becomes the acceptance criteria, everything else is the prompt. Optional frontmatter sets file-wide defaults:</p>
-<pre><code>---
+              <div class="chapter" id="m-import">
+                <span class="kicker">§ 07</span>
+                <h3>Importing cards from Markdown</h3>
+                <p>Turn a plan into a backlog in one paste. Two entry points:</p>
+                <ul>
+                  <li><strong>⇪ Import</strong> (toolbar): paste markdown or pick a file — works from your phone.</li>
+                  <li><strong>Watch folder</strong>: drop <code>.md</code> files into <code>data/inbox/</code> — cards
+                    appear automatically and the file is archived to <code>data/inbox/imported/</code>.</li>
+                </ul>
+                <p>Two formats, auto-detected. <strong>Sections</strong> — every <code>## Heading</code> becomes a card:
+                  the heading is the title, leading <code>key: value</code> lines set fields, an
+                  <code>### Acceptance</code> subsection becomes the acceptance criteria, everything else is the prompt.
+                  Optional frontmatter sets file-wide defaults:
+                </p>
+                <pre><code>---
 cwd: /Users/you/project
 model: sonnet
 worktree: true
@@ -420,49 +600,82 @@ The test in auth.spec.ts fails intermittently because…
 - passes 10x in a row
 
 ## Update the README badges</code></pre>
-              <p>Recognized keys (case/space-insensitive): <code>cwd</code> (<code>dir</code>/<code>repo</code>), <code>model</code>, <code>effort</code>, <code>permissions</code>, <code>priority</code> (0–3), <code>worktree</code>, <code>openPr</code> (<code>pr</code>), <code>agent</code>, <code>skills</code>, <code>acceptance</code>. A card with no body uses its title as the prompt.</p>
-              <p><strong>Checklist</strong> — a file with no <code>##</code> headings: every unchecked <code>- [ ] item</code> becomes a card (checked items are skipped).</p>
-              <p><strong>✨ Drafting</strong>: describe the work in plain English in the Draft box and the Sensei writes the card doc for review. Pick a repo and check <strong>🔍 explore repo first</strong> to let it read the actual code before writing — slower, but cards reference real files. <strong>↻ Refine</strong> iterates on the draft in the same session; a live preview shows what will be created and warns about titles already on the board.</p>
-              <p><strong>⇣ From issues</strong>: pick a repo and pull its open GitHub issues into cards. Their PRs include <code>Fixes #N</code>, so merging the PR closes the issue automatically — issue → card → agent → PR → merged → closed.</p>
-              <p><strong>From Claude Code</strong>: the repo ships a skill — <a href="https://github.com/LeahyCC/kungfu-kanban/blob/main/skills/kungfu-todo/SKILL.md" target="_blank" rel="noreferrer"><code>skills/kungfu-todo/SKILL.md</code></a> — that teaches every Claude Code session, in any project, to do this on request: say &ldquo;create a kungfu todo for …&rdquo; and it drafts the cards, drops the file in the inbox, and confirms the import. Install it once:</p>
-<pre><code>cp -r skills/kungfu-todo ~/.claude/skills/
+                <p>Recognized keys (case/space-insensitive): <code>cwd</code> (<code>dir</code>/<code>repo</code>),
+                  <code>model</code>, <code>effort</code>, <code>permissions</code>, <code>priority</code> (0–3),
+                  <code>worktree</code>, <code>openPr</code> (<code>pr</code>), <code>agent</code>, <code>skills</code>,
+                  <code>acceptance</code>. A card with no body uses its title as the prompt.
+                </p>
+                <p><strong>Checklist</strong> — a file with no <code>##</code> headings: every unchecked
+                  <code>- [ ] item</code> becomes a card (checked items are skipped).
+                </p>
+                <p><strong>✨ Drafting</strong>: describe the work in plain English in the Draft box and the Sensei
+                  writes the card doc for review. Pick a repo and check <strong>🔍 explore repo first</strong> to let it
+                  read the actual code before writing — slower, but cards reference real files. <strong>↻
+                    Refine</strong> iterates on the draft in the same session; a live preview shows what will be created
+                  and warns about titles already on the board.</p>
+                <p><strong>⇣ From issues</strong>: pick a repo and pull its open GitHub issues into cards. Their PRs
+                  include <code>Fixes #N</code>, so merging the PR closes the issue automatically — issue → card → agent
+                  → PR → merged → closed.</p>
+                <p><strong>From Claude Code</strong>: the repo ships a skill — <a
+                    href="https://github.com/LeahyCC/kungfu-kanban/blob/main/skills/kungfu-todo/SKILL.md"
+                    target="_blank" rel="noreferrer"><code>skills/kungfu-todo/SKILL.md</code></a> — that teaches every
+                  Claude Code session, in any project, to do this on request: say &ldquo;create a kungfu todo for
+                  …&rdquo; and it drafts the cards, drops the file in the inbox, and confirms the import. Install it
+                  once:</p>
+                <pre><code>cp -r skills/kungfu-todo ~/.claude/skills/
 <span class="c"># then replace every &lt;board&gt; in ~/.claude/skills/kungfu-todo/SKILL.md</span>
 <span class="c"># with your clone's absolute path</span></code></pre>
-              <p>Imported cards land in <strong>Backlog</strong> tagged <code>import</code>, and the Sensei gets one triage ping per batch — paste a plan, and routing happens for you.</p>
-            </div>
+                <p>Imported cards land in <strong>Backlog</strong> tagged <code>import</code>, and the Sensei gets one
+                  triage ping per batch — paste a plan, and routing happens for you.</p>
+              </div>
 
-            <div class="chapter" id="m-schedule">
-              <span class="kicker">§ 08</span>
-              <h3>Scheduled cards</h3>
-              <p>Give a card a <strong>Repeat</strong> value in the editor to run it on a schedule:</p>
-              <ul>
-                <li><code>6h</code> (or <code>6</code>) — every 6 hours (fractional hours like <code>0.5h</code> are allowed)</li>
-                <li><code>14:30</code> — daily at 14:30 (24-hour local time)</li>
-              </ul>
-              <p>The server checks once a minute. When a card is due, it&rsquo;s <strong>cloned into a fresh one-shot card</strong> that launches via the normal runner — clones respect the parallel cap and flow through the columns like any other card. The scheduled card itself stays in <strong>Backlog</strong> carrying a <code>⏱</code> badge and never moves on its own; drag it elsewhere and it stops firing until it&rsquo;s back in Backlog. Clear the Repeat field to turn scheduling off.</p>
-            </div>
+              <div class="chapter" id="m-schedule">
+                <span class="kicker">§ 08</span>
+                <h3>Scheduled cards</h3>
+                <p>Give a card a <strong>Repeat</strong> value in the editor to run it on a schedule:</p>
+                <ul>
+                  <li><code>6h</code> (or <code>6</code>) — every 6 hours (fractional hours like <code>0.5h</code> are
+                    allowed)</li>
+                  <li><code>14:30</code> — daily at 14:30 (24-hour local time)</li>
+                </ul>
+                <p>The server checks once a minute. When a card is due, it&rsquo;s <strong>cloned into a fresh one-shot
+                    card</strong> that launches via the normal runner — clones respect the parallel cap and flow through
+                  the columns like any other card. The scheduled card itself stays in <strong>Backlog</strong> carrying
+                  a <code>⏱</code> badge and never moves on its own; drag it elsewhere and it stops firing until
+                  it&rsquo;s back in Backlog. Clear the Repeat field to turn scheduling off.</p>
+              </div>
 
-            <div class="chapter" id="m-notify">
-              <span class="kicker">§ 09</span>
-              <h3>Notifications</h3>
-              <p>When a card lands in <strong>Review</strong> (or fails), you get notified. User-stopped runs don&rsquo;t notify.</p>
-              <h4>macOS (on by default)</h4>
-              <p>Fires via <code>osascript</code>. Toggle in ⚙ Settings. If nothing appears: System Settings → Notifications → allow notifications for &ldquo;Script Editor&rdquo; / your terminal.</p>
-              <h4>Phone (ntfy)</h4>
-              <ol>
-                <li>Install the <strong>ntfy</strong> app (<a href="https://apps.apple.com/us/app/ntfy/id1625396347" target="_blank" rel="noreferrer">iOS</a> / <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noreferrer">Android</a>) — no account needed.</li>
-                <li>Pick a long, unguessable topic name (ntfy topics are a public namespace — anyone who knows the name can read it): e.g. <code>kk-$(openssl rand -hex 8)</code>.</li>
-                <li>Put it in <strong>⚙ Settings → ntfy topic</strong> on the board.</li>
-                <li>In the ntfy app: <strong>+ → Subscribe to topic</strong> → same name.</li>
-              </ol>
-              <p>Pushes include the card title, and tapping one opens the PR when there is one. Because the topic is public-by-obscurity, keep card titles free of secrets. <strong>🔔 Test notification</strong> (in ⚙ Settings) fires both channels on demand.</p>
-            </div>
+              <div class="chapter" id="m-notify">
+                <span class="kicker">§ 09</span>
+                <h3>Notifications</h3>
+                <p>When a card lands in <strong>Review</strong> (or fails), you get notified. User-stopped runs
+                  don&rsquo;t notify.</p>
+                <h4>macOS (on by default)</h4>
+                <p>Fires via <code>osascript</code>. Toggle in ⚙ Settings. If nothing appears: System Settings →
+                  Notifications → allow notifications for &ldquo;Script Editor&rdquo; / your terminal.</p>
+                <h4>Phone (ntfy)</h4>
+                <ol>
+                  <li>Install the <strong>ntfy</strong> app (<a href="https://apps.apple.com/us/app/ntfy/id1625396347"
+                      target="_blank" rel="noreferrer">iOS</a> / <a
+                      href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank"
+                      rel="noreferrer">Android</a>) — no account needed.</li>
+                  <li>Pick a long, unguessable topic name (ntfy topics are a public namespace — anyone who knows the
+                    name can read it): e.g. <code>kk-$(openssl rand -hex 8)</code>.</li>
+                  <li>Put it in <strong>⚙ Settings → ntfy topic</strong> on the board.</li>
+                  <li>In the ntfy app: <strong>+ → Subscribe to topic</strong> → same name.</li>
+                </ol>
+                <p>Pushes include the card title, and tapping one opens the PR when there is one. Because the topic is
+                  public-by-obscurity, keep card titles free of secrets. <strong>🔔 Test notification</strong> (in ⚙
+                  Settings) fires both channels on demand.</p>
+              </div>
 
-            <div class="chapter" id="m-phone">
-              <span class="kicker">§ 10</span>
-              <h3>Use it from your phone (Tailscale)</h3>
-              <p>The server <strong>refuses</strong> to bind beyond loopback without an access token, because the runner executes code. The safe path is a token + Tailscale — the port stays on loopback and Tailscale proxies it inside your tailnet only:</p>
-<pre><code><span class="c"># 1. one-time: create the token (this enables the login gate)</span>
+              <div class="chapter" id="m-phone">
+                <span class="kicker">§ 10</span>
+                <h3>Use it from your phone (Tailscale)</h3>
+                <p>The server <strong>refuses</strong> to bind beyond loopback without an access token, because the
+                  runner executes code. The safe path is a token + Tailscale — the port stays on loopback and Tailscale
+                  proxies it inside your tailnet only:</p>
+                <pre><code><span class="c"># 1. one-time: create the token (this enables the login gate)</span>
 openssl rand -hex 16 &gt; data/auth-token
 
 <span class="c"># 2. run the board</span>
@@ -471,31 +684,51 @@ npm start                          <span class="c"># logs: "token gate: ON"</spa
 <span class="c"># 3. one-time: serve it over your tailnet with HTTPS</span>
 tailscale serve --bg 4747
 tailscale serve status             <span class="c"># shows your https://….ts.net URL</span></code></pre>
-              <p>On your phone: install Tailscale, sign in to the same tailnet, open the URL, enter the token once — it&rsquo;s stored as a cookie for a year. Scripts/API calls can send <code>Authorization: Bearer &lt;token&gt;</code> instead.</p>
-              <p><strong>Install it as an app</strong>: the board is a PWA. On iPhone, open the tailnet URL in Safari → Share → <strong>Add to Home Screen</strong> — you get a standalone full-screen app with the robot icon and night-dojo status bar.</p>
-              <ul>
-                <li>Token can also come from the <code>KFK_TOKEN</code> env var (overrides the file).</li>
-                <li>Rotate it by regenerating <code>data/auth-token</code> (old cookies stop working).</li>
-                <li><code>tailscale serve</code> is tailnet-only. <strong>Never</strong> use <code>tailscale funnel</code> or a public port-forward for this app.</li>
-                <li>To stop sharing: <code>tailscale serve --https=443 off</code> (or <code>tailscale serve reset</code>).</li>
-              </ul>
-            </div>
+                <p>On your phone: install Tailscale, sign in to the same tailnet, open the URL, enter the token once —
+                  it&rsquo;s stored as a cookie for a year. Scripts/API calls can send
+                  <code>Authorization: Bearer &lt;token&gt;</code> instead.
+                </p>
+                <p><strong>Install it as an app</strong>: the board is a PWA. On iPhone, open the tailnet URL in Safari
+                  → Share → <strong>Add to Home Screen</strong> — you get a standalone full-screen app with the robot
+                  icon and night-dojo status bar.</p>
+                <ul>
+                  <li>Token can also come from the <code>KFK_TOKEN</code> env var (overrides the file).</li>
+                  <li>Rotate it by regenerating <code>data/auth-token</code> (old cookies stop working).</li>
+                  <li><code>tailscale serve</code> is tailnet-only. <strong>Never</strong> use
+                    <code>tailscale funnel</code> or a public port-forward for this app.
+                  </li>
+                  <li>To stop sharing: <code>tailscale serve --https=443 off</code> (or
+                    <code>tailscale serve reset</code>).
+                  </li>
+                </ul>
+              </div>
 
-            <div class="chapter" id="m-limits">
-              <span class="kicker">§ 11</span>
-              <h3>Subscription limits &amp; model fallback</h3>
-              <p>Both of these are automatic — nothing to configure.</p>
-              <h4>Cooldown</h4>
-              <p>When a run dies on a usage/rate limit, the board parses the reset time from the CLI&rsquo;s error (falls back to a 1-hour backoff), <strong>requeues the card</strong> (it wasn&rsquo;t a real failure), and pauses all auto flow — queue pumping, Sensei triggers, PR auto-fix — until the limit resets. A <strong>⏳ countdown chip</strong> shows in the header and your phone gets a ping. Manual run clicks during cooldown queue instead of burning against the wall. When the timer expires everything queued launches automatically and you get a &ldquo;training resumes&rdquo; notification.</p>
-              <h4>Model fallback</h4>
-              <p>A <em>model-specific</em> cap or outage (an Opus-hours limit while Sonnet still works, a 529 overload) doesn&rsquo;t pause anything — the failed model is blocked temporarily (30 min for caps, 10 for overloads), the card requeues, and launches step down the ladder <strong>fable → opus → sonnet → haiku</strong> until the block expires. Cards keep their configured model and climb back up automatically; a <strong>⬇ chip</strong> in the header shows what&rsquo;s stepped down, and the transcript notes every substitution. The Sensei&rsquo;s own runs substitute too.</p>
-            </div>
+              <div class="chapter" id="m-limits">
+                <span class="kicker">§ 11</span>
+                <h3>Subscription limits &amp; model fallback</h3>
+                <p>Both of these are automatic — nothing to configure.</p>
+                <h4>Cooldown</h4>
+                <p>When a run dies on a usage/rate limit, the board parses the reset time from the CLI&rsquo;s error
+                  (falls back to a 1-hour backoff), <strong>requeues the card</strong> (it wasn&rsquo;t a real failure),
+                  and pauses all auto flow — queue pumping, Sensei triggers, PR auto-fix — until the limit resets. A
+                  <strong>⏳ countdown chip</strong> shows in the header and your phone gets a ping. Manual run clicks
+                  during cooldown queue instead of burning against the wall. When the timer expires everything queued
+                  launches automatically and you get a &ldquo;training resumes&rdquo; notification.
+                </p>
+                <h4>Model fallback</h4>
+                <p>A <em>model-specific</em> cap or outage (an Opus-hours limit while Sonnet still works, a 529
+                  overload) doesn&rsquo;t pause anything — the failed model is blocked temporarily (30 min for caps, 10
+                  for overloads), the card requeues, and launches step down the ladder <strong>fable → opus → sonnet →
+                    haiku</strong> until the block expires. Cards keep their configured model and climb back up
+                  automatically; a <strong>⬇ chip</strong> in the header shows what&rsquo;s stepped down, and the
+                  transcript notes every substitution. The Sensei&rsquo;s own runs substitute too.</p>
+              </div>
 
-            <div class="chapter" id="m-launchd">
-              <span class="kicker">§ 12</span>
-              <h3>Run at login (optional)</h3>
-              <p><code>~/Library/LaunchAgents/com.kungfu-kanban.plist</code>:</p>
-<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+              <div class="chapter" id="m-launchd">
+                <span class="kicker">§ 12</span>
+                <h3>Run at login (optional)</h3>
+                <p><code>~/Library/LaunchAgents/com.kungfu-kanban.plist</code>:</p>
+                <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
 &lt;plist version="1.0"&gt;&lt;dict&gt;
@@ -516,119 +749,183 @@ tailscale serve status             <span class="c"># shows your https://….ts.n
   &lt;key&gt;StandardOutPath&lt;/key&gt;&lt;string&gt;/tmp/kungfu-kanban.log&lt;/string&gt;
   &lt;key&gt;StandardErrorPath&lt;/key&gt;&lt;string&gt;/tmp/kungfu-kanban.log&lt;/string&gt;
 &lt;/dict&gt;&lt;/plist&gt;</code></pre>
-<pre><code>launchctl load ~/Library/LaunchAgents/com.kungfu-kanban.plist   <span class="c"># start now + at login</span>
+                <pre><code>launchctl load ~/Library/LaunchAgents/com.kungfu-kanban.plist   <span class="c"># start now + at login</span>
 launchctl unload ~/Library/LaunchAgents/com.kungfu-kanban.plist <span class="c"># stop</span></code></pre>
-            </div>
+              </div>
 
-            <div class="chapter" id="m-config">
-              <span class="kicker">§ 13</span>
-              <h3>Configuration reference</h3>
-              <h4>Environment variables</h4>
-              <table class="doc-table">
-                <thead><tr><th>Var</th><th>Default</th><th>Meaning</th></tr></thead>
-                <tbody>
-                  <tr><td><code>PORT</code></td><td><code>4747</code></td><td>listen port</td></tr>
-                  <tr><td><code>HOST</code></td><td><code>127.0.0.1</code></td><td>bind address; anything non-loopback requires a token</td></tr>
-                  <tr><td><code>KFK_TOKEN</code></td><td>—</td><td>access token (overrides <code>data/auth-token</code>)</td></tr>
-                </tbody>
-              </table>
-              <h4>Files (<code>data/</code>, gitignored — this is all app state)</h4>
-              <table class="doc-table">
-                <thead><tr><th>File</th><th>Contents</th></tr></thead>
-                <tbody>
-                  <tr><td><code>tasks.json</code></td><td>all cards</td></tr>
-                  <tr><td><code>settings.json</code></td><td>parallel cap, default cwd, ntfy topic, notification toggle, manager config</td></tr>
-                  <tr><td><code>manager.json</code></td><td>pending suggestions, chat history, launch timestamps</td></tr>
-                  <tr><td><code>manager-log.jsonl</code></td><td>manager activity log</td></tr>
-                  <tr><td><code>transcripts/&lt;task-id&gt;.jsonl</code></td><td>per-card transcript</td></tr>
-                  <tr><td><code>auth-token</code></td><td>access token (create to enable the gate)</td></tr>
-                </tbody>
-              </table>
-              <p>Back up <code>data/</code> to keep your board; delete it to factory-reset. Individual sessions can always be reopened in the terminal with <code>claude -r &lt;session-id&gt;</code> (shown in each card&rsquo;s drawer).</p>
-            </div>
+              <div class="chapter" id="m-config">
+                <span class="kicker">§ 13</span>
+                <h3>Configuration reference</h3>
+                <h4>Environment variables</h4>
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th>Var</th>
+                      <th>Default</th>
+                      <th>Meaning</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>PORT</code></td>
+                      <td><code>4747</code></td>
+                      <td>listen port</td>
+                    </tr>
+                    <tr>
+                      <td><code>HOST</code></td>
+                      <td><code>127.0.0.1</code></td>
+                      <td>bind address; anything non-loopback requires a token</td>
+                    </tr>
+                    <tr>
+                      <td><code>KFK_TOKEN</code></td>
+                      <td>—</td>
+                      <td>access token (overrides <code>data/auth-token</code>)</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <h4>Files (<code>data/</code>, gitignored — this is all app state)</h4>
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th>File</th>
+                      <th>Contents</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>tasks.json</code></td>
+                      <td>all cards</td>
+                    </tr>
+                    <tr>
+                      <td><code>settings.json</code></td>
+                      <td>parallel cap, default cwd, ntfy topic, notification toggle, manager config</td>
+                    </tr>
+                    <tr>
+                      <td><code>manager.json</code></td>
+                      <td>pending suggestions, chat history, launch timestamps</td>
+                    </tr>
+                    <tr>
+                      <td><code>manager-log.jsonl</code></td>
+                      <td>manager activity log</td>
+                    </tr>
+                    <tr>
+                      <td><code>transcripts/&lt;task-id&gt;.jsonl</code></td>
+                      <td>per-card transcript</td>
+                    </tr>
+                    <tr>
+                      <td><code>auth-token</code></td>
+                      <td>access token (create to enable the gate)</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p>Back up <code>data/</code> to keep your board; delete it to factory-reset. Individual sessions can
+                  always be reopened in the terminal with <code>claude -r &lt;session-id&gt;</code> (shown in each
+                  card&rsquo;s drawer).</p>
+              </div>
 
-            <div class="chapter" id="m-trouble">
-              <span class="kicker">§ 14</span>
-              <h3>Troubleshooting</h3>
-              <ul>
-                <li><strong>Card fails instantly with &ldquo;Failed to launch claude CLI&rdquo;</strong> — <code>claude</code> isn&rsquo;t on the server&rsquo;s PATH (common under launchd; fix the plist PATH above) or isn&rsquo;t installed.</li>
-                <li><strong>Run errors mentioning auth/login</strong> — the CLI isn&rsquo;t logged in: run <code>claude</code> in a terminal, <code>/login</code>, pick your subscription account. API-key auth can&rsquo;t be used — the runner deletes <code>ANTHROPIC_API_KEY</code> on purpose.</li>
-                <li><strong>PR flow: &ldquo;no worktree matching …&rdquo;</strong> — the card ran without the worktree box, or the cwd isn&rsquo;t a git repo. <strong>&ldquo;gh pr create failed&rdquo;</strong> — check <code>gh auth status</code> and that <code>origin</code> points at GitHub.</li>
-                <li><strong>Port already in use</strong> — <code>lsof -nP -iTCP:4747 -sTCP:LISTEN</code>, kill the old server.</li>
-                <li><strong>No macOS notifications</strong> — System Settings → Notifications: allow &ldquo;Script Editor&rdquo;/terminal; check the ⚙ Settings toggle.</li>
-                <li><strong>Hitting subscription rate limits</strong> — lower <strong>parallel</strong>, prefer haiku/sonnet + low effort for routine cards, disable the manager interval trigger, or lean on the Sensei&rsquo;s frugality bias (it routes cheap by default).</li>
-                <li><strong>Server won&rsquo;t start: &ldquo;Refusing to bind …&rdquo;</strong> — you set <code>HOST</code> without a token. Create <code>data/auth-token</code> (or unset <code>HOST</code> and use Tailscale serve, which works with loopback).</li>
-              </ul>
-            </div>
+              <div class="chapter" id="m-trouble">
+                <span class="kicker">§ 14</span>
+                <h3>Troubleshooting</h3>
+                <ul>
+                  <li><strong>Card fails instantly with &ldquo;Failed to launch claude CLI&rdquo;</strong> —
+                    <code>claude</code> isn&rsquo;t on the server&rsquo;s PATH (common under launchd; fix the plist PATH
+                    above) or isn&rsquo;t installed.
+                  </li>
+                  <li><strong>Run errors mentioning auth/login</strong> — the CLI isn&rsquo;t logged in: run
+                    <code>claude</code> in a terminal, <code>/login</code>, pick your subscription account. API-key auth
+                    can&rsquo;t be used — the runner deletes <code>ANTHROPIC_API_KEY</code> on purpose.
+                  </li>
+                  <li><strong>PR flow: &ldquo;no worktree matching …&rdquo;</strong> — the card ran without the worktree
+                    box, or the cwd isn&rsquo;t a git repo. <strong>&ldquo;gh pr create failed&rdquo;</strong> — check
+                    <code>gh auth status</code> and that <code>origin</code> points at GitHub.
+                  </li>
+                  <li><strong>Port already in use</strong> — <code>lsof -nP -iTCP:4747 -sTCP:LISTEN</code>, kill the old
+                    server.</li>
+                  <li><strong>No macOS notifications</strong> — System Settings → Notifications: allow &ldquo;Script
+                    Editor&rdquo;/terminal; check the ⚙ Settings toggle.</li>
+                  <li><strong>Hitting subscription rate limits</strong> — lower <strong>parallel</strong>, prefer
+                    haiku/sonnet + low effort for routine cards, disable the manager interval trigger, or lean on the
+                    Sensei&rsquo;s frugality bias (it routes cheap by default).</li>
+                  <li><strong>Server won&rsquo;t start: &ldquo;Refusing to bind …&rdquo;</strong> — you set
+                    <code>HOST</code> without a token. Create <code>data/auth-token</code> (or unset <code>HOST</code>
+                    and use Tailscale serve, which works with loopback).
+                  </li>
+                </ul>
+              </div>
 
-            <div class="chapter" id="m-security">
-              <span class="kicker">§ 15</span>
-              <h3>Security notes</h3>
-              <p>This board <strong>executes code on your machine</strong> with whatever permission mode a card carries — <code>bypassPermissions</code> means exactly that. Accordingly:</p>
-              <ul>
-                <li>The server never binds beyond loopback without a token, and you shouldn&rsquo;t either. Tailscale serve (tailnet-only) + token is the supported remote path. No public exposure, ever.</li>
-                <li>The manager&rsquo;s permission ceiling stops it from escalating cards beyond what you allow; deleting cards is hard-blocked regardless of autonomy.</li>
-                <li>ntfy topics are public-by-obscurity: unguessable names only, no secrets in card titles.</li>
-                <li>The token cookie is <code>HttpOnly</code>/<code>SameSite=Lax</code>, compared timing-safe, and lives a year; rotate <code>data/auth-token</code> to invalidate.</li>
-              </ul>
-            </div>
+              <div class="chapter" id="m-security">
+                <span class="kicker">§ 15</span>
+                <h3>Security notes</h3>
+                <p>This board <strong>executes code on your machine</strong> with whatever permission mode a card
+                  carries — <code>bypassPermissions</code> means exactly that. Accordingly:</p>
+                <ul>
+                  <li>The server never binds beyond loopback without a token, and you shouldn&rsquo;t either. Tailscale
+                    serve (tailnet-only) + token is the supported remote path. No public exposure, ever.</li>
+                  <li>The manager&rsquo;s permission ceiling stops it from escalating cards beyond what you allow;
+                    deleting cards is hard-blocked regardless of autonomy.</li>
+                  <li>ntfy topics are public-by-obscurity: unguessable names only, no secrets in card titles.</li>
+                  <li>The token cookie is <code>HttpOnly</code>/<code>SameSite=Lax</code>, compared timing-safe, and
+                    lives a year; rotate <code>data/auth-token</code> to invalidate.</li>
+                </ul>
+              </div>
 
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- COLOPHON -->
-    <footer class="colophon">
-      <div class="mkt-inner">
-        <div class="colophon-grid">
-          <div>
-            <b>The dojo</b>
-            <a href="#forms">The four forms</a>
-            <a href="#features">The discipline</a>
-            <a href="#manual">The manual</a>
+      <!-- COLOPHON -->
+      <footer class="colophon">
+        <div class="mkt-inner">
+          <div class="colophon-grid">
+            <div>
+              <b>The dojo</b>
+              <a href="#forms">The four forms</a>
+              <a href="#features">The discipline</a>
+              <a href="#manual">The manual</a>
+            </div>
+            <div>
+              <b>Source</b>
+              <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer">GitHub</a>
+              <a href="https://github.com/LeahyCC/kungfu-kanban#readme" target="_blank" rel="noreferrer">README</a>
+              <a href="https://github.com/LeahyCC/kungfu-kanban/issues" target="_blank" rel="noreferrer">Issues</a>
+            </div>
+            <div>
+              <b>Colophon</b>
+              <span style="color: var(--ink-400)">© 2026 Kungfu Kanban</span>
+            </div>
           </div>
-          <div>
-            <b>Source</b>
-            <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer">GitHub</a>
-            <a href="https://github.com/LeahyCC/kungfu-kanban#readme" target="_blank" rel="noreferrer">README</a>
-            <a href="https://github.com/LeahyCC/kungfu-kanban/issues" target="_blank" rel="noreferrer">Issues</a>
-          </div>
-          <div>
-            <b>Colophon</b>
-            <span style="color: var(--ink-400)">© 2026 Kungfu Kanban</span>
+          <div class="colophon-bow">
+            <img src="/icons/android-icon-48x48.png" alt="" width="48" height="48">
+            <p>
+              Set in Bricolage Grotesque, Instrument Sans &amp; IBM Plex Mono.
+              Ink, paper, and one cardboard master. No stock photos. No accounts. No billing.
+            </p>
           </div>
         </div>
-        <div class="colophon-bow">
-          <img src="/icons/android-icon-48x48.png" alt="" width="48" height="48">
-          <p>
-            Set in Bricolage Grotesque, Instrument Sans &amp; IBM Plex Mono.
-            Ink, paper, and one cardboard master. No stock photos. No accounts. No billing.
-          </p>
-        </div>
-      </div>
-    </footer>
-  </main>
-</div>
+      </footer>
+    </main>
+  </div>
 
-<script>
-  // Night dojo (dark) is the default; light is the stored override.
-  (function () {
-    var btn = document.getElementById('theme-toggle');
-    function render() {
-      var light = document.documentElement.dataset.theme === 'light';
-      btn.textContent = light ? '☾' : '☀';
-      btn.title = light ? 'Night dojo' : 'Day dojo';
-    }
-    btn.addEventListener('click', function () {
-      var next = !(document.documentElement.dataset.theme === 'light');
-      if (next) document.documentElement.dataset.theme = 'light';
-      else delete document.documentElement.dataset.theme;
-      try { localStorage.setItem('kk-theme', next ? 'light' : 'dark'); } catch (e) {}
+  <script>
+    // Night dojo (dark) is the default; light is the stored override.
+    (function () {
+      var btn = document.getElementById('theme-toggle');
+      function render() {
+        var light = document.documentElement.dataset.theme === 'light';
+        btn.textContent = light ? '☾' : '☀';
+        btn.title = light ? 'Night dojo' : 'Day dojo';
+      }
+      btn.addEventListener('click', function () {
+        var next = !(document.documentElement.dataset.theme === 'light');
+        if (next) document.documentElement.dataset.theme = 'light';
+        else delete document.documentElement.dataset.theme;
+        try { localStorage.setItem('kk-theme', next ? 'light' : 'dark'); } catch (e) { }
+        render();
+      });
       render();
-    });
-    render();
-  })();
-</script>
+    })();
+  </script>
 </body>
+
 </html>
