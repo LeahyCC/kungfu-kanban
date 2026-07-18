@@ -1,5 +1,6 @@
 node_modules/
 data/
 local/
+.claude/worktrees/
 .env*
 .DS_Store
