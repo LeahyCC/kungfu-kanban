@@ -240,6 +240,7 @@ fieldset { border: 1px solid var(--rule); border-radius: 2px; padding: 10px 12px
 fieldset legend { padding: 0 6px; }
 input.tiny { width: 60px; }
 .hint-inline { text-transform: none; letter-spacing: normal; font-weight: 400; color: var(--ink-400); }
+.hint { text-transform: none; letter-spacing: normal; font-weight: 400; color: var(--ink-400); font-size: 11.5px; margin: -6px 0 14px; }
 
 .check-row {
   flex-direction: row !important;
