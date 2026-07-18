@@ -5,8 +5,10 @@ CLI on your subscription login** — no API keys, no token billing, no cloud. Th
 strips `ANTHROPIC_API_KEY` from the environment before spawning, so it can never
 silently fall back to pay-per-token.
 
-> This used to be a two-edition repo with a hosted SaaS variant (Stripe, Clerk, Neon,
-> Vercel Sandbox). That edition is deleted — this is a tool for one person.
+**[kungfu-kanban.com](https://kungfu-kanban.com)** — this README as an illustrated manual.
+
+> A tool for one person, by design: single-user, local-first, everything in a folder
+> of JSON on your own machine. There is no hosted version and there won't be one.
 
 **How it works:** an Express server (`server.js`) serves the board UI and spawns
 `claude -p <prompt> --output-format stream-json` per card. Output streams into the
@@ -29,7 +31,7 @@ triages, dispatches, and reviews cards. Everything persists as JSON files in `da
 ## Quick start
 
 ```bash
-git clone <this repo> && cd kungfu-kanban
+git clone https://github.com/LeahyCC/kungfu-kanban.git && cd kungfu-kanban
 npm install
 npm start          # → http://localhost:4747
 ```
@@ -443,3 +445,16 @@ carries — `bypassPermissions` means exactly that. Accordingly:
   titles.
 - The token cookie is `HttpOnly`/`SameSite=Lax`, compared timing-safe, and lives a
   year; rotate `data/auth-token` to invalidate.
+
+---
+
+## Status & contributions
+
+This is a personal tool that happens to be public. Issues and PRs are welcome, but the
+scope is deliberately narrow: single-user, local-first, subscription-auth only. Feature
+requests for multi-tenancy, hosted deployment, API-key providers, or billing will be
+closed with a polite bow — that version existed and was deleted on purpose.
+
+## License
+
+[MIT](LICENSE)
