@@ -33,6 +33,7 @@
       <button id="tabManager" class="app-tab">Manager <span id="suggCount" class="pill hidden"></span></button>
     </nav>
     <div class="app-status" aria-label="Board summary">
+      <span id="usageChip" class="cooldown-chip usage-chip hidden" title="All Claude Code output tokens on this Mac in the rolling 5-hour limit window (board + terminal). Set a budget in ⚙ Settings for a % meter.">⛽ <span id="usageChipText"></span></span>
       <span id="cooldownChip" class="cooldown-chip hidden" title="Subscription limits hit — auto flow paused; queued cards launch when it resets">⏳ <span id="cooldownTimer">--:--</span></span>
       <span id="modelChip" class="cooldown-chip model-chip hidden" title="Model capped or unavailable — launches use the next model down until it resets">⬇ <span id="modelChipText"></span></span>
       <span class="status-chip" title="Backlog"><span class="belt-dot belt-todo"></span><span id="countBacklog" class="status-count">0</span></span>
@@ -257,6 +258,10 @@ The prompt: self-contained instructions for the executing agent.
           <input name="prWatchMin" type="number" min="0" max="120" class="tiny" />
         </label>
         <label class="check-row"><input type="checkbox" name="prWatchAutoFix" /> auto-fix PR merge conflicts (spawns a fix card, max 2 tries)</label>
+        <label title="Anthropic doesn't publish exact quotas, so pick a number that matches your experience of when limits hit — the ⛽ chip becomes a % meter against it">5-hour budget <span class="hint-inline">(output Mtok, 0 = just show usage)</span>
+          <input name="usageBudgetM" type="number" min="0" max="1000" step="0.5" class="tiny" />
+        </label>
+        <div id="usageBreakdown" class="footnote"></div>
         <div class="modal-actions">
           <button type="button" id="notifyTestBtn" class="ghost">🔔 Test notification</button>
           <button type="button" id="settingsCancelBtn" class="ghost" title="Close without saving">Cancel</button>
@@ -274,6 +279,12 @@ The prompt: self-contained instructions for the executing agent.
     </div>
     <div id="drawerMeta" class="drawer-meta"></div>
     <div id="drawerActions" class="drawer-actions"></div>
+    <div class="drawer-prompt">
+      <span class="field-label">The work
+        <button type="button" id="promptSaveBtn" class="ghost mini hidden" title="Save the edited prompt — used on the next run or retry">save</button>
+      </span>
+      <textarea id="promptEdit" rows="4" title="The prompt the agent receives — edit it right here"></textarea>
+    </div>
     <div id="transcript" class="transcript slab"></div>
     <form id="followForm" class="follow-row hidden">
       <input name="message" placeholder="Follow-up: fix the bug where…, also add…" autocomplete="off" />

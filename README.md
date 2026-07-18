@@ -59,6 +59,13 @@ Columns: **Backlog → Queued → Running → Review → Done**
 - **☀ / ☾** toggles the day/night dojo. Night is the default.
 - The toolbar shows live **system status**: green dots when the `claude` CLI and
   `gh` auth are healthy, red with a plain-English warning when they're not.
+- The **⛽ usage chip** shows output tokens burned in the rolling 5-hour limit
+  window across ALL Claude Code activity on the machine (board + terminal),
+  computed from the local session logs. Set a budget in ⚙ Settings to turn it
+  into a % meter (amber ≥70%, red ≥90%); the full in/out/cache/per-model
+  breakdown lives in ⚙ Settings.
+- The drawer shows **The work** — the card's prompt, editable in place — and
+  running cards report live output tokens and **session context usage** (ctx %).
 - Cards with a PR get **⇉ Merge PR / Close PR** buttons in the drawer — merging
   happens via `gh` and stamps the card Done on the spot.
 

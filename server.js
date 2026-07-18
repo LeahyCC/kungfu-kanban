@@ -91,6 +91,10 @@ app.put('/api/settings', (req, res) => {
     prwatch.applyInterval();
   }
   if (typeof prWatchAutoFix === 'boolean') state.settings.prWatchAutoFix = prWatchAutoFix;
+  const { usageBudgetM } = req.body || {};
+  if (typeof usageBudgetM === 'number' && usageBudgetM >= 0 && usageBudgetM <= 1000) {
+    state.settings.usageBudgetTokens = Math.round(usageBudgetM * 1_000_000);
+  }
   if (Number.isInteger(maxConcurrent) && maxConcurrent >= 1 && maxConcurrent <= 8) {
     state.settings.maxConcurrent = maxConcurrent;
   }
@@ -196,6 +200,11 @@ app.post('/api/import/issues', (req, res) => {
 app.post('/api/prwatch/sweep', (req, res) => {
   prwatch.sweep();
   res.json({ ok: true });
+});
+
+// Rolling 5-hour usage across all local Claude Code activity. Cached 2 min.
+app.get('/api/usage', (req, res) => {
+  res.json({ ...require('./lib/usage').scan(), budgetTokens: state.settings.usageBudgetTokens || 0 });
 });
 
 // System health: is the claude CLI reachable, is gh authed? Cached 5 min.
