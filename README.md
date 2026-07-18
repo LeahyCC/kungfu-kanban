@@ -186,6 +186,17 @@ a card with no body uses its title as the prompt.
 **Checklist** — a file with no `##` headings: every unchecked `- [ ] item`
 becomes a card (checked items are skipped).
 
+**✨ Drafting**: describe the work in plain English in the Draft box and the Sensei
+writes the card doc into the textarea for review. Pick a repo and check **🔍
+explore repo first** to let it read the actual code before writing — slower, but
+cards reference real files. **↻ Refine** iterates on the draft in the same
+session ("split card 2, make the last one opus"). A live preview under the
+textarea shows what will be created and warns about titles already on the board.
+
+**⇣ From issues**: pick a repo and pull its open GitHub issues into cards
+(`issue: N` field). Their PRs include `Fixes #N`, so merging the PR closes the
+issue automatically — issue → card → agent → PR → merged → closed.
+
 **From Claude Code**: a personal skill at `~/.claude/skills/kungfu-todo/SKILL.md`
 teaches every Claude Code session (any project) to do this on request — say
 "create a kungfu todo for …" and it drafts the cards, drops the file in the

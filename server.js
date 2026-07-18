@@ -124,19 +124,72 @@ app.post('/api/import', (req, res) => {
 importer.watchInbox(triageImported);
 
 // Draft an import document from natural language (runs on the subscription).
+// {request} for a fresh draft (+ optional {repoPath, explore} to ground it in
+// the actual code); {refine, sessionId} to revise the previous draft in place.
 app.post('/api/import/draft', async (req, res) => {
-  const request = ((req.body || {}).request || '').trim();
-  if (!request) return res.status(400).json({ error: 'empty request' });
+  const b = req.body || {};
   if (cooldown.active()) return res.status(503).json({ error: 'subscription is cooling down — try after the timer' });
   try {
-    const markdown = await importer.draft(request, {
-      repos: discoverRepos(reposDir()),
-      defaultCwd: state.settings.defaultCwd,
-    });
-    res.json({ markdown });
+    let out;
+    if (b.refine && b.sessionId) {
+      out = await importer.refine(String(b.sessionId), String(b.refine).slice(0, 5000));
+    } else {
+      const request = (b.request || '').trim();
+      if (!request) return res.status(400).json({ error: 'empty request' });
+      const repos = discoverRepos(reposDir());
+      const repoPath = repos.some((r) => r.path === b.repoPath) ? b.repoPath : null;
+      out = await importer.draft(request, {
+        repos,
+        defaultCwd: state.settings.defaultCwd,
+        repoPath,
+        explore: !!b.explore && !!repoPath,
+      });
+    }
+    res.json(out);
   } catch (e) {
     res.status(500).json({ error: String(e.message || e).slice(0, 300) });
   }
+});
+
+// Parse preview: what would this markdown create, and does anything collide?
+app.post('/api/import/preview', (req, res) => {
+  const cards = importer.parseMarkdown(((req.body || {}).markdown) || '');
+  const existing = new Set(state.tasks.map((t) => t.title.trim().toLowerCase()));
+  res.json({
+    cards: cards.map((c) => ({ title: c.title, model: c.model || 'default', priority: c.priority || 0 })),
+    dupes: cards.filter((c) => existing.has(c.title.trim().toLowerCase())).map((c) => c.title),
+  });
+});
+
+// Open GitHub issues of a repo → an import document (review before importing).
+app.post('/api/import/issues', (req, res) => {
+  const repos = discoverRepos(reposDir());
+  const repoPath = repos.some((r) => r.path === (req.body || {}).repoPath) ? req.body.repoPath : null;
+  if (!repoPath) return res.status(400).json({ error: 'pick a repo first' });
+  require('child_process').execFile(
+    'gh', ['issue', 'list', '--json', 'number,title,body,labels', '--limit', '50'],
+    { cwd: repoPath, timeout: 30_000, maxBuffer: 4 * 1024 * 1024 },
+    (err, stdout) => {
+      if (err) return res.status(500).json({ error: String(err.message).slice(0, 200) });
+      let issues;
+      try { issues = JSON.parse(stdout); } catch { return res.status(500).json({ error: 'unparsable gh output' }); }
+      if (!issues.length) return res.json({ markdown: '', count: 0 });
+      const md = [
+        '---', `cwd: ${repoPath}`, 'worktree: true', 'openPr: true', '---', '',
+        ...issues.map((i) => {
+          const urgent = (i.labels || []).some((l) => /bug|urgent|p0|p1/i.test(l.name));
+          return [
+            `## ${i.title}`,
+            `issue: ${i.number}`,
+            urgent ? 'priority: 2' : '',
+            (i.body || i.title).trim().slice(0, 3000),
+            '',
+          ].filter(Boolean).join('\n');
+        }),
+      ].join('\n');
+      res.json({ markdown: md, count: issues.length });
+    }
+  );
 });
 
 // Manual PR-watch pass (also runs on an interval).
@@ -155,7 +208,7 @@ app.post('/api/notify/test', (req, res) => {
 const TASK_FIELDS = [
   'title', 'prompt', 'cwd', 'model', 'effort', 'permissionMode',
   'skills', 'skillsAuto', 'agent', 'worktree', 'openPr', 'status', 'priority', 'acceptanceCriteria',
-  'schedule',
+  'schedule', 'issueNumber',
 ];
 const STATUSES = ['backlog', 'queued', 'running', 'stopping', 'review', 'done'];
 
@@ -201,6 +254,7 @@ function makeTask(b, createdBy = 'user') {
     priority: Number.isInteger(b.priority) ? b.priority : 0,
     acceptanceCriteria: b.acceptanceCriteria || '',
     schedule: parseSchedule(b.schedule),
+    issueNumber: Number.isInteger(b.issueNumber) ? b.issueNumber : null,
     status: 'backlog',
     createdAt: new Date().toISOString(),
     createdBy,

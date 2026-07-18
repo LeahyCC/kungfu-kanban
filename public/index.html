@@ -192,9 +192,19 @@
           <input id="draftPrompt" placeholder="✨ Or describe the work and let the Sensei draft it… e.g. plan a dark-mode pass for bouldi as 4 cards" autocomplete="off" />
           <button type="button" id="draftBtn" class="ghost">✨ Draft</button>
         </div>
+        <div class="draft-row draft-opts">
+          <select id="draftRepo"><option value="">repo…</option></select>
+          <label class="check-row"><input type="checkbox" id="exploreToggle" /> 🔍 explore repo first <span class="hint-inline">(slower, grounds cards in real files)</span></label>
+          <button type="button" id="issuesBtn" class="ghost" title="Turn the repo's open GitHub issues into cards — PRs will say Fixes #N">⇣ From issues</button>
+        </div>
         <label>Markdown
           <textarea name="markdown" id="importText" rows="12" class="mono" placeholder="Paste a card doc, pick a file below, tap the template, or let the Sensei draft one from the ✨ box above."></textarea>
         </label>
+        <div id="importPreview" class="footnote"></div>
+        <div class="draft-row hidden" id="refineRow">
+          <input id="refinePrompt" placeholder="↻ Refine the draft: split card 2, make the last one opus…" autocomplete="off" />
+          <button type="button" id="refineBtn" class="ghost">↻ Refine</button>
+        </div>
         <label class="check-row">…or pick a file
           <input type="file" id="importFile" accept=".md,.markdown,.txt" />
         </label>
