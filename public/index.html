@@ -47,6 +47,7 @@
       <span class="status-chip" title="Running"><span class="belt-dot belt-doing"></span><span id="countRunning" class="status-count">0</span><span class="sr-only">cards Running</span></span>
       <span class="status-chip" title="Review"><span class="belt-dot belt-review"></span><span id="countReview" class="status-count">0</span><span class="sr-only">cards in Review</span></span>
       <span class="status-chip" title="Done"><span class="belt-dot belt-done"></span><span id="countDone" class="status-count">0</span><span class="sr-only">cards Done</span></span>
+      <button id="settingsBtn" class="icon-btn" title="Settings" aria-label="Settings">⚙</button>
       <button id="themeToggle" class="theme-toggle" title="Day / night dojo" aria-label="Toggle theme" aria-pressed="false">◐</button>
     </div>
   </header>
@@ -56,7 +57,6 @@
     <div class="toolbar-actions">
       <input id="filterInput" class="filter" type="search" placeholder="⌕ filter cards…" aria-label="Filter cards by text, repo, model, or skill" title="Filter the board by title, prompt, repo path, model, agent, or skill" />
       <label class="conc" title="How many agent sessions may run at once — extras wait in Queued. Keeps parallel cards from burning your subscription rate limits.">parallel <input id="maxConcurrent" type="number" min="1" max="8" /></label>
-      <button id="settingsBtn" class="ghost" title="Settings">⚙ Settings</button>
       <button id="newTaskBtn" class="ghost" title="Fallback: write a card by hand — nothing runs until you launch it">＋ New card</button>
       <button id="importBtn" class="primary"
         title="The main way in: paste a plan, ✨ describe the work and let the Sensei draft the cards, or pull GitHub issues">⇪
