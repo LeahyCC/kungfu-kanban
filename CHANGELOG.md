@@ -7,11 +7,111 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.4.2] — 2026-07-17
+
+### Changed — marketing site replica no longer drifts
+- The landing page's "live board replica" (`site/index.html`) is now generated
+  from `site/board.data.json` by `site/build.js` (`npm run build:site`) instead
+  of being hand-copied from the app's board. The generator emits the app's real
+  card/column classes and **fails the build** if any of them stop existing in
+  `public/style.css`, so the replica can't silently fall out of sync as the
+  product evolves (docs/ui-ux-review.md §6). The site stays fully static — the
+  script writes plain HTML that Vercel deploys as-is, no build step required.
+
+## [0.4.1] — 2026-07-17
+
+### Fixed — board update check
+- ⬆ Update no longer fails with "no such ref was fetched" when the clone sits
+  on a merged-and-deleted PR branch: the pull now names `origin main`
+  explicitly instead of trusting the current branch's upstream.
+- The update chip no longer advertises an *older* version (e.g. "v0.3.2
+  available" on a v0.4.0 board): an update is offered only when origin/main's
+  version is actually newer than the local one.
+- Status line decluttered: "kungfu v0.4.1 · ● claude 2.1.212 ↑ update · ● gh"
+  — the "on your subscription" filler moved into the tooltip and the CLI's
+  parenthetical name is dropped.
+
+### Added — the UI/UX review pass (docs/ui-ux-review.md, all sections)
+- Every API call now has an error path: failures surface as toasts, the boot
+  sequence shows "contacting the dojo…" and a real error + retry state instead
+  of a blank page, and a ⚡ reconnecting chip appears whenever the live SSE
+  feed drops (the board refetches when it returns).
+- Keyboard-first accessibility: cards and skill chips are focusable and
+  operable with Enter/Space, modals and the drawer have dialog semantics
+  (role, aria-modal, labelled titles), Escape closes the topmost surface,
+  focus is trapped inside open overlays and returned to the trigger on close,
+  the tab bar is a real tablist with arrow-key navigation, and the app has a
+  skip link. The priority square now carries screen-reader text (and P3 gets a
+  distinct urgent ring).
+- Phones are first-class: the board stacks to a single column below 700px, a
+  "column" select in the drawer moves cards anywhere (drag-and-drop has no
+  touch equivalent), quick actions and the theme toggle grew to touch-target
+  size, header counts stay visible on small screens, and column heights use
+  dvh so iOS Safari stops jumping.
+- Board search: a ⌕ filter box in the toolbar matches title, prompt, repo
+  path, model, agent, and skills.
+- Styled confirm/alert dialogs replace every native confirm()/alert();
+  approving a card (quick ✓, drawer, or drag-to-Done) now asks first, and
+  destructive confirms are visually marked.
+- Sign out button in Settings (shown when the token gate is active) plus a
+  /logout route; the login page now honors the saved theme and the OS
+  preference, shows a copyable token-generation command, and rate-limits
+  wrong-token attempts with visible feedback.
+- A minimal service worker makes "add to home screen" a real PWA: network-first
+  (frontend still serves fresh from disk), cached shell only as an offline
+  fallback, /api/ never intercepted.
+
+### Fixed — the UI/UX review pass
+- Unsaved Sensei-settings edits are no longer wiped by SSE refreshes mid-edit
+  (dirty-check before repopulating the form).
+- Transcript and chat streaming only auto-scroll when you're already at the
+  bottom — scrolling up to read no longer teleports you back down.
+- Import feedback errors render in the error color instead of success green.
+- Closing the card modal (backdrop, Cancel, or Escape) with unsaved changes,
+  discarding a drafted import, or closing the drawer with an unsaved prompt
+  edit now asks before throwing your work away.
+- Board rebuilds preserve column scroll positions and defer while a drag is in
+  flight; the drag-over outline no longer flickers when crossing cards.
+- Double-submit protection everywhere: quick actions, card save, import,
+  suggestion approve/reject, Sensei chat (input disables while it thinks —
+  each run is a paid call), follow-ups, and drawer actions disable in flight.
+- The CLI/gh health line actually re-checks every 5 minutes, as its tooltip
+  always claimed.
+- The header's first count chip is labeled "Backlog + Queued" — what it
+  actually shows.
+- Default working directory and repos directory can now be cleared from
+  Settings (empty field = back to defaults).
+- Context % is computed against a named 200k window constant on card and
+  drawer instead of a magic /2000.
+- Activity-log timestamps include the date when not from today; cards and the
+  drawer show created/updated relative times; the drawer's cwd badge reveals
+  the full path on hover; the copied-resume badge no longer turns into a wall
+  of text.
+- Theme: first visit follows the OS color scheme, the toggle exposes
+  aria-pressed, and the theme-color meta follows the active theme.
+- Safety-critical permission copy (dontAsk/bypassPermissions) is inline text
+  in the card editor and Sensei settings, not just a tooltip; worktree/PR
+  behavior got inline hints too.
+- The Manager tab is now "Sensei" everywhere — one name for one agent.
+
+## [0.3.2] — 2026-07-17
+
 ### Fixed
 - App icons and favicons regenerated from the transparent logo — no more white
   box around the robot in browser tabs and bookmarks. Home-screen tiles
   (apple/ms icons) get the app's dark background instead, since iOS renders
   transparency as black.
+
+### Changed
+- The board leads with the auto path: ⇪ Import is the primary toolbar button
+  (＋ New card is the ghost fallback), the empty state shows the terminal
+  prompt that creates cards ("create a kungfu todo for …") with Import/draft
+  as the main button and hand-writing as the fallback, and the import modal's
+  footnote mentions you can skip it entirely from any Claude Code session.
+
+## [0.3.1] — 2026-07-17
+
+### Fixed
 - A permission-blocked card can no longer be misread as a subscription or model
   outage. Its error embeds the denied command, so a benign block on a command
   whose text contains a phrase like "rate limit" (or a model name) previously
@@ -26,11 +126,6 @@ compares your clone against `origin/main` and offers a one-click update.
 - Landing page leans into full-auto: the four forms are now say-it → Sensei
   routes → dojo runs itself → PRs arrive shipped, and the hero + import copy
   no longer read like you write and route cards by hand.
-- The board leads with the auto path: ⇪ Import is the primary toolbar button
-  (＋ New card is the ghost fallback), the empty state shows the terminal
-  prompt that creates cards ("create a kungfu todo for …") with Import/draft
-  as the main button and hand-writing as the fallback, and the import modal's
-  footnote mentions you can skip it entirely from any Claude Code session.
 
 ## [0.3.0] — 2026-07-17
 
