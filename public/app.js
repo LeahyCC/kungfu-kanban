@@ -95,9 +95,15 @@ function updateHeaderStatus() {
   antenna.setAttribute('aria-label', running > 0 ? `${running} agent${running > 1 ? 's' : ''} running` : 'No agents running');
 }
 
+// The SHIPPED stamp is a mount animation, but the board rebuilds on every SSE
+// event — only animate a seal the first time its card lands in Done, or it
+// pops on every rebuild (visible as flicker whenever anything streams).
+const stampedSeals = new Set();
+
 function cardEl(t) {
   const el = document.createElement('div');
   const isRunning = RUNNING_LIKE[t.status];
+  if (t.status !== 'done') stampedSeals.delete(t.id); // re-arm if it leaves Done
   el.className = 'card'
     + (isRunning ? ' running-card brush' : '')
     + (t.status === 'done' ? ' done-card' : '')
@@ -130,7 +136,12 @@ function cardEl(t) {
   } else if (t.stats && t.stats.turns) meta.push(`<span class="badge">${t.stats.turns} turns</span>`);
 
   const antenna = isRunning ? '<span class="antenna lit"></span>' : '';
-  const seal = t.status === 'done' ? '<span class="seal card-seal seal--stamp">Shipped</span>' : '';
+  let seal = '';
+  if (t.status === 'done') {
+    const fresh = !stampedSeals.has(t.id);
+    stampedSeals.add(t.id);
+    seal = `<span class="seal card-seal${fresh ? ' seal--stamp' : ''}">Shipped</span>`;
+  }
   // one quick action per column: Backlog ▶ run · Queued ⏸ unqueue ·
   // Review ✓ approve · Done ✕ delete (Running gets none — Stop is in the drawer)
   let quick = '';
