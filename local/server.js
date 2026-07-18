@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const path = require('path');
 const { discoverSkills, discoverAgents } = require('./lib/discovery');
-const { state, save, getTask, readTranscript } = require('./lib/store');
+const { state, save, getTask, readTranscript, sweepArchive } = require('./lib/store');
 const runner = require('./lib/runner');
 const manager = require('./lib/manager');
 
@@ -37,6 +37,14 @@ runner.setOnFinish((task) => {
 });
 manager.applyInterval();
 
+// --- Archive sweep: move old "done" cards to data/archive.jsonl daily ---
+function runArchiveSweep() {
+  const archived = sweepArchive();
+  for (const t of archived) broadcast({ type: 'deleted', taskId: t.id });
+}
+runArchiveSweep();
+setInterval(runArchiveSweep, 24 * 60 * 60 * 1000);
+
 // --- Config: models, efforts, skills, agents ---
 const MODELS = ['default', 'fable', 'opus', 'sonnet', 'haiku'];
 const EFFORTS = ['default', 'low', 'medium', 'high', 'xhigh', 'max'];
@@ -54,11 +62,14 @@ app.get('/api/config', (req, res) => {
 });
 
 app.put('/api/settings', (req, res) => {
-  const { maxConcurrent, defaultCwd } = req.body || {};
+  const { maxConcurrent, defaultCwd, archiveDays } = req.body || {};
   if (Number.isInteger(maxConcurrent) && maxConcurrent >= 1 && maxConcurrent <= 8) {
     state.settings.maxConcurrent = maxConcurrent;
   }
   if (typeof defaultCwd === 'string' && defaultCwd) state.settings.defaultCwd = defaultCwd;
+  if (Number.isInteger(archiveDays) && archiveDays >= 0 && archiveDays <= 365) {
+    state.settings.archiveDays = archiveDays;
+  }
   save();
   res.json(state.settings);
 });
