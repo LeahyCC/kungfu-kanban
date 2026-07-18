@@ -274,6 +274,11 @@ input.tiny { width: 60px; }
   border-radius: 2px;
   padding: 1px 6px;
   background: var(--paper-1);
+  /* long values (cwd paths, session ids) ellipsize instead of overflowing */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .badge.model { color: var(--ink-900); border-color: var(--rule-strong); }
 .badge.copyable { cursor: pointer; user-select: none; }
@@ -572,8 +577,18 @@ input.tiny { width: 60px; }
   color: var(--on-accent);
 }
 .card-run:active { transform: translateY(1px); }
-/* done cards: ✕ delete instead of ▶ — sits clear of the SHIPPED seal */
-.card-del { margin-top: 8px; }
+/* per-column quick actions: ✓ approve (review), ⏸ unqueue, ✕ delete (done) */
+.card-run.card-ok:hover {
+  background: transparent;
+  border-color: var(--success);
+  color: var(--success);
+}
+.card-run.card-unq:hover {
+  background: transparent;
+  border-color: var(--rule-strong);
+  color: var(--ink-900);
+}
+.card-del { margin-top: 8px; } /* sits clear of the SHIPPED seal */
 .card-run.card-del:hover {
   background: transparent;
   border-color: var(--error);
@@ -678,7 +693,7 @@ textarea.mono { font-family: var(--font-mono); font-size: 12.5px; line-height: 1
 }
 .draft-opts button { flex: none; margin-left: auto; }
 .draft-hint { display: block; margin: 0 0 12px; }
-#importPreview { margin: -6px 0 10px; }
+#importPreview { margin: -6px 0 10px; word-break: break-word; }
 #importPreview .dupe { color: var(--warning); }
 .fmt-example {
   font-size: 11.5px;
@@ -853,8 +868,8 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
   border-radius: 2px;
   padding: 10px 12px;
 }
-.sugg-head { font-weight: 600; font-size: 13.5px; margin-bottom: 4px; }
-.sugg-why { color: var(--ink-600); font-size: 12.5px; margin-bottom: 9px; }
+.sugg-head { font-weight: 600; font-size: 13.5px; margin-bottom: 4px; word-break: break-word; }
+.sugg-why { color: var(--ink-600); font-size: 12.5px; margin-bottom: 9px; word-break: break-word; }
 .sugg-actions { display: flex; gap: 8px; }
 .sugg-actions button { padding: 5px 12px; font-size: 12.5px; }
 
@@ -874,6 +889,7 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
   padding: 5px 8px;
   color: var(--ink-600);
   border-left: 2px solid var(--rule);
+  word-break: break-word;
 }
 .log-entry:nth-child(even) { background: var(--paper-2); }
 .log-entry.action { border-left-color: var(--success); color: var(--ink-900); }
@@ -937,7 +953,7 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
   gap: 12px;
   margin-bottom: 10px;
 }
-.drawer-head h2 { font-size: 1.25rem; font-weight: 600; line-height: 1.25; }
+.drawer-head h2 { font-size: 1.25rem; font-weight: 600; line-height: 1.25; word-break: break-word; min-width: 0; }
 .drawer-head button { padding: 4px 10px; }
 .drawer-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; align-items: center; }
 .drawer-pick {
