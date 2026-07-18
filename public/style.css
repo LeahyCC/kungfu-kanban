@@ -708,6 +708,8 @@ textarea.mono { font-family: var(--font-mono); font-size: 12.5px; line-height: 1
   user-select: none;
 }
 .fmt-example:hover { border-color: var(--accent-ink); }
+.skill-install-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.skill-install-row button { padding: 4px 12px; font-size: 12px; }
 .fmt-example.copied { outline: 2px solid var(--accent); }
 input[type='file'] { border: none; background: none; padding: 4px 0; color: var(--ink-600); font-size: 12.5px; min-width: 0; flex: 1; }
 .nowrap { white-space: nowrap; }
