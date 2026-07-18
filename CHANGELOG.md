@@ -7,6 +7,23 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-07-18
+
+### Added — board-wide default permission mode
+- ⚙ Settings gains **Default card permissions**: the mode pre-filled on new
+  cards and applied to imports/Sensei-created cards that don't set one
+  (`settings.defaultPermissionMode`, still `acceptEdits` out of the box).
+  The Sensei's permission ceiling keeps clamping only the modes the Sensei
+  itself chooses — the human's board default applies unclamped.
+
+### Fixed — worktree cards no longer permission-block on reading their own repo
+- Worktree sessions live inside the worktree, so the parent repo's paths were
+  out of bounds: even a `Read` of the main checkout permission-blocked a
+  headless card ("the agent needed to run Read …WEB-PARITY.md"). Launches and
+  resumes now pass `--add-dir <repo>`, whitelisting the parent repo — the
+  most common source of false permission blocks disappears without raising
+  any card's mode.
+
 ## [0.7.0] — 2026-07-18
 
 ### Added — CI surveillance for card PRs (no more silently red PRs)
