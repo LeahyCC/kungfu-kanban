@@ -2,6 +2,7 @@ node_modules/
 data/
 local/
 .claude/worktrees/
+.claude/skills/
 .env*
 .DS_Store
 .vercel
