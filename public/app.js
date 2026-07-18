@@ -340,6 +340,43 @@ $('#settingsForm').addEventListener('submit', async (e) => {
   $('#settingsBackdrop').classList.add('hidden');
 });
 
+// ---------- subscription cooldown + model fallback chips ----------
+let cooldownUntil = 0;
+let modelBlocks = {};
+function applyCooldown(until) {
+  cooldownUntil = until || 0;
+  tickCooldown();
+}
+function applyModelBlocks(blocks) {
+  modelBlocks = blocks || {};
+  tickCooldown();
+}
+function fmtMs(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return (h ? `${h}:${String(m).padStart(2, '0')}` : `${m}`) + `:${String(sec).padStart(2, '0')}`;
+}
+function tickCooldown() {
+  const chip = $('#cooldownChip');
+  const ms = cooldownUntil - Date.now();
+  if (ms <= 0) chip.classList.add('hidden');
+  else {
+    $('#cooldownTimer').textContent = fmtMs(ms);
+    chip.classList.remove('hidden');
+  }
+
+  const mchip = $('#modelChip');
+  const active = Object.entries(modelBlocks).filter(([, until]) => until > Date.now());
+  if (!active.length) mchip.classList.add('hidden');
+  else {
+    $('#modelChipText').textContent = active
+      .map(([m, until]) => `${m} ${fmtMs(until - Date.now())}`)
+      .join(' · ');
+    mchip.classList.remove('hidden');
+  }
+}
+setInterval(tickCooldown, 1000);
+
 // ---------- theme ----------
 function paintThemeToggle() {
   const light = document.documentElement.dataset.theme === 'light';
@@ -369,9 +406,24 @@ async function openDrawer(id) {
   box.innerHTML = '';
   for (const e of entries) box.appendChild(entryEl(e));
   if (t.error) box.appendChild(entryEl({ kind: 'error', text: t.error }));
+  $('#followForm').classList.toggle('hidden', RUNNING_LIKE[t.status] || !t.sessionId);
   $('#drawer').classList.remove('hidden');
   box.scrollTop = box.scrollHeight;
 }
+
+$('#followForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = e.target.message;
+  const msg = input.value.trim();
+  if (!msg || !drawerId) return;
+  input.value = '';
+  const r = await api(`/api/tasks/${drawerId}/followup`, { method: 'POST', body: { message: msg } });
+  if (r.error) {
+    const box = $('#transcript');
+    box.appendChild(entryEl({ kind: 'error', text: r.error }));
+    box.scrollTop = box.scrollHeight;
+  }
+});
 
 function renderDrawerMeta(t) {
   const bits = [
@@ -653,6 +705,14 @@ $('#mgrChatForm').addEventListener('submit', async (e) => {
 const es = new EventSource('/api/events');
 es.onmessage = (msg) => {
   const evt = JSON.parse(msg.data);
+  if (evt.type === 'cooldown') {
+    applyCooldown(evt.until);
+    return;
+  }
+  if (evt.type === 'modelblocks') {
+    applyModelBlocks(evt.blocks);
+    return;
+  }
   if (evt.type === 'manager') {
     if (evt.event === 'busy' && mgrState) {
       mgrState.busy = evt.busy;
@@ -672,6 +732,7 @@ es.onmessage = (msg) => {
     if (drawerId === evt.task.id) {
       renderDrawerMeta(evt.task);
       renderDrawerActions(evt.task);
+      $('#followForm').classList.toggle('hidden', !!RUNNING_LIKE[evt.task.status] || !evt.task.sessionId);
     }
   } else if (evt.type === 'deleted') {
     tasks = tasks.filter((t) => t.id !== evt.taskId);
@@ -695,5 +756,8 @@ async function loadTasks() {
 }
 (async () => {
   config = await api('/api/config');
+  $('#maxConcurrent').value = config.settings.maxConcurrent || 2;
+  applyCooldown(config.cooldownUntil || 0);
+  applyModelBlocks(config.modelBlocks || {});
   await loadTasks();
 })();

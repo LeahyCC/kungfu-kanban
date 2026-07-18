@@ -69,6 +69,36 @@ The sweep runs once at server startup and every 24h after that. Set
 **Archive "done" cards after (days)** to `0` in ⚙ Settings to turn it off;
 archived history in `data/archive.jsonl` is never deleted automatically.
 
+### Follow-up prompts
+
+Open any card that has run and type in the **follow-up box** under the transcript
+("fix the bug where…", "also add…"). The run **resumes the same CLI session**
+(`claude -r`), so the agent keeps its full context — and for worktree cards it
+re-enters the original worktree, so a follow-up push updates the existing PR.
+Follow-ups respect the parallel cap and queue like any run; the follow-up text is
+appended to the card's prompt so Sensei reviews and retries see it.
+
+### Subscription limits — automatic cooldown
+
+When a run dies on a usage/rate limit, the board:
+
+- parses the reset time from the CLI's error (falls back to a 1-hour backoff),
+- **requeues the card** (it wasn't a real failure) and pauses all auto flow —
+  queue pumping, Sensei triggers, PR auto-fix — until the limit resets,
+- shows a **⏳ countdown chip** in the header, and pings your phone.
+
+Manual run clicks during cooldown queue instead of burning against the wall.
+When the timer expires everything queued launches automatically and you get a
+"training resumes" notification.
+
+**Model fallback**: a *model-specific* cap or outage (e.g. an Opus-hours limit
+while Sonnet still works, or a 529 overload) doesn't pause anything — the failed
+model is blocked temporarily (30 min for caps, 10 for overloads), the card
+requeues, and launches step down the ladder **fable → opus → sonnet → haiku**
+until the block expires. Cards keep their configured model and climb back up
+automatically; a **⬇ chip** in the header shows what's stepped down, and the
+transcript notes every substitution. The Sensei's own runs substitute too.
+
 ### Card fields
 
 | Field | Maps to | Notes |
