@@ -271,6 +271,19 @@ function cardEl(t) {
   if (t.agent) meta.push(`<span class="badge">agent:${esc(t.agent)}</span>`);
   if (t.worktree) meta.push('<span class="badge wt">worktree</span>');
   if (t.issueNumber) meta.push(`<span class="badge">#${t.issueNumber}</span>`);
+  // Dependency badge: amber "waiting on" while prerequisites are unmet (the
+  // card sits in Queued until they ship), green chain once they're all done.
+  const unmetDeps = depsUnmet(t);
+  if (unmetDeps.length) {
+    const first = unmetDeps[0].title;
+    const more = unmetDeps.length > 1 ? ` +${unmetDeps.length - 1}` : '';
+    meta.push(`<span class="badge dep" title="Waits until done: ${esc(unmetDeps.map((d) => d.title).join(' · '))}">⛓ after: ${esc(first.slice(0, 30))}${first.length > 30 ? '…' : ''}${more}</span>`);
+  } else if ((t.deps || []).length) {
+    meta.push(`<span class="badge dep-met" title="All prerequisites are done">⛓ deps met</span>`);
+  }
+  if ((t.depsUnresolved || []).length) {
+    meta.push(`<span class="badge err" title="Unresolved after: ${esc(t.depsUnresolved.join(' · '))} — edit the card or let the Sensei fix the link">⛓ unresolved dep</span>`);
+  }
   if (t.schedule) meta.push(`<span class="badge sched">⏱ ${esc(scheduleLabel(t.schedule))}</span>`);
   if (t.skillsAuto) meta.push('<span class="badge skillauto">✦ auto</span>');
   for (const s of (t.skills || []).slice(0, 3)) meta.push(`<span class="badge">${esc(s)}</span>`);
@@ -323,6 +336,14 @@ function cardEl(t) {
 // models ship a 200k window; adjust here if that changes.
 const CTX_WINDOW = 200_000;
 
+// The dep cards that still block this one (deleted/archived ids count as met —
+// same rule as the server).
+function depsUnmet(t) {
+  return (t.deps || [])
+    .map((id) => tasks.find((x) => x.id === id))
+    .filter((d) => d && d.status !== 'done');
+}
+
 function esc(s) {
   return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -369,6 +390,7 @@ function taskFormSnapshot() {
     f.permissionMode.value, f.agent.value, f.worktree.checked, f.openPr.checked,
     f.priority.value, f.acceptanceCriteria.value, f.schedule.value,
     [...document.querySelectorAll('#skillPicker .skill-chip.on')].map((c) => c.dataset.name || 'auto'),
+    [...document.querySelectorAll('#depPicker .skill-chip.on')].map((c) => c.dataset.id),
   ]);
 }
 
@@ -432,6 +454,28 @@ function openModal(task) {
     chipify(chip);
     picker.appendChild(chip);
   }
+  // "Runs after" picker: every other card is a candidate prerequisite. Current
+  // deps lead, then live cards column-first; done cards only show if already
+  // selected (a done dep is met — nothing to add there).
+  const dp = $('#depPicker');
+  dp.innerHTML = '';
+  const chosen = new Set(task ? task.deps || [] : []);
+  const candidates = tasks
+    .filter((c) => (!task || c.id !== task.id) && (chosen.has(c.id) || c.status !== 'done'))
+    .sort((a, b) => (chosen.has(b.id) - chosen.has(a.id)) || (b.priority || 0) - (a.priority || 0))
+    .slice(0, 40);
+  if (!candidates.length) {
+    dp.innerHTML = '<span class="footnote">no other cards on the board</span>';
+  }
+  for (const c of candidates) {
+    const chip = document.createElement('span');
+    chip.className = 'skill-chip' + (chosen.has(c.id) ? ' on' : '');
+    chip.textContent = `⛓ ${c.title.slice(0, 40)}${c.title.length > 40 ? '…' : ''}`;
+    chip.title = `${c.title} (${c.status})`;
+    chip.dataset.id = c.id;
+    chipify(chip);
+    dp.appendChild(chip);
+  }
   $('#modalBackdrop').classList.remove('hidden');
   f.title.focus();
   modalSnapshot = taskFormSnapshot();
@@ -465,8 +509,9 @@ $('#taskForm').addEventListener('submit', (e) => {
     priority: parseInt(f.priority.value, 10) || 0,
     acceptanceCriteria: f.acceptanceCriteria.value,
     schedule: f.schedule.value,
-    skills: [...document.querySelectorAll('.skill-chip.on')].filter((c) => !c.dataset.auto).map((c) => c.dataset.name),
-    skillsAuto: !!document.querySelector('.skill-chip.auto.on'),
+    skills: [...document.querySelectorAll('#skillPicker .skill-chip.on')].filter((c) => !c.dataset.auto).map((c) => c.dataset.name),
+    skillsAuto: !!document.querySelector('#skillPicker .skill-chip.auto.on'),
+    deps: [...document.querySelectorAll('#depPicker .skill-chip.on')].map((c) => c.dataset.id),
   };
   const r = editingId
     ? await api(`/api/tasks/${editingId}`, { method: 'PATCH', body })
@@ -943,6 +988,10 @@ function renderDrawerMeta(t) {
   mkSel('perms', config.permissionModes, t.permissionMode, 'permissionMode');
 
   const bits = [`cwd: ${t.cwd}`];
+  const unmetD = depsUnmet(t);
+  if (unmetD.length) bits.push(`⛓ waits for: ${unmetD.map((d) => d.title).join(' · ')}`);
+  else if ((t.deps || []).length) bits.push('⛓ all prerequisites done');
+  if ((t.depsUnresolved || []).length) bits.push(`⛓ unresolved: ${t.depsUnresolved.join(' · ')}`);
   if (t.createdAt) bits.push(`created ${relTime(t.createdAt)}`);
   if (t.updatedAt && t.updatedAt !== t.createdAt) bits.push(`updated ${relTime(t.updatedAt)}`);
   if (t.ctxTokens) bits.push(`ctx: ${fmtTok(t.ctxTokens)} (${Math.round((t.ctxTokens / CTX_WINDOW) * 100)}% of ${fmtTok(CTX_WINDOW)})`);

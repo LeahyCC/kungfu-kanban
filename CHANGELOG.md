@@ -7,6 +7,36 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-07-18
+
+### Added — first-class card dependencies (chains run in order, unattended)
+- Cards can declare prerequisites (`deps`, an array of card ids). A queued card
+  waits until every dep is **Done** (approved, PR merged, or dragged there),
+  then launches automatically — queue a whole chain at once and it executes in
+  order. Deleted/archived deps count as met so cleanups can't wedge the queue.
+- Import format: `after: <card title>` per card (repeat the line for several;
+  ordinals like `#2`, ids, and `previous` work too) and `sequential: true` in
+  the frontmatter to chain the whole file. Unresolvable `after:` names land on
+  the card as `depsUnresolved` for the Sensei to fix instead of vanishing.
+  The kungfu-todo skill and ✨ Draft prompt now teach: **declare dependencies,
+  never prose-guard them** — "stop if X hasn't merged" burns a run discovering
+  the block; `after:` prevents the run entirely.
+- Sensei: the snapshot shows each card's deps (with live statuses), and a new
+  `requeue_task` action returns a stalled review card to Queued **without
+  burning a retry** — the fix for dependency self-stops, paired with
+  `update_task deps:[…]` so the card relaunches only when its prerequisite
+  ships. Guidance in the manager prompt covers the whole pattern.
+- UI: amber `⛓ after: …` badge while prerequisites are unmet (green `⛓ deps
+  met` once satisfied, red for unresolved names), a "waits for" line in the
+  drawer, and a "Runs after" chip picker in the card editor. Dependency cycles
+  are rejected at the API (`400 dependency cycle`).
+
+### Changed — queue discipline
+- The queue now launches the highest-priority, oldest, dependency-ready card
+  first (it used to be newest-first, ignoring priority), and a finished/shipped/
+  deleted card immediately pumps the queue so freed dependents start without
+  waiting for the next event. A minute-interval safety pump catches stragglers.
+
 ## [0.5.3] — 2026-07-18
 
 ### Fixed — mobile board layout + session-limit error spam
