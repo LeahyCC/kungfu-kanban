@@ -1,12 +1,14 @@
 const express = require('express');
 const crypto = require('crypto');
 const path = require('path');
+const { execFile } = require('child_process');
 const { discoverSkills, discoverAgents } = require('./lib/discovery');
 const { state, save, getTask, readTranscript } = require('./lib/store');
 const runner = require('./lib/runner');
 const manager = require('./lib/manager');
 const auth = require('./lib/auth');
 const importer = require('./lib/importer');
+const { notify } = require('./lib/notify');
 
 const PORT = process.env.PORT || 4747;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -41,6 +43,36 @@ runner.setOnFinish((task) => {
   }
 });
 manager.applyInterval();
+
+// --- PR poll: cards in review with a prUrl move to done once the PR merges ---
+function ghPrState(url) {
+  return new Promise((resolve) => {
+    execFile('gh', ['pr', 'view', url, '--json', 'state'], { timeout: 30_000 }, (err, stdout) => {
+      if (err) return resolve(null); // offline / gh not authed / PR deleted — skip quietly
+      try {
+        resolve(JSON.parse(stdout).state || null);
+      } catch {
+        resolve(null);
+      }
+    });
+  });
+}
+
+async function pollPrMerges() {
+  const candidates = state.tasks.filter((t) => t.status === 'review' && t.prUrl);
+  for (const task of candidates) {
+    const prState = await ghPrState(task.prUrl);
+    if (prState !== 'MERGED') continue;
+    const t = getTask(task.id);
+    if (!t || t.status !== 'review') continue; // may have been reviewed manually meanwhile
+    t.status = 'done';
+    t.managerVerdict = 'PR merged';
+    save();
+    broadcast({ type: 'task', task: t });
+    notify('Kungfu Kanban — PR merged', t.title, t.prUrl);
+  }
+}
+setInterval(pollPrMerges, 10 * 60_000);
 
 // --- Config: models, efforts, skills, agents ---
 const MODELS = ['default', 'fable', 'opus', 'sonnet', 'haiku'];
