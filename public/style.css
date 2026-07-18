@@ -19,6 +19,7 @@
   --accent: #E0524A;
   --accent-ink: #E8776F;
   --accent-wash: rgba(224, 82, 74, 0.10);
+  --selection-bg: rgba(224, 82, 74, 0.32);
   --on-accent: #141210;
   /* the ink slab: agent output is always dark, both themes */
   --slab-bg: #1A1714;
@@ -59,7 +60,11 @@
   --accent: #C1272D;
   --accent-ink: #A31F24;
   --accent-wash: rgba(193, 39, 45, 0.08);
+  --selection-bg: rgba(193, 39, 45, 0.22);
   --on-accent: #FDFBF5;
+  /* the two unqueued belts need re-tuning for cream too (dark values fail on paper) */
+  --belt-todo: #6E6656;
+  --belt-queued: #7A6E52;
   --belt-doing: #2E5E8C;
   --belt-review: #7A5230;
   --belt-done: #1A1714;
@@ -115,7 +120,7 @@ h1, h2, h3 {
   border-radius: 2px;
 }
 
-::selection { background: var(--accent-wash); }
+::selection { background: var(--selection-bg); }
 
 .hidden { display: none !important; }
 
@@ -295,7 +300,7 @@ input:focus, textarea:focus, select:focus {
   outline-offset: 0;
   border-color: transparent;
 }
-input::placeholder, textarea::placeholder { color: var(--ink-400); opacity: 0.8; }
+input::placeholder, textarea::placeholder { color: var(--ink-400); opacity: 1; }
 label { display: flex; flex-direction: column; gap: 5px; }
 
 .field-label, form label, fieldset legend {
@@ -484,8 +489,9 @@ input.tiny { width: 60px; }
   font-size: 11.5px;
   color: var(--ink-400);
 }
-.theme-toggle {
+.theme-toggle, .icon-btn {
   width: 34px; height: 34px;
+  flex: none; /* stay square when the header status row gets crowded */
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -496,7 +502,7 @@ input.tiny { width: 60px; }
   color: var(--ink-600);
   border-radius: 2px;
 }
-.theme-toggle:hover { border-color: var(--rule-strong); color: var(--ink-900); }
+.theme-toggle:hover, .icon-btn:hover { border-color: var(--rule-strong); color: var(--ink-900); }
 
 /* subscription-limit countdown */
 .cooldown-chip {
@@ -673,7 +679,7 @@ input.tiny { width: 60px; }
 }
 @media (hover: none) {
   .card-run { opacity: 1; width: 36px; height: 36px; font-size: 13px; }
-  .theme-toggle { width: 38px; height: 38px; }
+  .theme-toggle, .icon-btn { width: 38px; height: 38px; }
 }
 .card .title .antenna { margin-right: 6px; vertical-align: 1px; }
 .card .meta {
@@ -785,6 +791,14 @@ textarea.mono { font-family: var(--font-mono); font-size: 12.5px; line-height: 1
   user-select: none;
 }
 .fmt-example:hover { border-color: var(--accent-ink); }
+/* the FORMAT block is a copy-me reference, not agent output — in light mode give
+   it a paper surface so it reads like a code block instead of a black box on cream.
+   (The drawer transcript keeps the dark slab; that one really is agent output.) */
+[data-theme='light'] .fmt-example {
+  background: var(--paper-2);
+  color: var(--ink-900);
+  border-color: var(--rule);
+}
 /* usage panel in settings — a stat block, not a sentence */
 #usageBreakdown {
   border: 1px solid var(--rule);
@@ -887,6 +901,14 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
   max-width: 440px;
 }
 .dojo-empty .empty-prompt .c { color: var(--ink-400); }
+/* like .fmt-example: an instructional example, not agent output — paper surface in
+   light mode. On paper-2 the .c tint (--ink-400 #5F594F) rises to ~5.7:1, so it needs
+   no separate override; the dark slab is kept only for the real transcript. */
+[data-theme='light'] .dojo-empty .empty-prompt {
+  background: var(--paper-2);
+  color: var(--ink-900);
+  border-color: var(--rule);
+}
 .dojo-empty .empty-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
 /* ============================================================
@@ -1010,6 +1032,9 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
   align-self: flex-end;
   background: var(--accent-wash);
   border: 1px solid var(--rule);
+  /* the wash alone is near-invisible in light mode; an accent edge mirrors the
+     manager belt so "you" bubbles stay marked in both themes */
+  border-right: 2px solid var(--accent);
 }
 .chat-msg.manager {
   align-self: flex-start;
@@ -1173,7 +1198,9 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 .t-entry.result { border-top: 1px solid var(--slab-rule); padding-top: 8px; }
 .t-entry.pr { color: #6FA3D4; }
 .t-entry.pr::before { content: '⇡ '; }
-.t-entry.user { color: var(--accent-ink); }
+/* slab is always dark, so this coral is hardcoded like its siblings above —
+   var(--accent-ink) would flip to a dark red on the slab in light mode (~2.3:1) */
+.t-entry.user { color: #E8776F; }
 .t-entry.user::before { content: '» '; }
 .t-entry.error { color: #E06C5F; }
 .t-entry.error::before { content: '✕ '; }
@@ -1193,7 +1220,9 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 .t-entry.md code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background: #0000002e; padding: 1px 4px; border-radius: 3px; }
 .t-entry.md pre { background: #0000002e; padding: 8px 10px; border-radius: 4px; overflow-x: auto; margin: 4px 0 6px; }
 .t-entry.md pre code { background: none; padding: 0; }
-.t-entry.md a { color: var(--accent); text-decoration: underline; }
+/* hardcoded (not var(--accent)) so links stay bright on the always-dark slab —
+   the themed token flips to a dim red on the slab in light mode (~3:1) */
+.t-entry.md a { color: #E0524A; text-decoration: underline; }
 
 /* responsive */
 @media (max-width: 900px) {

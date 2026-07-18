@@ -7,6 +7,45 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.5.2] — 2026-07-17
+
+### Changed — Settings moved into the header
+- The ⚙ Settings button moved from the board toolbar up into the header status
+  row, right beside the ◐ day/night toggle, and is now icon-only (the word
+  "Settings" is dropped; the label lives in its `title`/`aria-label`). The two
+  share one square icon-button style (`.icon-btn`) and no longer shrink when the
+  header status row gets crowded. The toolbar keeps filter, parallel, New card,
+  and Import.
+
+## [0.5.1] — 2026-07-17
+
+### Fixed — light-mode ("day dojo") audit pass
+- **Belt colours on cream.** The light theme re-tuned three of the five belt
+  ranks but left `--belt-todo` and `--belt-queued` at their night-dojo values,
+  so the Backlog and Queued column rules (and belt dots) were near-invisible on
+  paper — Queued measured 2.2:1, below the 3:1 minimum for UI marks. Both are
+  now tuned for cream (`#6E6656` / `#7A6E52`) in `public/style.css`; the site
+  stylesheet gained the matching `--belt-todo` (it already had queued).
+- **Dark "ink slab" blocks that aren't agent output.** The Import FORMAT
+  reference (`.fmt-example`) and the empty-board `$ claude` example
+  (`.empty-prompt`) reused the always-dark agent-output slab, so they rendered
+  as heavy black boxes on the cream page. In light mode they now sit on a paper
+  surface with ink text, reading like inline code blocks. The drawer transcript
+  keeps its dark slab — that one really is agent output.
+- **Transcript text that used theme-flipping tokens.** In the (always-dark)
+  drawer transcript, user echo lines (`.t-entry.user`) used `var(--accent-ink)`
+  and markdown links used `var(--accent)`; in light mode both flipped to a dark
+  red on near-black (~2.3:1 / ~3.0:1). They now hardcode the slab-safe coral
+  like their sibling entry colours (~6.2:1 / ~4.7:1).
+- **Faint form placeholders.** `input/textarea::placeholder` dropped to ~4.2:1
+  on paper because of an `opacity: 0.8`; now `opacity: 1` (~6.7:1).
+- **Invisible "you" chat bubble.** The Sensei chat user bubble carried only an
+  8%-tint fill that vanished on cream; it now gets an accent right-edge, so it
+  stays marked in both themes.
+- **Barely-visible text selection.** `::selection` reused the 8% accent wash;
+  a dedicated per-theme `--selection-bg` now gives a legible highlight on cream
+  (app and site).
+
 ## [0.5.0] — 2026-07-17
 
 ### Added — no Mac sleep while cards run

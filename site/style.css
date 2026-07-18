@@ -18,6 +18,7 @@
   --accent: #E0524A;
   --accent-ink: #E8776F;
   --accent-wash: rgba(224, 82, 74, 0.10);
+  --selection-bg: rgba(224, 82, 74, 0.32);
   --on-accent: #141210;
   /* the ink slab: agent output is always dark, both themes */
   --slab-bg: #1A1714;
@@ -59,7 +60,9 @@
   --accent: #C1272D;
   --accent-ink: #A31F24;
   --accent-wash: rgba(193, 39, 45, 0.08);
+  --selection-bg: rgba(193, 39, 45, 0.22);
   --on-accent: #FDFBF5;
+  --belt-todo: #6E6656;
   --belt-queued: #7A6E52;
   --belt-doing: #2E5E8C;
   --belt-review: #7A5230;
@@ -133,7 +136,7 @@ h1, h2, h3, h4 {
 .chapter,
 section[id] { scroll-margin-top: 84px; }
 
-::selection { background: var(--accent-wash); }
+::selection { background: var(--selection-bg); }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
