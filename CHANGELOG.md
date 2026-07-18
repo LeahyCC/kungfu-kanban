@@ -7,6 +7,24 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Fixed
+- A permission-blocked card can no longer be misread as a subscription or model
+  outage. Its error embeds the denied command, so a benign block on a command
+  whose text contains a phrase like "rate limit" (or a model name) previously
+  false-tripped the board-wide cooldown / model-fallback and requeued the card —
+  an indefinite freeze. Blocked runs now bypass both detectors entirely.
+- The Sensei reliably sees a block (a snapshot flag, not just error-text
+  matching) and won't spend a retry re-hitting the same wall; the block also
+  leads the card's error even when the run additionally reported an error.
+- The blocked transcript note no longer renders a doubled ⛔.
+
+### Changed
+- Landing page leans into full-auto: the four forms are now say-it → Sensei
+  routes → dojo runs itself → PRs arrive shipped, and the hero + import copy
+  no longer read like you write and route cards by hand.
+
+## [0.3.0] — 2026-07-17
+
 ### Added
 - The kungfu-todo skill installs itself: every server start writes/refreshes
   `~/.claude/skills/kungfu-todo/` with the clone's real paths and port, so any
