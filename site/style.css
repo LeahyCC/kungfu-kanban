@@ -478,7 +478,7 @@ button, .btn {
   padding: 8px 10px;
   animation: stamp 320ms var(--ease) 650ms both;
   margin-left: 18px;
-  vertical-align: middle;
+  vertical-align: baseline;
   letter-spacing: 0.04em;
 }
 
