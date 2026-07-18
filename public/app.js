@@ -195,7 +195,8 @@ function openModal(task) {
   const picker = $('#skillPicker');
   picker.innerHTML = '';
   const auto = document.createElement('span');
-  auto.className = 'skill-chip auto' + (task && task.skillsAuto ? ' on' : '');
+  // new cards default to auto-select; editing reflects the card's saved choice
+  auto.className = 'skill-chip auto' + ((task ? task.skillsAuto : true) ? ' on' : '');
   auto.textContent = '✦ auto-select';
   auto.title = 'Let the agent pick relevant skills itself';
   auto.dataset.auto = '1';
