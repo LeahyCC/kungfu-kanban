@@ -76,6 +76,7 @@ function cardEl(t) {
   if (t.effort && t.effort !== 'default') badges.push(`<span class="badge effort">${esc(t.effort)}</span>`);
   if (t.agent) badges.push(`<span class="badge">agent:${esc(t.agent)}</span>`);
   if (t.worktree) badges.push(`<span class="badge wt">worktree</span>`);
+  if (t.schedule) badges.push(`<span class="badge sched">⏱ ${esc(scheduleLabel(t.schedule))}</span>`);
   for (const s of (t.skills || []).slice(0, 3)) badges.push(`<span class="badge skill">${esc(s)}</span>`);
   if ((t.skills || []).length > 3) badges.push(`<span class="badge skill">+${t.skills.length - 3}</span>`);
   if (t.error) badges.push(`<span class="badge err">error</span>`);
@@ -88,6 +89,22 @@ function cardEl(t) {
 
 function esc(s) {
   return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Schedule is a normalized object from the server: {kind:'interval',hours} or
+// {kind:'daily',time}. Render it for the card badge and back into the "repeat"
+// input's freeform form.
+function scheduleLabel(sc) {
+  if (!sc) return '';
+  if (sc.kind === 'interval') return `every ${sc.hours}h`;
+  if (sc.kind === 'daily') return `daily ${sc.time}`;
+  return '';
+}
+function scheduleToInput(sc) {
+  if (!sc) return '';
+  if (sc.kind === 'interval') return `${sc.hours}h`;
+  if (sc.kind === 'daily') return sc.time;
+  return '';
 }
 
 // ---------- modal ----------
@@ -106,6 +123,7 @@ function openModal(task) {
   f.worktree.checked = task ? !!task.worktree : false;
   f.priority.value = String(task && task.priority ? task.priority : 0);
   f.acceptanceCriteria.value = task ? task.acceptanceCriteria || '' : '';
+  f.schedule.value = task ? scheduleToInput(task.schedule) : '';
 
   const picker = $('#skillPicker');
   picker.innerHTML = '';
@@ -148,6 +166,7 @@ $('#taskForm').addEventListener('submit', async (e) => {
     worktree: f.worktree.checked,
     priority: parseInt(f.priority.value, 10) || 0,
     acceptanceCriteria: f.acceptanceCriteria.value,
+    schedule: f.schedule.value,
     skills: [...document.querySelectorAll('.skill-chip.on')].map((c) => c.dataset.name),
   };
   if (editingId) await api(`/api/tasks/${editingId}`, { method: 'PATCH', body });

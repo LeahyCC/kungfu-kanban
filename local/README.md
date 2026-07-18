@@ -42,6 +42,21 @@ Backlog → Queued → Running → Review → Done
 
 Task data lives in `data/` (JSON + per-task transcripts). Delete it to reset.
 
+## Scheduled cards
+
+Give a card a **Repeat** value in the editor to run it on a schedule:
+
+- `6h` (or `6`) — every 6 hours (fractional hours like `0.5h` are allowed)
+- `14:30` — daily at 14:30 (24-hour local time)
+
+The server checks once a minute. When a card is due, it's **cloned into a fresh
+one-shot card** (with no schedule of its own) that's launched via the normal
+runner — so clones respect the **parallel** (maxConcurrent) queue and flow
+Backlog → Running → Review → Done like any other card. The scheduled card itself
+stays in **Backlog** carrying a `⏱` badge and never moves columns on its own;
+drag it elsewhere and it stops firing until it's back in Backlog. Clear the
+Repeat field to turn scheduling off.
+
 ## Manager tab
 
 An LLM manager (also a `claude -p` session on your subscription) that triages,

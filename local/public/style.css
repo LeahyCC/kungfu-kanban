@@ -121,6 +121,7 @@ main#board {
 .badge.skill { color: var(--blue); border-color: #28394a; }
 .badge.wt { color: var(--green); border-color: #28453a; }
 .badge.err { color: var(--red); border-color: #4a2830; }
+.badge.sched { color: var(--accent); border-color: #4a3328; }
 .card .spin {
   display: inline-block; width: 10px; height: 10px; border-radius: 50%;
   border: 2px solid var(--accent); border-top-color: transparent;
