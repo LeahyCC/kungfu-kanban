@@ -773,6 +773,12 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
   align-items: center;
   gap: 8px;
 }
+.mgr-col h2 .mini {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 400;
+}
 .mgr-col h2:not(:first-child) { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--rule); }
 .mgr-col label { margin-bottom: 12px; }
 .mgr-col .row { display: flex; gap: 12px; }
