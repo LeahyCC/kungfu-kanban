@@ -1061,7 +1061,16 @@ async function renderHealth() {
       return;
     }
     bb.textContent = '⬆ restarting…';
-    setTimeout(() => location.reload(), 6000);
+    // launchd throttles respawns (~10s) — poll until the server is back
+    const poll = setInterval(async () => {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok || res.status === 302 || res.status === 401) {
+          clearInterval(poll);
+          location.reload();
+        }
+      } catch {}
+    }, 3000);
   });
   const ub = $('#updateClaudeBtn');
   if (ub) ub.addEventListener('click', async () => {
