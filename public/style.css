@@ -1234,7 +1234,10 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 /* phones: the board stacks — every column reachable by vertical scroll, no
    1100px sideways trek; status chips stay so the header keeps its counts */
 @media (max-width: 700px) {
-  .board { display: flex; flex-direction: column; overflow-x: visible; }
+  /* stretch (not the grid's align-items:start) so every stacked column fills
+     the width — otherwise empty columns collapse to their header and populated
+     ones size to their widest card */
+  .board { display: flex; flex-direction: column; align-items: stretch; overflow-x: visible; }
   .toolbar-actions { flex-wrap: wrap; justify-content: flex-end; }
   .board.is-empty { display: flex; }
   .column { max-height: none; min-width: 0; }
