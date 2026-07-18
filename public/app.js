@@ -266,6 +266,35 @@ $('#importCancelBtn').addEventListener('click', () => $('#importBackdrop').class
 $('#importBackdrop').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) $('#importBackdrop').classList.add('hidden');
 });
+$('#draftBtn').addEventListener('click', async (e) => {
+  const btn = e.target;
+  const request = $('#draftPrompt').value.trim();
+  if (!request) return;
+  btn.disabled = true;
+  btn.textContent = '✨ drafting…';
+  const r = await api('/api/import/draft', { method: 'POST', body: { request } });
+  btn.disabled = false;
+  btn.textContent = '✨ Draft';
+  if (r.markdown) {
+    $('#importText').value = r.markdown;
+    $('#importResult').textContent = '✓ draft ready — review, edit, then Import';
+  } else {
+    $('#importResult').textContent = `✕ ${r.error || 'draft failed'}`;
+  }
+});
+
+$('#fmtExample').addEventListener('click', async (e) => {
+  const pre = e.currentTarget;
+  try {
+    await navigator.clipboard.writeText(pre.textContent);
+    $('#importResult').textContent = '✓ template copied';
+  } catch {
+    $('#importResult').textContent = '✕ copy blocked by browser';
+  }
+  pre.classList.add('copied');
+  setTimeout(() => pre.classList.remove('copied'), 1200);
+});
+
 $('#importFile').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;

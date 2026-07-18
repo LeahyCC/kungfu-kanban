@@ -188,13 +188,32 @@
     <div class="modal">
       <h2>Import cards from Markdown</h2>
       <form id="importForm">
+        <div class="draft-row">
+          <input id="draftPrompt" placeholder="✨ Or describe the work and let the Sensei draft it… e.g. plan a dark-mode pass for bouldi as 4 cards" autocomplete="off" />
+          <button type="button" id="draftBtn" class="ghost">✨ Draft</button>
+        </div>
         <label>Markdown
-          <textarea name="markdown" id="importText" rows="12" class="mono" placeholder="## Fix the flaky login test&#10;model: opus&#10;priority: 2&#10;The test fails intermittently because…&#10;### Acceptance&#10;- passes 10x in a row&#10;&#10;— or just a checklist —&#10;&#10;- [ ] update the README badges&#10;- [ ] bump express"></textarea>
+          <textarea name="markdown" id="importText" rows="12" class="mono" placeholder="Paste a card doc, pick a file below, tap the template, or let the Sensei draft one from the ✨ box above."></textarea>
         </label>
         <label class="check-row">…or pick a file
           <input type="file" id="importFile" accept=".md,.markdown,.txt" />
         </label>
-        <span class="footnote">every <span class="mono">## heading</span> becomes a card (body = prompt, leading <span class="mono">key: value</span> lines = fields) · no headings? each <span class="mono">- [ ]</span> item becomes a card · frontmatter sets file-wide defaults · tip: drop .md files into <span class="mono">data/inbox/</span> for hands-free import</span>
+        <span class="field-label">Format <span class="hint-inline">(tap the block to copy it)</span></span>
+        <pre id="fmtExample" class="slab fmt-example" title="Click to copy the template">---
+cwd: /path/to/repo      # frontmatter = file-wide defaults (all optional)
+model: sonnet           # fable | opus | sonnet | haiku
+worktree: true
+openPr: true
+---
+
+## Card title — imperative, specific
+model: opus             # per-card overrides: model, effort, priority 0-3,
+priority: 2             # worktree, openPr, permissions, skills, cwd
+The prompt: self-contained instructions for the executing agent.
+
+### Acceptance
+- verifiable criteria the Sensei reviews against</pre>
+        <span class="footnote">no <span class="mono">##</span> headings? each <span class="mono">- [ ]</span> item becomes a card · drop .md files into <span class="mono">data/inbox/</span> for hands-free import</span>
         <div class="modal-actions">
           <span id="importResult" class="import-result"></span>
           <button type="button" id="importCancelBtn" class="ghost">Cancel</button>
