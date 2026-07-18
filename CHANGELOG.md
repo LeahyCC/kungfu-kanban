@@ -7,6 +7,12 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-07-17
+
+### Fixed
+- The usage breakdown in ⚙ Settings is a proper stat panel (big numbers,
+  labels, model badges, budget bar) instead of a run-on sentence
+
 ## [0.2.0] — 2026-07-17
 
 The public launch. Everything after the SaaS-edition delete, in one line each:
