@@ -115,6 +115,7 @@ function cardEl(t) {
   if (t.effort && t.effort !== 'default') meta.push(`<span class="badge">${esc(t.effort)}</span>`);
   if (t.agent) meta.push(`<span class="badge">agent:${esc(t.agent)}</span>`);
   if (t.worktree) meta.push('<span class="badge wt">worktree</span>');
+  if (t.schedule) meta.push(`<span class="badge sched">⏱ ${esc(scheduleLabel(t.schedule))}</span>`);
   if (t.skillsAuto) meta.push('<span class="badge skillauto">✦ auto</span>');
   for (const s of (t.skills || []).slice(0, 3)) meta.push(`<span class="badge">${esc(s)}</span>`);
   if ((t.skills || []).length > 3) meta.push(`<span class="badge">+${t.skills.length - 3}</span>`);
@@ -140,6 +141,22 @@ function cardEl(t) {
 
 function esc(s) {
   return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Schedule is a normalized object from the server: {kind:'interval',hours} or
+// {kind:'daily',time}. Render it for the card badge and back into the "repeat"
+// input's freeform form.
+function scheduleLabel(sc) {
+  if (!sc) return '';
+  if (sc.kind === 'interval') return `every ${sc.hours}h`;
+  if (sc.kind === 'daily') return `daily ${sc.time}`;
+  return '';
+}
+function scheduleToInput(sc) {
+  if (!sc) return '';
+  if (sc.kind === 'interval') return `${sc.hours}h`;
+  if (sc.kind === 'daily') return sc.time;
+  return '';
 }
 
 // ---------- card modal ----------
@@ -172,6 +189,7 @@ function openModal(task) {
   f.openPr.checked = task ? !!task.openPr : false;
   f.priority.value = String(task && task.priority ? task.priority : 0);
   f.acceptanceCriteria.value = task ? task.acceptanceCriteria || '' : '';
+  f.schedule.value = task ? scheduleToInput(task.schedule) : '';
 
   const picker = $('#skillPicker');
   picker.innerHTML = '';
@@ -222,6 +240,7 @@ $('#taskForm').addEventListener('submit', async (e) => {
     openPr: f.openPr.checked,
     priority: parseInt(f.priority.value, 10) || 0,
     acceptanceCriteria: f.acceptanceCriteria.value,
+    schedule: f.schedule.value,
     skills: [...document.querySelectorAll('.skill-chip.on')].filter((c) => !c.dataset.auto).map((c) => c.dataset.name),
     skillsAuto: !!document.querySelector('.skill-chip.auto.on'),
   };

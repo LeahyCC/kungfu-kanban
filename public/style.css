@@ -277,6 +277,7 @@ input.tiny { width: 60px; }
 .badge.model { color: var(--ink-900); border-color: var(--rule-strong); }
 .badge.err { color: var(--error); border-color: var(--error); }
 .badge.wt { color: var(--info); border-color: var(--info); }
+.badge.sched { color: var(--accent-ink); border-color: var(--accent-ink); }
 
 /* the suggestion-count pill */
 .pill {

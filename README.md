@@ -101,6 +101,7 @@ transcript notes every substitution. The Sensei's own runs substitute too.
 | Open PR when done | post-run `gh pr create` | requires worktree; see below |
 | Priority | sort order (0–3) | 2+ shows the vermillion square |
 | Acceptance criteria | manager review rubric | the Sensei approves/rejects against this |
+| Repeat | schedule (interval or daily) | `6h` every 6 hours, `14:30` daily — see [Scheduled cards](#scheduled-cards) |
 | Skills | injected into the prompt | pick from installed skills, or **✦ auto-select** to let the agent choose |
 
 ### Skills & agents discovery
@@ -111,6 +112,21 @@ Auto-discovered at load, no config:
 - Plugin skills: every enabled plugin in `~/.claude/plugins/installed_plugins.json`
   (their `skills/` and `workflow-skills/` dirs), namespaced `plugin:skill`
 - Agents: `~/.claude/agents/*.md`
+
+### Scheduled cards
+
+Give a card a **Repeat** value in the editor to run it on a schedule:
+
+- `6h` (or `6`) — every 6 hours (fractional hours like `0.5h` are allowed)
+- `14:30` — daily at 14:30 (24-hour local time)
+
+The server checks once a minute. When a card is due, it's **cloned into a fresh
+one-shot card** (with no schedule of its own) that's launched via the normal
+runner — so clones respect the **parallel** (maxConcurrent) queue and flow
+Backlog → Running → Review → Done like any other card. The scheduled card itself
+stays in **Backlog** carrying a `⏱` badge and never moves columns on its own;
+drag it elsewhere and it stops firing until it's back in Backlog. Clear the
+Repeat field to turn scheduling off.
 
 ---
 
