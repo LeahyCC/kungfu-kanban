@@ -264,6 +264,10 @@ The prompt: self-contained instructions for the executing agent.
         <label title="Pre-filled as the working directory on new cards">Default working directory
           <input name="defaultCwd" placeholder="/Users/you/project" />
         </label>
+        <label title="Permission mode for new cards and imports that don't set one themselves">Default card permissions
+          <select name="defaultPermissionMode"></select>
+        </label>
+        <p class="hint">bypassPermissions = agents run <b>any</b> command without asking. Fine on a solo box you trust; think twice if card prompts can carry untrusted text.</p>
         <label>Repos directory <span class="hint-inline">(scanned for the card repo picker)</span>
           <input name="reposDir" placeholder="/Users/you/Code" />
         </label>

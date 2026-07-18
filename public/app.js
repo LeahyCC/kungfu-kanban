@@ -433,7 +433,7 @@ function openModal(task) {
   f.cwd.oninput = () => { rs.value = (config.repos || []).some((r) => r.path === f.cwd.value) ? f.cwd.value : ''; };
   fillSelect(f.model, config.models, task ? task.model : 'default');
   fillSelect(f.effort, config.efforts, task ? task.effort : 'default');
-  fillSelect(f.permissionMode, config.permissionModes, task ? task.permissionMode : 'acceptEdits');
+  fillSelect(f.permissionMode, config.permissionModes, task ? task.permissionMode : (config.settings.defaultPermissionMode || 'acceptEdits'));
   const agentOpts = ['', ...config.agents.map((a) => a.name)];
   fillSelect(f.agent, agentOpts, task && task.agent ? task.agent : '');
   f.worktree.checked = task ? !!task.worktree : false;
@@ -754,6 +754,7 @@ function openSettings() {
   $('#logoutBtn').classList.toggle('hidden', !config.authGate);
   const f = $('#settingsForm');
   f.defaultCwd.value = config.settings.defaultCwd || '';
+  fillSelect(f.defaultPermissionMode, config.permissionModes, config.settings.defaultPermissionMode || 'acceptEdits');
   f.reposDir.value = config.settings.reposDir || '';
   f.ntfyTopic.value = config.settings.ntfyTopic || '';
   f.notifyMac.checked = config.settings.notifyMac !== false;
@@ -821,6 +822,7 @@ $('#settingsForm').addEventListener('submit', async (e) => {
     method: 'PUT',
     body: {
       defaultCwd: f.defaultCwd.value,
+      defaultPermissionMode: f.defaultPermissionMode.value,
       reposDir: f.reposDir.value,
       ntfyTopic: f.ntfyTopic.value,
       notifyMac: f.notifyMac.checked,

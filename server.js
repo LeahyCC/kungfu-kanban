@@ -109,6 +109,11 @@ app.put('/api/settings', (req, res) => {
     state.settings.maxConcurrent = maxConcurrent;
   }
   if (typeof defaultCwd === 'string') state.settings.defaultCwd = defaultCwd.trim(); // empty clears it
+  const { defaultPermissionMode } = req.body || {};
+  if (typeof defaultPermissionMode === 'string') {
+    if (PERMISSION_MODES.includes(defaultPermissionMode)) state.settings.defaultPermissionMode = defaultPermissionMode;
+    else if (!defaultPermissionMode) delete state.settings.defaultPermissionMode; // empty resets to acceptEdits
+  }
   if (Number.isInteger(archiveDays) && archiveDays >= 0 && archiveDays <= 365) {
     state.settings.archiveDays = archiveDays;
   }
@@ -375,7 +380,7 @@ function makeTask(b, createdBy = 'user') {
     cwd: b.cwd || state.settings.defaultCwd,
     model: b.model || 'default',
     effort: b.effort || 'default',
-    permissionMode: b.permissionMode || 'acceptEdits',
+    permissionMode: b.permissionMode || state.settings.defaultPermissionMode || 'acceptEdits',
     skills: Array.isArray(b.skills) ? b.skills : [],
     skillsAuto: !!b.skillsAuto,
     agent: b.agent || null,
