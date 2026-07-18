@@ -238,6 +238,10 @@ The prompt: self-contained instructions for the executing agent.
           <input name="ntfyTopic" placeholder="my-secret-kanban-topic" />
         </label>
         <label class="check-row"><input type="checkbox" name="notifyMac" /> macOS notifications</label>
+        <label>Archive "done" cards after (days)
+          <input name="archiveDays" type="number" min="0" max="365" />
+        </label>
+        <p class="hint">Cards left in Done longer than this are moved to <code>data/archive.jsonl</code> and their transcripts deleted. Set to 0 to turn off archiving.</p>
         <label>Check PRs every <span class="hint-inline">(minutes, 0 = off — merged PRs ship their card; conflicted PRs can auto-fix)</span>
           <input name="prWatchMin" type="number" min="0" max="120" class="tiny" />
         </label>
