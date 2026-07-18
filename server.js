@@ -9,6 +9,7 @@ const runner = require('./lib/runner');
 const manager = require('./lib/manager');
 const auth = require('./lib/auth');
 const importer = require('./lib/importer');
+const prwatch = require('./lib/prwatch');
 
 const PORT = process.env.PORT || 4747;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -37,6 +38,9 @@ function broadcast(msg) {
 runner.setBroadcaster(broadcast);
 manager.setBroadcaster(broadcast);
 importer.setBroadcaster(broadcast);
+prwatch.setBroadcaster(broadcast);
+prwatch.applyInterval();
+setTimeout(() => prwatch.sweep(), 30_000); // first pass shortly after boot
 runner.setOnFinish((task) => {
   if (manager.config().triggers.onFinish) {
     manager.invoke(`task finished and awaits review: "${task.title}" (id ${task.id})`);
@@ -66,8 +70,13 @@ app.get('/api/config', (req, res) => {
 });
 
 app.put('/api/settings', (req, res) => {
-  const { maxConcurrent, defaultCwd, ntfyTopic, notifyMac, reposDir: rd } = req.body || {};
+  const { maxConcurrent, defaultCwd, ntfyTopic, notifyMac, reposDir: rd, prWatchMin, prWatchAutoFix } = req.body || {};
   if (typeof rd === 'string' && rd) state.settings.reposDir = rd;
+  if (Number.isInteger(prWatchMin) && prWatchMin >= 0 && prWatchMin <= 120) {
+    state.settings.prWatchMin = prWatchMin;
+    prwatch.applyInterval();
+  }
+  if (typeof prWatchAutoFix === 'boolean') state.settings.prWatchAutoFix = prWatchAutoFix;
   if (Number.isInteger(maxConcurrent) && maxConcurrent >= 1 && maxConcurrent <= 8) {
     state.settings.maxConcurrent = maxConcurrent;
   }
@@ -96,6 +105,12 @@ app.post('/api/import', (req, res) => {
 });
 
 importer.watchInbox(triageImported);
+
+// Manual PR-watch pass (also runs on an interval).
+app.post('/api/prwatch/sweep', (req, res) => {
+  prwatch.sweep();
+  res.json({ ok: true });
+});
 
 // Fire both notification channels on demand, for wiring up phones.
 app.post('/api/notify/test', (req, res) => {
