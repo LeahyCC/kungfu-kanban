@@ -12,6 +12,7 @@ const importer = require('./lib/importer');
 const prwatch = require('./lib/prwatch');
 const cooldown = require('./lib/cooldown');
 const models = require('./lib/models');
+const depsLib = require('./lib/deps');
 
 const PORT = process.env.PORT || 4747;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -311,6 +312,7 @@ app.post('/api/tasks/:id/pr', (req, res) => {
       task.managerVerdict = 'PR merged';
       note('pr', 'PR merged from the board');
       require('./lib/notify').notify('Kungfu Kanban — PR merged', task.title, task.prUrl);
+      runner.pumpQueue(); // the merge may free dependent cards
     } else {
       task.prClosedNoted = true;
       note('pr', 'PR closed from the board (not merged)');
@@ -377,6 +379,7 @@ function makeTask(b, createdBy = 'user') {
     openPr: !!b.openPr,
     priority: Number.isInteger(b.priority) ? b.priority : 0,
     acceptanceCriteria: b.acceptanceCriteria || '',
+    deps: depsLib.sanitize(b.deps, null),
     schedule: parseSchedule(b.schedule),
     issueNumber: Number.isInteger(b.issueNumber) ? b.issueNumber : null,
     status: 'backlog',
@@ -410,6 +413,14 @@ app.patch('/api/tasks/:id', (req, res) => {
     // Only allow no-op / status moves are blocked while running
     return res.status(409).json({ error: 'task is running' });
   }
+  if ('deps' in req.body) {
+    const clean = depsLib.sanitize(req.body.deps, task.id);
+    if (depsLib.wouldCycle(task.id, clean)) {
+      return res.status(400).json({ error: 'dependency cycle — a card cannot (transitively) wait on itself' });
+    }
+    task.deps = clean;
+    delete task.depsUnresolved;
+  }
   for (const f of TASK_FIELDS) {
     if (f in req.body) task[f] = req.body[f];
   }
@@ -417,6 +428,8 @@ app.patch('/api/tasks/:id', (req, res) => {
   if (!STATUSES.includes(task.status)) task.status = 'backlog';
   save();
   broadcast({ type: 'task', task });
+  // Shipping a card (or loosening deps) can free queued dependents.
+  if (task.status === 'done' || 'deps' in req.body) runner.pumpQueue();
   res.json(task);
 });
 
@@ -427,6 +440,7 @@ app.delete('/api/tasks/:id', (req, res) => {
   state.tasks = state.tasks.filter((t) => t.id !== task.id);
   save();
   broadcast({ type: 'deleted', taskId: task.id });
+  runner.pumpQueue(); // a deleted dep counts as met — free any waiting dependents
   res.json({ ok: true });
 });
 
@@ -532,7 +546,10 @@ function checkSchedules() {
   }
 }
 
-setInterval(checkSchedules, 60 * 1000);
+setInterval(() => {
+  checkSchedules();
+  runner.pumpQueue(); // safety sweep: catch any dep-freed card a pump missed
+}, 60 * 1000);
 
 // The runner executes code: never bind beyond loopback without a token gate.
 if (HOST !== '127.0.0.1' && HOST !== 'localhost' && !auth.getToken()) {

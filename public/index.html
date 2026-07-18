@@ -187,6 +187,8 @@
         <label>Repeat <span class="hint-inline">(optional — clones &amp; runs on a schedule; card stays in Backlog)</span>
           <input name="schedule" placeholder="e.g. 6h (every 6 hours) or 14:30 (daily)" />
         </label>
+        <span class="field-label" title="The card waits in Queued until every selected card is Done (approved or PR merged), then launches automatically — chain dependent work instead of babysitting the order">Runs after <span class="hint-inline">(optional — waits until these cards are Done)</span></span>
+        <div id="depPicker" class="skill-picker"></div>
         <span class="field-label" title="Skill names injected into the prompt so the agent reaches for them; ✦ auto-select lets the agent review its own installed skills instead">Skills to use</span>
         <div id="skillPicker" class="skill-picker"></div>
         <div class="modal-actions">
@@ -234,6 +236,8 @@ openPr: true
 ## Card title — imperative, specific
 model: opus             # per-card overrides: model, effort, priority 0-3,
 priority: 2             # worktree, openPr, permissions, skills, cwd
+after: Earlier card title   # waits until that card is Done (repeat for several);
+                        # or sequential: true in frontmatter chains the whole file
 The prompt: self-contained instructions for the executing agent.
 
 ### Acceptance
