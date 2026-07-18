@@ -609,23 +609,36 @@ function renderDrawerMeta(t) {
 function renderDrawerActions(t) {
   const box = $('#drawerActions');
   box.innerHTML = '';
-  const mk = (label, cls, fn) => {
+  const mk = (label, cls, title, fn) => {
     const b = document.createElement('button');
     b.textContent = label;
     if (cls) b.className = cls;
+    if (title) b.title = title;
     b.addEventListener('click', fn);
     box.appendChild(b);
   };
   if (RUNNING_LIKE[t.status]) {
-    mk('⏹ Stop', 'danger', () => api(`/api/tasks/${t.id}/stop`, { method: 'POST' }));
+    mk('⏹ Stop', 'danger', 'Stop the agent (SIGTERM; the partial transcript is kept)', () => api(`/api/tasks/${t.id}/stop`, { method: 'POST' }));
   } else {
-    mk('▶ Run', 'primary', () => api(`/api/tasks/${t.id}/run`, { method: 'POST' }));
-    mk('Edit', 'ghost', () => { $('#drawer').classList.add('hidden'); openModal(t); });
-    if (t.status === 'review') mk('✓ Done', '', async () => {
+    mk('▶ Run', 'primary', 'Launch now — re-running clears the previous transcript and result', () => api(`/api/tasks/${t.id}/run`, { method: 'POST' }));
+    mk('Edit', 'ghost', 'Edit the card (prompt, model, schedule, …)', () => { $('#drawer').classList.add('hidden'); openModal(t); });
+    if (t.status === 'review') mk('✓ Done', '', 'Stamp it shipped — moves the card to Done', async () => {
       await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: 'done' } });
       $('#drawer').classList.add('hidden');
     });
-    mk('Delete', 'danger', async () => {
+    if (t.prUrl && t.status !== 'done') {
+      mk('⇉ Merge PR', '', 'Merge the pull request on GitHub (merge commit) and stamp the card Done', async () => {
+        if (!confirm(`Merge this PR?\n${t.prUrl}`)) return;
+        const r = await api(`/api/tasks/${t.id}/pr`, { method: 'POST', body: { action: 'merge' } });
+        if (r.error) alert(`Merge failed: ${r.error}`);
+      });
+      mk('Close PR', 'ghost', 'Close the pull request on GitHub without merging (the branch and work remain)', async () => {
+        if (!confirm(`Close this PR without merging?\n${t.prUrl}`)) return;
+        const r = await api(`/api/tasks/${t.id}/pr`, { method: 'POST', body: { action: 'close' } });
+        if (r.error) alert(`Close failed: ${r.error}`);
+      });
+    }
+    mk('Delete', 'danger', 'Delete the card and its transcript (does not touch git or PRs)', async () => {
       if (!confirm('Delete this card?')) return;
       await api(`/api/tasks/${t.id}`, { method: 'DELETE' });
       $('#drawer').classList.add('hidden');
@@ -927,10 +940,27 @@ async function loadTasks() {
   tasks = await api('/api/tasks');
   render();
 }
+// ---------- system status (claude CLI + gh health) ----------
+async function renderHealth() {
+  const el = $('#sysStatus');
+  const h = await api('/api/health');
+  if (!h.claude) return; // auth redirect etc.
+  const dot = (ok) => `<span class="sys-dot ${ok ? 'ok' : 'bad'}">●</span>`;
+  if (h.claude.ok && h.gh.ok) {
+    el.innerHTML = `on your subscription · ${dot(true)} ${esc(h.claude.out || 'claude')} · ${dot(true)} gh`;
+  } else {
+    el.innerHTML = [
+      h.claude.ok ? `${dot(true)} ${esc(h.claude.out)}` : `${dot(false)} claude CLI not working — cards can't run`,
+      h.gh.ok ? `${dot(true)} gh` : `${dot(false)} gh not authed — PR features off`,
+    ].join(' · ');
+  }
+}
+
 (async () => {
   config = await api('/api/config');
   $('#maxConcurrent').value = config.settings.maxConcurrent || 2;
   applyCooldown(config.cooldownUntil || 0);
   applyModelBlocks(config.modelBlocks || {});
   await loadTasks();
+  renderHealth();
 })();

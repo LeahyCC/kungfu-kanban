@@ -57,6 +57,10 @@ Columns: **Backlog → Queued → Running → Review → Done**
 - **⚙ Settings** (toolbar): default working directory, repos directory, ntfy
   topic, macOS notification toggle, and Done-column archiving (see below).
 - **☀ / ☾** toggles the day/night dojo. Night is the default.
+- The toolbar shows live **system status**: green dots when the `claude` CLI and
+  `gh` auth are healthy, red with a plain-English warning when they're not.
+- Cards with a PR get **⇉ Merge PR / Close PR** buttons in the drawer — merging
+  happens via `gh` and stamps the card Done on the spot.
 
 ### Archiving old Done cards
 

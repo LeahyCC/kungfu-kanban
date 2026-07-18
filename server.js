@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const path = require('path');
+const { execFile } = require('child_process');
 const { discoverSkills, discoverAgents, discoverRepos } = require('./lib/discovery');
 const os = require('os');
 const { state, save, getTask, readTranscript, sweepArchive } = require('./lib/store');
@@ -195,6 +196,53 @@ app.post('/api/import/issues', (req, res) => {
 app.post('/api/prwatch/sweep', (req, res) => {
   prwatch.sweep();
   res.json({ ok: true });
+});
+
+// System health: is the claude CLI reachable, is gh authed? Cached 5 min.
+let healthCache = { at: 0, data: null };
+app.get('/api/health', async (req, res) => {
+  if (healthCache.data && Date.now() - healthCache.at < 5 * 60_000) return res.json(healthCache.data);
+  const check = (cmd, args) =>
+    new Promise((r) => execFile(cmd, args, { timeout: 10_000 }, (err, stdout) =>
+      r({ ok: !err, out: (stdout || '').trim().split('\n')[0].slice(0, 60) })));
+  const [claude, gh] = await Promise.all([
+    check('claude', ['--version']),
+    check('gh', ['auth', 'status']),
+  ]);
+  healthCache = { at: Date.now(), data: { claude, gh } };
+  res.json(healthCache.data);
+});
+
+// Merge or close a card's PR right from the board (gh does the work).
+app.post('/api/tasks/:id/pr', (req, res) => {
+  const task = getTask(req.params.id);
+  if (!task || !task.prUrl) return res.status(404).json({ error: 'no PR on this card' });
+  const action = (req.body || {}).action;
+  if (!['merge', 'close'].includes(action)) return res.status(400).json({ error: 'action must be merge|close' });
+  const args = action === 'merge' ? ['pr', 'merge', task.prUrl, '--merge'] : ['pr', 'close', task.prUrl];
+  execFile('gh', args, { timeout: 60_000, cwd: task.cwd }, (err, stdout, stderr) => {
+    const note = (kind, text) => {
+      require('./lib/store').appendTranscript(task.id, { kind, text });
+      broadcast({ type: 'output', taskId: task.id, entry: { kind, text } });
+    };
+    if (err) {
+      const msg = (stderr || err.message || '').trim().slice(0, 300);
+      note('error', `PR ${action} failed — ${msg}`);
+      return res.status(500).json({ error: msg });
+    }
+    if (action === 'merge') {
+      task.status = 'done';
+      task.managerVerdict = 'PR merged';
+      note('pr', 'PR merged from the board');
+      require('./lib/notify').notify('Kungfu Kanban — PR merged', task.title, task.prUrl);
+    } else {
+      task.prClosedNoted = true;
+      note('pr', 'PR closed from the board (not merged)');
+    }
+    save();
+    broadcast({ type: 'task', task });
+    res.json({ ok: true });
+  });
 });
 
 // Fire both notification channels on demand, for wiring up phones.
