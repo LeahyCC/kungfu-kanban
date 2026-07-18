@@ -1021,9 +1021,52 @@ async function renderUsage() {
   }
   chip.classList.remove('hidden');
   const bd = $('#usageBreakdown');
-  const models = Object.entries(u.byModel || {}).sort((a, b) => b[1] - a[1])
-    .map(([m, n]) => `${m} ${fmtTok(n)}`).join(' · ');
-  bd.textContent = `last 5h across this Mac's Claude Code: ${fmtTok(u.output)} out / ${fmtTok(u.input)} in (${fmtTok(u.cacheRead)} cached) · ${u.turns} turns${models ? ` · ${models}` : ''}`;
+  bd.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'usage-grid';
+  for (const [val, label] of [
+    [fmtTok(u.output), 'out tok'],
+    [fmtTok(u.input), 'in tok'],
+    [fmtTok(u.cacheRead), 'cached'],
+    [String(u.turns), 'turns'],
+  ]) {
+    const s = document.createElement('div');
+    s.className = 'u-stat';
+    const b = document.createElement('b');
+    b.textContent = val;
+    const l = document.createElement('span');
+    l.textContent = label;
+    s.append(b, l);
+    grid.appendChild(s);
+  }
+  bd.appendChild(grid);
+  if (u.budgetTokens > 0) {
+    const pct = Math.min(100, Math.round((u.output / u.budgetTokens) * 100));
+    const bar = document.createElement('div');
+    bar.className = 'u-bar';
+    const fill = document.createElement('div');
+    fill.className = 'u-fill' + (pct >= 90 ? ' bad' : pct >= 70 ? ' warn' : '');
+    fill.style.width = `${pct}%`;
+    bar.appendChild(fill);
+    bar.title = `${pct}% of your ${fmtTok(u.budgetTokens)} budget`;
+    bd.appendChild(bar);
+  }
+  const models = Object.entries(u.byModel || {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+  if (models.length) {
+    const row = document.createElement('div');
+    row.className = 'u-models';
+    for (const [m, n] of models) {
+      const chip = document.createElement('span');
+      chip.className = 'badge';
+      chip.textContent = `${m} ${fmtTok(n)}`;
+      row.appendChild(chip);
+    }
+    bd.appendChild(row);
+  }
+  const cap = document.createElement('span');
+  cap.className = 'footnote';
+  cap.textContent = 'all Claude Code on this Mac · rolling 5-hour window';
+  bd.appendChild(cap);
 }
 setInterval(renderUsage, 5 * 60_000);
 
