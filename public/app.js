@@ -114,6 +114,7 @@ function cardEl(t) {
   if (t.effort && t.effort !== 'default') meta.push(`<span class="badge">${esc(t.effort)}</span>`);
   if (t.agent) meta.push(`<span class="badge">agent:${esc(t.agent)}</span>`);
   if (t.worktree) meta.push('<span class="badge wt">worktree</span>');
+  if (t.skillsAuto) meta.push('<span class="badge skillauto">✦ auto</span>');
   for (const s of (t.skills || []).slice(0, 3)) meta.push(`<span class="badge">${esc(s)}</span>`);
   if ((t.skills || []).length > 3) meta.push(`<span class="badge">+${t.skills.length - 3}</span>`);
   if (t.prUrl) meta.push(`<a class="pr-link" href="${esc(t.prUrl)}" target="_blank" rel="noopener">PR ↗</a>`);
@@ -148,6 +149,19 @@ function openModal(task) {
   f.title.value = task ? task.title : '';
   f.prompt.value = task ? task.prompt : '';
   f.cwd.value = task ? task.cwd : config.settings.defaultCwd || '';
+
+  // repo picker fills the cwd input; the input stays the source of truth
+  const rs = $('#repoSelect');
+  rs.innerHTML = '<option value="">repo…</option>';
+  for (const r of config.repos || []) {
+    const opt = document.createElement('option');
+    opt.value = r.path;
+    opt.textContent = r.name;
+    rs.appendChild(opt);
+  }
+  rs.value = (config.repos || []).some((r) => r.path === f.cwd.value) ? f.cwd.value : '';
+  rs.onchange = () => { if (rs.value) f.cwd.value = rs.value; };
+  f.cwd.oninput = () => { rs.value = (config.repos || []).some((r) => r.path === f.cwd.value) ? f.cwd.value : ''; };
   fillSelect(f.model, config.models, task ? task.model : 'default');
   fillSelect(f.effort, config.efforts, task ? task.effort : 'default');
   fillSelect(f.permissionMode, config.permissionModes, task ? task.permissionMode : 'acceptEdits');
@@ -160,6 +174,13 @@ function openModal(task) {
 
   const picker = $('#skillPicker');
   picker.innerHTML = '';
+  const auto = document.createElement('span');
+  auto.className = 'skill-chip auto' + (task && task.skillsAuto ? ' on' : '');
+  auto.textContent = '✦ auto-select';
+  auto.title = 'Let the agent pick relevant skills itself';
+  auto.dataset.auto = '1';
+  auto.addEventListener('click', () => auto.classList.toggle('on'));
+  picker.appendChild(auto);
   const selected = new Set(task ? task.skills || [] : []);
   for (const s of config.skills) {
     const chip = document.createElement('span');
@@ -200,7 +221,8 @@ $('#taskForm').addEventListener('submit', async (e) => {
     openPr: f.openPr.checked,
     priority: parseInt(f.priority.value, 10) || 0,
     acceptanceCriteria: f.acceptanceCriteria.value,
-    skills: [...document.querySelectorAll('.skill-chip.on')].map((c) => c.dataset.name),
+    skills: [...document.querySelectorAll('.skill-chip.on')].filter((c) => !c.dataset.auto).map((c) => c.dataset.name),
+    skillsAuto: !!document.querySelector('.skill-chip.auto.on'),
   };
   if (editingId) await api(`/api/tasks/${editingId}`, { method: 'PATCH', body });
   else await api('/api/tasks', { method: 'POST', body });
@@ -254,6 +276,7 @@ $('#importForm').addEventListener('submit', async (e) => {
 function openSettings() {
   const f = $('#settingsForm');
   f.defaultCwd.value = config.settings.defaultCwd || '';
+  f.reposDir.value = config.settings.reposDir || '';
   f.ntfyTopic.value = config.settings.ntfyTopic || '';
   f.notifyMac.checked = config.settings.notifyMac !== false;
   $('#settingsBackdrop').classList.remove('hidden');
@@ -282,10 +305,12 @@ $('#settingsForm').addEventListener('submit', async (e) => {
     method: 'PUT',
     body: {
       defaultCwd: f.defaultCwd.value,
+      reposDir: f.reposDir.value,
       ntfyTopic: f.ntfyTopic.value,
       notifyMac: f.notifyMac.checked,
     },
   });
+  config = await api('/api/config'); // re-scan repos for the picker
   $('#settingsBackdrop').classList.add('hidden');
 });
 

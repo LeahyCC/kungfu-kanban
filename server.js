@@ -1,7 +1,9 @@
 const express = require('express');
 const crypto = require('crypto');
 const path = require('path');
-const { discoverSkills, discoverAgents } = require('./lib/discovery');
+const { discoverSkills, discoverAgents, discoverRepos } = require('./lib/discovery');
+const path2 = require('path');
+const os = require('os');
 const { state, save, getTask, readTranscript } = require('./lib/store');
 const runner = require('./lib/runner');
 const manager = require('./lib/manager');
@@ -47,6 +49,10 @@ const MODELS = ['default', 'fable', 'opus', 'sonnet', 'haiku'];
 const EFFORTS = ['default', 'low', 'medium', 'high', 'xhigh', 'max'];
 const PERMISSION_MODES = ['acceptEdits', 'auto', 'plan', 'dontAsk', 'bypassPermissions'];
 
+function reposDir() {
+  return state.settings.reposDir || path2.join(os.homedir(), 'Documents', 'Code', 'Git');
+}
+
 app.get('/api/config', (req, res) => {
   res.json({
     models: MODELS,
@@ -54,12 +60,14 @@ app.get('/api/config', (req, res) => {
     permissionModes: PERMISSION_MODES,
     skills: discoverSkills(),
     agents: discoverAgents(),
-    settings: state.settings,
+    repos: discoverRepos(reposDir()),
+    settings: { ...state.settings, reposDir: reposDir() },
   });
 });
 
 app.put('/api/settings', (req, res) => {
-  const { maxConcurrent, defaultCwd, ntfyTopic, notifyMac } = req.body || {};
+  const { maxConcurrent, defaultCwd, ntfyTopic, notifyMac, reposDir: rd } = req.body || {};
+  if (typeof rd === 'string' && rd) state.settings.reposDir = rd;
   if (Number.isInteger(maxConcurrent) && maxConcurrent >= 1 && maxConcurrent <= 8) {
     state.settings.maxConcurrent = maxConcurrent;
   }
@@ -98,7 +106,7 @@ app.post('/api/notify/test', (req, res) => {
 // --- Tasks ---
 const TASK_FIELDS = [
   'title', 'prompt', 'cwd', 'model', 'effort', 'permissionMode',
-  'skills', 'agent', 'worktree', 'openPr', 'status', 'priority', 'acceptanceCriteria',
+  'skills', 'skillsAuto', 'agent', 'worktree', 'openPr', 'status', 'priority', 'acceptanceCriteria',
 ];
 const STATUSES = ['backlog', 'queued', 'running', 'stopping', 'review', 'done'];
 
@@ -115,6 +123,7 @@ app.post('/api/tasks', (req, res) => {
     effort: b.effort || 'default',
     permissionMode: b.permissionMode || 'acceptEdits',
     skills: Array.isArray(b.skills) ? b.skills : [],
+    skillsAuto: !!b.skillsAuto,
     agent: b.agent || null,
     worktree: !!b.worktree,
     openPr: !!b.openPr,

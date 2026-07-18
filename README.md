@@ -62,7 +62,7 @@ Columns: **Backlog → Queued → Running → Review → Done**
 |---|---|---|
 | Title | — | shown on the card, PR title, notification text |
 | Prompt | the `claude -p` prompt | what the agent should do |
-| Working directory | process `cwd` | defaults from ⚙ Settings |
+| Working directory | process `cwd` | repo dropdown (scans the ⚙ Settings repos directory for git repos) or any path |
 | Model | `--model` | default / fable / opus / sonnet / haiku |
 | Effort | `--effort` | default / low / medium / high / xhigh / max |
 | Permissions | `--permission-mode` | `acceptEdits` (default), `auto`, `plan`, `dontAsk`, `bypassPermissions` — see [Security](#security-notes) |
@@ -71,7 +71,7 @@ Columns: **Backlog → Queued → Running → Review → Done**
 | Open PR when done | post-run `gh pr create` | requires worktree; see below |
 | Priority | sort order (0–3) | 2+ shows the vermillion square |
 | Acceptance criteria | manager review rubric | the Sensei approves/rejects against this |
-| Skills | injected into the prompt | picked from your installed skills |
+| Skills | injected into the prompt | pick from installed skills, or **✦ auto-select** to let the agent choose |
 
 ### Skills & agents discovery
 
@@ -211,6 +211,10 @@ tailscale serve status             # shows your https://<machine>.<tailnet>.ts.n
 On your phone: install Tailscale, sign in to the same tailnet, open the URL, enter
 the token once — it's stored as a cookie for a year. Scripts/API calls can send
 `Authorization: Bearer <token>` instead.
+
+**Install it as an app**: the board is a PWA. On iPhone, open the tailnet URL in
+Safari → Share → **Add to Home Screen** — you get a standalone full-screen app
+with the robot icon and night-dojo status bar.
 
 - Token can also come from the `KFK_TOKEN` env var (overrides the file).
 - Rotate it by regenerating `data/auth-token` (old cookies stop working).
