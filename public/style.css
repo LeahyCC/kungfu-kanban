@@ -624,6 +624,16 @@ input.tiny { width: 60px; }
   color: var(--ink-900);
 }
 
+/* cwd repo picker: select fills the input, input stays the source of truth */
+.cwd-row { display: flex; gap: 8px; }
+.cwd-row select { flex: none; max-width: 40%; }
+.cwd-row input { flex: 1; min-width: 0; }
+
+/* the auto-select skill chip */
+.skill-chip.auto { border-style: dashed; color: var(--accent-ink); }
+.skill-chip.auto.on { background: var(--accent-wash); border: 1px solid var(--accent); color: var(--ink-900); }
+.badge.skillauto { color: var(--accent-ink); border-color: var(--accent-ink); }
+
 /* import modal */
 textarea.mono { font-family: var(--font-mono); font-size: 12.5px; line-height: 1.5; }
 input[type='file'] { border: none; background: none; padding: 4px 0; color: var(--ink-600); font-size: 12.5px; }

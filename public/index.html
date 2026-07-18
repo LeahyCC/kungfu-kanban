@@ -132,7 +132,10 @@
           <textarea name="prompt" rows="5" required placeholder="What should the agent do?"></textarea>
         </label>
         <label>Working directory
-          <input name="cwd" placeholder="/Users/you/project" />
+          <div class="cwd-row">
+            <select id="repoSelect"><option value="">repo…</option></select>
+            <input name="cwd" placeholder="/Users/you/project" />
+          </div>
         </label>
         <div class="row">
           <label>Model
@@ -203,6 +206,9 @@
       <form id="settingsForm">
         <label>Default working directory
           <input name="defaultCwd" placeholder="/Users/you/project" />
+        </label>
+        <label>Repos directory <span class="hint-inline">(scanned for the card repo picker)</span>
+          <input name="reposDir" placeholder="/Users/you/Code" />
         </label>
         <label>ntfy topic <span class="hint-inline">(push to your phone via ntfy.sh — leave empty to disable)</span>
           <input name="ntfyTopic" placeholder="my-secret-kanban-topic" />
