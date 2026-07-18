@@ -656,11 +656,18 @@ input.tiny { width: 60px; }
 
 /* import modal */
 textarea.mono { font-family: var(--font-mono); font-size: 12.5px; line-height: 1.5; }
-.draft-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.draft-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
 .draft-row input:not([type='checkbox']) { flex: 1; min-width: 180px; }
-.draft-opts { margin-top: -6px; }
-.draft-opts select { max-width: 160px; }
-.draft-opts .check-row { margin-bottom: 0; flex: 1; }
+.draft-opts { margin: -4px 0 4px; }
+.draft-opts select { flex: 1; min-width: 110px; max-width: 180px; }
+.explore-check {
+  flex: none;
+  margin-bottom: 0 !important;
+  white-space: nowrap;
+  gap: 6px !important;
+}
+.draft-opts button { flex: none; margin-left: auto; }
+.draft-hint { display: block; margin: 0 0 12px; }
 #importPreview { margin: -6px 0 10px; }
 #importPreview .dupe { color: var(--warning); }
 .fmt-example {
@@ -673,7 +680,8 @@ textarea.mono { font-family: var(--font-mono); font-size: 12.5px; line-height: 1
 }
 .fmt-example:hover { border-color: var(--accent-ink); }
 .fmt-example.copied { outline: 2px solid var(--accent); }
-input[type='file'] { border: none; background: none; padding: 4px 0; color: var(--ink-600); font-size: 12.5px; }
+input[type='file'] { border: none; background: none; padding: 4px 0; color: var(--ink-600); font-size: 12.5px; min-width: 0; flex: 1; }
+.nowrap { white-space: nowrap; }
 .import-result {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -984,4 +992,9 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
   .board { grid-template-columns: repeat(5, minmax(220px, 1fr)); }
   .app-status .status-chip { display: none; }
   .toolbar { flex-wrap: wrap; }
+}
+@media (max-width: 560px) {
+  .app-header { gap: 8px; padding: 0 12px; }
+  .wordmark { display: none; } /* logo + antenna carry the brand on phones */
+  .app-tab { padding: 6px 8px; }
 }
