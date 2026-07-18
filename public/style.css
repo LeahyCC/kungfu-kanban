@@ -570,6 +570,13 @@ input.tiny { width: 60px; }
   color: var(--on-accent);
 }
 .card-run:active { transform: translateY(1px); }
+/* done cards: ✕ delete instead of ▶ — sits clear of the SHIPPED seal */
+.card-del { margin-top: 8px; }
+.card-run.card-del:hover {
+  background: transparent;
+  border-color: var(--error);
+  color: var(--error);
+}
 @media (hover: none) { .card-run { opacity: 1; } }
 .card .title .antenna { margin-right: 6px; vertical-align: 1px; }
 .card .meta {
@@ -585,13 +592,14 @@ input.tiny { width: 60px; }
   font-size: 10.5px;
   color: var(--accent-ink);
 }
-.card.done-card > .title, .card.done-card > .meta { opacity: 0.6; }
+.card.done-card .title, .card.done-card .meta { opacity: 0.6; }
 .card .card-seal {
   position: absolute;
   top: -6px;
   right: 8px;
   font-size: 9px;
   padding: 3px 5px;
+  pointer-events: none; /* never steal taps from the buttons beneath it */
 }
 .card .failword {
   font-family: var(--font-mono);
