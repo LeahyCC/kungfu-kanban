@@ -704,6 +704,7 @@ function openSettings() {
   f.reposDir.value = config.settings.reposDir || '';
   f.ntfyTopic.value = config.settings.ntfyTopic || '';
   f.notifyMac.checked = config.settings.notifyMac !== false;
+  f.keepAwake.checked = config.settings.keepAwake !== false;
   f.archiveDays.value = config.settings.archiveDays ?? 7;
   f.prWatchMin.value = Number.isInteger(config.settings.prWatchMin) ? config.settings.prWatchMin : 10;
   f.prWatchAutoFix.checked = config.settings.prWatchAutoFix !== false;
@@ -770,6 +771,7 @@ $('#settingsForm').addEventListener('submit', async (e) => {
       reposDir: f.reposDir.value,
       ntfyTopic: f.ntfyTopic.value,
       notifyMac: f.notifyMac.checked,
+      keepAwake: f.keepAwake.checked,
       archiveDays: parseInt(f.archiveDays.value, 10),
       prWatchMin: parseInt(f.prWatchMin.value, 10) || 0,
       prWatchAutoFix: f.prWatchAutoFix.checked,
