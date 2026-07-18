@@ -123,8 +123,11 @@ function cardEl(t) {
   if ((t.skills || []).length > 3) meta.push(`<span class="badge">+${t.skills.length - 3}</span>`);
   if (t.prUrl) meta.push(`<a class="pr-link" href="${esc(t.prUrl)}" target="_blank" rel="noopener">PR ↗</a>`);
   if (t.error && t.status !== 'done') meta.push(`<span class="failword">${t.error === 'Stopped by user' ? 'stopped' : 'failed'}</span>`);
-  if (isRunning) meta.push('<span class="runword">training…</span>');
-  else if (t.stats && t.stats.turns) meta.push(`<span class="badge">${t.stats.turns} turns</span>`);
+  if (isRunning) {
+    meta.push('<span class="runword">training…</span>');
+    if (t.liveOut) meta.push(`<span class="badge">${fmtTok(t.liveOut)} out</span>`);
+    if (t.ctxTokens) meta.push(`<span class="badge" title="Session context used (of ~200k)">ctx ${Math.round(t.ctxTokens / 2000)}%</span>`);
+  } else if (t.stats && t.stats.turns) meta.push(`<span class="badge">${t.stats.turns} turns</span>`);
 
   const antenna = isRunning ? '<span class="antenna lit"></span>' : '';
   const seal = t.status === 'done' ? '<span class="seal card-seal seal--stamp">Shipped</span>' : '';
@@ -418,6 +421,8 @@ function openSettings() {
   f.archiveDays.value = config.settings.archiveDays ?? 7;
   f.prWatchMin.value = Number.isInteger(config.settings.prWatchMin) ? config.settings.prWatchMin : 10;
   f.prWatchAutoFix.checked = config.settings.prWatchAutoFix !== false;
+  f.usageBudgetM.value = (config.settings.usageBudgetTokens || 0) / 1_000_000;
+  renderUsage();
   $('#settingsBackdrop').classList.remove('hidden');
 }
 $('#settingsBtn').addEventListener('click', openSettings);
@@ -450,6 +455,7 @@ $('#settingsForm').addEventListener('submit', async (e) => {
       archiveDays: parseInt(f.archiveDays.value, 10),
       prWatchMin: parseInt(f.prWatchMin.value, 10) || 0,
       prWatchAutoFix: f.prWatchAutoFix.checked,
+      usageBudgetM: parseFloat(f.usageBudgetM.value) || 0,
     },
   });
   config = await api('/api/config'); // re-scan repos for the picker
@@ -522,10 +528,28 @@ async function openDrawer(id) {
   box.innerHTML = '';
   for (const e of entries) box.appendChild(entryEl(e));
   if (t.error) box.appendChild(entryEl({ kind: 'error', text: t.error }));
+  box.classList.toggle('hidden', !box.children.length && !RUNNING_LIKE[t.status]);
   $('#followForm').classList.toggle('hidden', RUNNING_LIKE[t.status] || !t.sessionId);
+
+  // the work: prompt shown and editable right here
+  const pe = $('#promptEdit');
+  pe.value = t.prompt || '';
+  pe.disabled = !!RUNNING_LIKE[t.status];
+  $('#promptSaveBtn').classList.add('hidden');
+
   $('#drawer').classList.remove('hidden');
   box.scrollTop = box.scrollHeight;
 }
+
+$('#promptEdit').addEventListener('input', () => {
+  const t = tasks.find((x) => x.id === drawerId);
+  $('#promptSaveBtn').classList.toggle('hidden', !t || $('#promptEdit').value === t.prompt);
+});
+$('#promptSaveBtn').addEventListener('click', async () => {
+  if (!drawerId) return;
+  const r = await api(`/api/tasks/${drawerId}`, { method: 'PATCH', body: { prompt: $('#promptEdit').value } });
+  if (!r.error) $('#promptSaveBtn').classList.add('hidden');
+});
 
 $('#followForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -569,6 +593,7 @@ function renderDrawerMeta(t) {
   mkSel('effort', config.efforts, t.effort, 'effort');
 
   const bits = [`perms: ${t.permissionMode}`, `cwd: ${t.cwd}`];
+  if (t.ctxTokens) bits.push(`ctx: ${fmtTok(t.ctxTokens)} (${Math.round(t.ctxTokens / 2000)}% of 200k)`);
   if (t.modelUsed && t.model !== 'default' && !t.modelUsed.includes(t.model)) bits.unshift(`ran on: ${t.modelUsed}`);
   if (t.skills && t.skills.length) bits.push(`skills: ${t.skills.join(', ')}`);
   if (t.stats) {
@@ -926,6 +951,7 @@ es.onmessage = (msg) => {
       renderDrawerMeta(evt.task);
       renderDrawerActions(evt.task);
       $('#followForm').classList.toggle('hidden', !!RUNNING_LIKE[evt.task.status] || !evt.task.sessionId);
+      $('#promptEdit').disabled = !!RUNNING_LIKE[evt.task.status];
     }
   } else if (evt.type === 'deleted') {
     tasks = tasks.filter((t) => t.id !== evt.taskId);
@@ -947,6 +973,36 @@ async function loadTasks() {
   tasks = await api('/api/tasks');
   render();
 }
+// ---------- 5-hour usage chip ----------
+function fmtTok(n) {
+  if (!n) return '0';
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1000) return `${Math.round(n / 1000)}k`;
+  return String(n);
+}
+
+async function renderUsage() {
+  const u = await api('/api/usage');
+  if (!u || u.output === undefined) return;
+  const chip = $('#usageChip');
+  const txt = $('#usageChipText');
+  if (u.budgetTokens > 0) {
+    const pct = Math.round((u.output / u.budgetTokens) * 100);
+    txt.textContent = `5h ${pct}%`;
+    chip.classList.toggle('warn', pct >= 70 && pct < 90);
+    chip.classList.toggle('bad', pct >= 90);
+  } else {
+    txt.textContent = `5h ${fmtTok(u.output)}`;
+    chip.classList.remove('warn', 'bad');
+  }
+  chip.classList.remove('hidden');
+  const bd = $('#usageBreakdown');
+  const models = Object.entries(u.byModel || {}).sort((a, b) => b[1] - a[1])
+    .map(([m, n]) => `${m} ${fmtTok(n)}`).join(' · ');
+  bd.textContent = `last 5h across this Mac's Claude Code: ${fmtTok(u.output)} out / ${fmtTok(u.input)} in (${fmtTok(u.cacheRead)} cached) · ${u.turns} turns${models ? ` · ${models}` : ''}`;
+}
+setInterval(renderUsage, 5 * 60_000);
+
 // ---------- system status (claude CLI + gh health) ----------
 async function renderHealth() {
   const el = $('#sysStatus');
@@ -970,4 +1026,5 @@ async function renderHealth() {
   applyModelBlocks(config.modelBlocks || {});
   await loadTasks();
   renderHealth();
+  renderUsage();
 })();

@@ -441,6 +441,9 @@ input.tiny { width: 60px; }
   padding: 2px 8px;
 }
 .cooldown-chip.model-chip { color: var(--info); border-color: var(--info); }
+.usage-chip { color: var(--ink-600); border-color: var(--rule); }
+.usage-chip.warn { color: var(--warning); border-color: var(--warning); }
+.usage-chip.bad { color: var(--error); border-color: var(--error); }
 
 /* ============================================================
    BOARD
@@ -982,6 +985,19 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 .follow-row { display: flex; gap: 8px; margin-top: 10px; }
 .follow-row input { flex: 1; }
 .follow-row button { padding: 6px 14px; font-size: 0.8125rem; }
+
+/* the work: the card's prompt, editable in place */
+.drawer-prompt { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.drawer-prompt .field-label { display: flex; align-items: center; gap: 8px; }
+.drawer-prompt .mini { padding: 1px 8px; font-size: 11px; }
+.drawer-prompt textarea {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  resize: vertical;
+  max-height: 30vh;
+}
+.drawer-prompt textarea:disabled { opacity: 0.6; }
 
 /* transcript — the ink slab fills the rest */
 .transcript {
