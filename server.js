@@ -112,6 +112,22 @@ app.post('/api/import', (req, res) => {
 
 importer.watchInbox(triageImported);
 
+// Draft an import document from natural language (runs on the subscription).
+app.post('/api/import/draft', async (req, res) => {
+  const request = ((req.body || {}).request || '').trim();
+  if (!request) return res.status(400).json({ error: 'empty request' });
+  if (cooldown.active()) return res.status(503).json({ error: 'subscription is cooling down — try after the timer' });
+  try {
+    const markdown = await importer.draft(request, {
+      repos: discoverRepos(reposDir()),
+      defaultCwd: state.settings.defaultCwd,
+    });
+    res.json({ markdown });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e).slice(0, 300) });
+  }
+});
+
 // Manual PR-watch pass (also runs on an interval).
 app.post('/api/prwatch/sweep', (req, res) => {
   prwatch.sweep();
