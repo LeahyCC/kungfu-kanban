@@ -458,12 +458,28 @@ function renderDrawerMeta(t) {
     if (t.stats.durationMs) bits.push(`${Math.round(t.stats.durationMs / 1000)}s`);
     if (t.stats.outputTokens) bits.push(`${t.stats.inputTokens || 0} in / ${t.stats.outputTokens} out tok`);
   }
-  if (t.sessionId) bits.push(`resume: claude -r ${t.sessionId}`);
   for (const b of bits) {
     const span = document.createElement('span');
     span.className = 'badge';
     span.textContent = b;
     box.appendChild(span);
+  }
+  if (t.sessionId) {
+    const cmd = `claude -r ${t.sessionId}`;
+    const b = document.createElement('span');
+    b.className = 'badge copyable';
+    b.title = 'Click to copy the resume command';
+    b.textContent = `resume: ${cmd}`;
+    b.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(cmd);
+        b.textContent = '✓ copied';
+      } catch {
+        b.textContent = '✕ copy blocked';
+      }
+      setTimeout(() => { b.textContent = `resume: ${cmd}`; }, 1200);
+    });
+    box.appendChild(b);
   }
   if (t.prUrl) {
     const a = document.createElement('a');
