@@ -1009,14 +1009,26 @@ async function renderHealth() {
   const h = await api('/api/health');
   if (!h.claude) return; // auth redirect etc.
   const dot = (ok) => `<span class="sys-dot ${ok ? 'ok' : 'bad'}">●</span>`;
+  const upBtn = h.claude.ok
+    ? ' <button id="updateClaudeBtn" class="ghost mini" title="Update the Claude Code CLI in place (runs claude update)">↑ update</button>'
+    : '';
   if (h.claude.ok && h.gh.ok) {
-    el.innerHTML = `on your subscription · ${dot(true)} ${esc(h.claude.out || 'claude')} · ${dot(true)} gh`;
+    el.innerHTML = `on your subscription · ${dot(true)} ${esc(h.claude.out || 'claude')}${upBtn} · ${dot(true)} gh`;
   } else {
     el.innerHTML = [
-      h.claude.ok ? `${dot(true)} ${esc(h.claude.out)}` : `${dot(false)} claude CLI not working — cards can't run`,
+      h.claude.ok ? `${dot(true)} ${esc(h.claude.out)}${upBtn}` : `${dot(false)} claude CLI not working — cards can't run`,
       h.gh.ok ? `${dot(true)} gh` : `${dot(false)} gh not authed — PR features off`,
     ].join(' · ');
   }
+  const ub = $('#updateClaudeBtn');
+  if (ub) ub.addEventListener('click', async () => {
+    if (!confirm('Update the Claude Code CLI now? Running agents finish on the old version; new runs use the new one.')) return;
+    ub.disabled = true;
+    ub.textContent = '↑ updating…';
+    const r = await api('/api/system/update-claude', { method: 'POST' });
+    alert(r.ok ? (r.output || 'Updated.') : `Update failed: ${r.error || 'unknown error'}`);
+    renderHealth();
+  });
 }
 
 (async () => {

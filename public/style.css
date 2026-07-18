@@ -462,6 +462,7 @@ input.tiny { width: 60px; }
 }
 .sys-dot.ok { color: var(--success); }
 .sys-dot.bad { color: var(--error); }
+.sub .mini { padding: 0 7px; font-size: 10.5px; margin-left: 2px; vertical-align: 1px; }
 .toolbar-actions { display: flex; align-items: center; gap: 10px; }
 .conc {
   flex-direction: row !important;
