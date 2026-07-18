@@ -123,9 +123,16 @@ function cardEl(t) {
 
   const antenna = isRunning ? '<span class="antenna lit"></span>' : '';
   const seal = t.status === 'done' ? '<span class="seal card-seal seal--stamp">Shipped</span>' : '';
-  el.innerHTML = `${seal}<div class="title">${antenna}${esc(t.title)}</div><div class="meta">${meta.join('')}</div>`;
+  const runBtn = !isRunning && t.status !== 'queued'
+    ? '<button class="card-run" title="Run now" aria-label="Run now">▶</button>' : '';
+  el.innerHTML = `${seal}<div class="card-top"><div class="title">${antenna}${esc(t.title)}</div>${runBtn}</div><div class="meta">${meta.join('')}</div>`;
   const pr = el.querySelector('.pr-link');
   if (pr) pr.addEventListener('click', (e) => e.stopPropagation());
+  const rb = el.querySelector('.card-run');
+  if (rb) rb.addEventListener('click', (e) => {
+    e.stopPropagation();
+    api(`/api/tasks/${t.id}/run`, { method: 'POST' });
+  });
   return el;
 }
 
