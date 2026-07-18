@@ -7,9 +7,32 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Fixed
+- Cards no longer sit in a silent, subscription-burning approval loop. When a
+  headless run ends blocked on a tool permission — a Bash command that must
+  leave the sandbox, a deny rule, or a mode that won't auto-approve Bash — the
+  CLI reports it as `permission_denials` while still exiting "success". The
+  board now reads that field, marks the card failed-in-review with the real
+  remedy, and no longer lets the agent's "please approve" message masquerade as
+  a finished result. A natural-language "yes" can't grant a headless permission,
+  so the note points at the actual levers: raise the card's mode or add an
+  allow-rule.
+- Landing page UX pass: anchor links no longer scroll chapters under the sticky
+  masthead; long inline commands wrap on phones instead of pushing the page
+  sideways; the TOC scrolls on short viewports; the theme toggle announces its
+  state (`aria-pressed`) and updates the browser theme-color; added a skip link.
+
+### Added
+- Permissions is a live select in the card drawer now (alongside model and
+  effort), so a blocked card can be raised and re-run without opening the editor.
+- Landing page: scroll tracking for the manual — the TOC highlights the chapter
+  you're reading, and a vermillion progress stroke under the masthead shows how
+  far down the page you are.
+
 ### Changed
 - README: launchd section uses modern bootstrap/bootout/kickstart commands and
   documents the "Load failed: 5" already-loaded gotcha
+- README troubleshooting covers a card stuck asking for approval
 
 ## [0.2.8] — 2026-07-17
 

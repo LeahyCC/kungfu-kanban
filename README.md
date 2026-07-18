@@ -458,6 +458,12 @@ card's drawer).
 - **Server won't start: "Refusing to bind …"** — you set `HOST` without a token.
   Create `data/auth-token` (or unset `HOST` and use Tailscale serve, which works
   with loopback).
+- **A card keeps asking you to approve a command** — cards run headless, which
+  has no approval prompt, so replying "yes" can't grant a tool permission. A
+  card whose mode won't allow a command (often a build/test that needs to leave
+  the Bash sandbox) now lands **failed-in-review** with the reason. Raise the
+  card's **Permissions** (the drawer's `perms` select) to `bypassPermissions`,
+  or add an allow-rule in `.claude/settings.json`, then re-run.
 
 ## Security notes
 
