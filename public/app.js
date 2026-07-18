@@ -127,15 +127,23 @@ function cardEl(t) {
 
   const antenna = isRunning ? '<span class="antenna lit"></span>' : '';
   const seal = t.status === 'done' ? '<span class="seal card-seal seal--stamp">Shipped</span>' : '';
-  const runBtn = !isRunning && t.status !== 'queued'
+  const runBtn = !isRunning && t.status !== 'queued' && t.status !== 'done'
     ? '<button class="card-run" title="Run now" aria-label="Run now">▶</button>' : '';
-  el.innerHTML = `${seal}<div class="card-top"><div class="title">${antenna}${esc(t.title)}</div>${runBtn}</div><div class="meta">${meta.join('')}</div>`;
+  const delBtn = t.status === 'done'
+    ? '<button class="card-run card-del" title="Delete card" aria-label="Delete card">✕</button>' : '';
+  el.innerHTML = `${seal}<div class="card-top"><div class="title">${antenna}${esc(t.title)}</div>${runBtn}${delBtn}</div><div class="meta">${meta.join('')}</div>`;
   const pr = el.querySelector('.pr-link');
   if (pr) pr.addEventListener('click', (e) => e.stopPropagation());
-  const rb = el.querySelector('.card-run');
+  const rb = el.querySelector('.card-run:not(.card-del)');
   if (rb) rb.addEventListener('click', (e) => {
     e.stopPropagation();
     api(`/api/tasks/${t.id}/run`, { method: 'POST' });
+  });
+  const db = el.querySelector('.card-del');
+  if (db) db.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!confirm('Delete this card?')) return;
+    await api(`/api/tasks/${t.id}`, { method: 'DELETE' });
   });
   return el;
 }
