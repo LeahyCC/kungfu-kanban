@@ -7,6 +7,12 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.2.4] — 2026-07-17
+
+### Fixed
+- Hook detection also catches "command not found" failures (e.g. a pre-push
+  tsc/typecheck in a bare worktree), so the --no-verify fallback fires there too
+
 ## [0.2.3] — 2026-07-17
 
 ### Fixed
