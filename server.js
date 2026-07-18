@@ -85,7 +85,7 @@ app.get('/api/config', (req, res) => {
 });
 
 app.put('/api/settings', (req, res) => {
-  const { maxConcurrent, defaultCwd, archiveDays, ntfyTopic, notifyMac, reposDir: rd, prWatchMin, prWatchAutoFix } = req.body || {};
+  const { maxConcurrent, defaultCwd, archiveDays, ntfyTopic, notifyMac, keepAwake, reposDir: rd, prWatchMin, prWatchAutoFix } = req.body || {};
   // an empty string clears the setting (falls back to the default scan dir)
   if (typeof rd === 'string') {
     if (rd.trim()) state.settings.reposDir = rd.trim();
@@ -109,6 +109,11 @@ app.put('/api/settings', (req, res) => {
   }
   if (typeof ntfyTopic === 'string') state.settings.ntfyTopic = ntfyTopic.trim();
   if (typeof notifyMac === 'boolean') state.settings.notifyMac = notifyMac;
+  if (typeof keepAwake === 'boolean') {
+    state.settings.keepAwake = keepAwake;
+    // Drop any live timed assertion; per-agent ones die with their process.
+    if (!keepAwake) require('./lib/awake').clear();
+  }
   save();
   res.json(state.settings);
 });
