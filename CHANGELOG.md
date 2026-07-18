@@ -7,6 +7,30 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.5.3] — 2026-07-18
+
+### Fixed — mobile board layout + session-limit error spam
+- **Stacked columns collapsed on phones.** At ≤700px the board switches from a
+  five-column grid to a vertical `flex` stack, but the grid's `align-items:
+  start` was never overridden — in column-flex that stops the columns from
+  stretching, so empty columns (Backlog/Queued/Done) shrank to their header
+  width and populated ones sized to their widest card. Added `align-items:
+  stretch` to the mobile `.board` rule so every stacked column fills the width.
+- **"Manager output unparsable" logged on every trigger.** When the Sensei's own
+  `claude -p` run hit a subscription/session limit, the CLI returned
+  `{is_error:true, api_error_status:429, result:"You've hit your session
+  limit…"}` — and `manager.js` blindly `JSON.parse`d that human string as a
+  decision, logging an error on every triggered invocation. It now inspects the
+  wrapper: a limit error trips the board-wide cooldown (pausing auto-flow until
+  reset, the same response the runner gives a limit-failed card) and logs a
+  single clean "Paused —" note; other run errors log once; only genuinely
+  malformed output is reported as unparsable.
+- **Newer limit phrasing went undetected.** `cooldown.detect` didn't match the
+  CLI's "You've hit your session limit · resets 11:30pm" wording (it keyed off
+  "usage limit"/"limit reached"), so a card failing on that message would land
+  in Review instead of requeueing behind the cooldown. The pattern now also
+  matches "session limit" and "hit your … limit".
+
 ## [0.5.2] — 2026-07-17
 
 ### Changed — Settings moved into the header
