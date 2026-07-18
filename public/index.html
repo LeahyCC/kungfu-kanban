@@ -44,12 +44,12 @@
   </header>
 
   <div class="toolbar" id="boardToolbar">
-    <span class="sub">on your subscription · via claude code cli</span>
+    <span class="sub" id="sysStatus" title="System status: the claude CLI runs your cards; gh opens and merges PRs. Checked every few minutes.">on your subscription · via claude code cli</span>
     <div class="toolbar-actions">
       <label class="conc" title="How many agent sessions may run at once — extras wait in Queued. Keeps parallel cards from burning your subscription rate limits.">parallel <input id="maxConcurrent" type="number" min="1" max="8" /></label>
       <button id="importBtn" class="ghost" title="Import cards from markdown">⇪ Import</button>
       <button id="settingsBtn" class="ghost" title="Settings">⚙ Settings</button>
-      <button id="newTaskBtn" class="primary">＋ New card</button>
+      <button id="newTaskBtn" class="primary" title="Write a card by hand — nothing runs until you launch it">＋ New card</button>
     </div>
   </div>
 
@@ -101,7 +101,7 @@
         <label title="The most permissive mode the Sensei may assign to a card — it can never grant more than this, whatever it decides">Permission ceiling
           <select name="permissionCeiling"></select>
         </label>
-        <button type="submit" class="primary">Save settings</button>
+        <button type="submit" class="primary" title="Apply — takes effect immediately, no restart needed">Save settings</button>
       </form>
     </section>
 
@@ -110,7 +110,7 @@
       <div id="mgrChat" class="mgr-chat"></div>
       <form id="mgrChatForm" class="mgr-chat-input">
         <input name="message" placeholder="e.g. plan the auth refactor into cards, or: what's blocking?" autocomplete="off" />
-        <button type="submit" class="primary">Send</button>
+        <button type="submit" class="primary" title="Ask the Sensei — one run on your subscription; it can propose or take board actions per its autonomy">Send</button>
       </form>
       <h2>Pending suggestions</h2>
       <div id="mgrSuggestions" class="mgr-suggestions"></div>
@@ -176,8 +176,8 @@
         <span class="field-label" title="Skill names injected into the prompt so the agent reaches for them; ✦ auto-select lets the agent review its own installed skills instead">Skills to use</span>
         <div id="skillPicker" class="skill-picker"></div>
         <div class="modal-actions">
-          <button type="button" id="cancelBtn" class="ghost">Cancel</button>
-          <button type="submit" class="primary">Save card</button>
+          <button type="button" id="cancelBtn" class="ghost" title="Discard changes">Cancel</button>
+          <button type="submit" class="primary" title="Save the card to Backlog — does not run it">Save card</button>
         </div>
       </form>
     </div>
@@ -190,7 +190,7 @@
       <form id="importForm">
         <div class="draft-row">
           <input id="draftPrompt" placeholder="✨ Or describe the work and let the Sensei draft it… e.g. plan a dark-mode pass for bouldi as 4 cards" autocomplete="off" />
-          <button type="button" id="draftBtn" class="ghost">✨ Draft</button>
+          <button type="button" id="draftBtn" class="ghost" title="One Sensei call writes the card doc into the textarea — review before importing">✨ Draft</button>
         </div>
         <div class="draft-row draft-opts">
           <select id="draftRepo"><option value="">repo…</option></select>
@@ -204,7 +204,7 @@
         <div id="importPreview" class="footnote"></div>
         <div class="draft-row hidden" id="refineRow">
           <input id="refinePrompt" placeholder="↻ Refine the draft: split card 2, make the last one opus…" autocomplete="off" />
-          <button type="button" id="refineBtn" class="ghost">↻ Refine</button>
+          <button type="button" id="refineBtn" class="ghost" title="Revise the draft in the same session — keeps everything you didn't mention">↻ Refine</button>
         </div>
         <label class="check-row"><span class="nowrap">…or pick a file</span>
           <input type="file" id="importFile" accept=".md,.markdown,.txt" />
@@ -227,8 +227,8 @@ The prompt: self-contained instructions for the executing agent.
         <span class="footnote">no <span class="mono">##</span> headings? each <span class="mono">- [ ]</span> item becomes a card · drop .md files into <span class="mono">data/inbox/</span> for hands-free import</span>
         <div class="modal-actions">
           <span id="importResult" class="import-result"></span>
-          <button type="button" id="importCancelBtn" class="ghost">Cancel</button>
-          <button type="submit" class="primary">⇪ Import</button>
+          <button type="button" id="importCancelBtn" class="ghost" title="Close without creating anything">Cancel</button>
+          <button type="submit" class="primary" title="Create every previewed card in Backlog — the Sensei gets one triage ping for the batch">⇪ Import</button>
         </div>
       </form>
     </div>
@@ -259,8 +259,8 @@ The prompt: self-contained instructions for the executing agent.
         <label class="check-row"><input type="checkbox" name="prWatchAutoFix" /> auto-fix PR merge conflicts (spawns a fix card, max 2 tries)</label>
         <div class="modal-actions">
           <button type="button" id="notifyTestBtn" class="ghost">🔔 Test notification</button>
-          <button type="button" id="settingsCancelBtn" class="ghost">Cancel</button>
-          <button type="submit" class="primary">Save</button>
+          <button type="button" id="settingsCancelBtn" class="ghost" title="Close without saving">Cancel</button>
+          <button type="submit" class="primary" title="Apply — takes effect immediately, no restart needed">Save</button>
         </div>
       </form>
     </div>
@@ -277,7 +277,7 @@ The prompt: self-contained instructions for the executing agent.
     <div id="transcript" class="transcript slab"></div>
     <form id="followForm" class="follow-row hidden">
       <input name="message" placeholder="Follow-up: fix the bug where…, also add…" autocomplete="off" />
-      <button type="submit" class="primary">▶ Send</button>
+      <button type="submit" class="primary" title="Resume this card's session with extra instructions — the agent keeps its full context">▶ Send</button>
     </form>
   </div>
 </div>

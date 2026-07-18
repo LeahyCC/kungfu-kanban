@@ -452,6 +452,8 @@ input.tiny { width: 60px; }
   font-size: 12px;
   color: var(--ink-400);
 }
+.sys-dot.ok { color: var(--success); }
+.sys-dot.bad { color: var(--error); }
 .toolbar-actions { display: flex; align-items: center; gap: 10px; }
 .conc {
   flex-direction: row !important;
