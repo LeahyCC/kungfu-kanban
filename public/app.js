@@ -424,12 +424,34 @@ $('#followForm').addEventListener('submit', async (e) => {
 });
 
 function renderDrawerMeta(t) {
-  const bits = [
-    `model: ${t.modelUsed || t.model}`,
-    `effort: ${t.effort}`,
-    `perms: ${t.permissionMode}`,
-    `cwd: ${t.cwd}`,
-  ];
+  const box = $('#drawerMeta');
+  box.innerHTML = '';
+  const canEdit = !RUNNING_LIKE[t.status];
+
+  // model + effort are live selects: change them right here, next run/follow-up
+  // (and manager retries) use the new values
+  const mkSel = (label, opts, value, field) => {
+    const wrap = document.createElement('label');
+    wrap.className = 'drawer-pick';
+    wrap.append(label + ' ');
+    const sel = document.createElement('select');
+    for (const o of opts) {
+      const op = document.createElement('option');
+      op.value = o;
+      op.textContent = o;
+      sel.appendChild(op);
+    }
+    sel.value = value || 'default';
+    sel.disabled = !canEdit;
+    sel.addEventListener('change', () => api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { [field]: sel.value } }));
+    wrap.appendChild(sel);
+    box.appendChild(wrap);
+  };
+  mkSel('model', config.models, t.model, 'model');
+  mkSel('effort', config.efforts, t.effort, 'effort');
+
+  const bits = [`perms: ${t.permissionMode}`, `cwd: ${t.cwd}`];
+  if (t.modelUsed && t.model !== 'default' && !t.modelUsed.includes(t.model)) bits.unshift(`ran on: ${t.modelUsed}`);
   if (t.skills && t.skills.length) bits.push(`skills: ${t.skills.join(', ')}`);
   if (t.stats) {
     if (t.stats.turns) bits.push(`${t.stats.turns} turns`);
@@ -437,9 +459,21 @@ function renderDrawerMeta(t) {
     if (t.stats.outputTokens) bits.push(`${t.stats.inputTokens || 0} in / ${t.stats.outputTokens} out tok`);
   }
   if (t.sessionId) bits.push(`resume: claude -r ${t.sessionId}`);
-  const html = bits.map((b) => `<span class="badge">${esc(b)}</span>`);
-  if (t.prUrl) html.push(`<a class="pr-link" href="${esc(t.prUrl)}" target="_blank" rel="noopener">${esc(t.prUrl)} ↗</a>`);
-  $('#drawerMeta').innerHTML = html.join('');
+  for (const b of bits) {
+    const span = document.createElement('span');
+    span.className = 'badge';
+    span.textContent = b;
+    box.appendChild(span);
+  }
+  if (t.prUrl) {
+    const a = document.createElement('a');
+    a.className = 'pr-link';
+    a.href = t.prUrl;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = `${t.prUrl} ↗`;
+    box.appendChild(a);
+  }
 }
 
 function renderDrawerActions(t) {
