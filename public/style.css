@@ -894,7 +894,26 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 }
 .drawer-head h2 { font-size: 1.25rem; font-weight: 600; line-height: 1.25; }
 .drawer-head button { padding: 4px 10px; }
-.drawer-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.drawer-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; align-items: center; }
+.drawer-pick {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+  color: var(--ink-600);
+}
+.drawer-pick select {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 2px 6px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.drawer-pick select:disabled { opacity: 0.55; }
 .drawer-actions { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
 .drawer-actions button { padding: 6px 14px; font-size: 0.8125rem; }
 
