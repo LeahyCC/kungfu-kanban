@@ -111,6 +111,7 @@ function cardEl(t) {
   if (t.createdBy === 'manager') meta.push('<span class="badge wt">sensei</span>');
   if (t.createdBy === 'import') meta.push('<span class="badge">import</span>');
   if (t.createdBy === 'auto') meta.push('<span class="badge skillauto">auto-fix</span>');
+  if (t.createdBy === 'schedule') meta.push('<span class="badge sched">⏱ scheduled run</span>');
   meta.push(`<span class="badge model">${esc(t.model || 'default')}</span>`);
   if (t.effort && t.effort !== 'default') meta.push(`<span class="badge">${esc(t.effort)}</span>`);
   if (t.agent) meta.push(`<span class="badge">agent:${esc(t.agent)}</span>`);

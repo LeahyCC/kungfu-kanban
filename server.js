@@ -2,7 +2,6 @@ const express = require('express');
 const crypto = require('crypto');
 const path = require('path');
 const { discoverSkills, discoverAgents, discoverRepos } = require('./lib/discovery');
-const path2 = require('path');
 const os = require('os');
 const { state, save, getTask, readTranscript, sweepArchive } = require('./lib/store');
 const runner = require('./lib/runner');
@@ -66,7 +65,7 @@ const EFFORTS = ['default', 'low', 'medium', 'high', 'xhigh', 'max'];
 const PERMISSION_MODES = ['acceptEdits', 'auto', 'plan', 'dontAsk', 'bypassPermissions'];
 
 function reposDir() {
-  return state.settings.reposDir || path2.join(os.homedir(), 'Documents', 'Code', 'Git');
+  return state.settings.reposDir || path.join(os.homedir(), 'Documents', 'Code', 'Git');
 }
 
 app.get('/api/config', (req, res) => {
@@ -382,9 +381,12 @@ function scheduleDue(task, now) {
     return now - last >= sc.hours * 3600 * 1000;
   }
   if (sc.kind === 'daily') {
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    if (`${hh}:${mm}` !== sc.time) return false;
+    // Due once the target time has passed today — not only in the exact
+    // minute — so a sleeping laptop catches up on wake instead of skipping.
+    const [h, m] = sc.time.split(':').map(Number);
+    const target = new Date(now);
+    target.setHours(h, m, 0, 0);
+    if (now < target) return false;
     return !sc.lastFired || localDay(new Date(sc.lastFired)) !== localDay(now);
   }
   return false;
