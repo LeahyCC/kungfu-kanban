@@ -38,12 +38,26 @@ function render() {
     empty.className = 'dojo-empty';
     empty.innerHTML = `
       <h3>The dojo is quiet</h3>
-      <p>Write a card, pick a model and effort, and let an agent train on it. Results land in Review.</p>`;
-    const btn = document.createElement('button');
-    btn.className = 'primary';
-    btn.textContent = '＋ First card';
-    btn.addEventListener('click', () => openModal(null));
-    empty.appendChild(btn);
+      <p>Cards create themselves — say the word in any Claude Code session and the board
+        drafts, imports, and triages them. Results land in Review.</p>
+      <div class="empty-prompt" title="The kungfu-todo skill is auto-installed for every Claude Code session on this machine">
+        <span class="c">$ claude</span>
+        <span>&raquo; create a kungfu todo for: fix the flaky auth test, then add a healthcheck endpoint</span>
+      </div>
+      <p class="empty-sub">Or ⇪ Import: paste a plan, ✨ describe the work and the Sensei writes the
+        cards, or pull your open GitHub issues.</p>`;
+    const actions = document.createElement('div');
+    actions.className = 'empty-actions';
+    const imp = document.createElement('button');
+    imp.className = 'primary';
+    imp.textContent = '⇪ Import / draft cards';
+    imp.addEventListener('click', () => $('#importBtn').click());
+    const manual = document.createElement('button');
+    manual.className = 'ghost';
+    manual.textContent = '＋ Write one by hand';
+    manual.addEventListener('click', () => openModal(null));
+    actions.append(imp, manual);
+    empty.appendChild(actions);
     board.appendChild(empty);
     return;
   }

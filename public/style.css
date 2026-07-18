@@ -770,7 +770,27 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
   text-align: center;
 }
 .dojo-empty h3 { font-size: 1.375rem; font-weight: 600; }
-.dojo-empty p { color: var(--ink-600); font-size: 0.875rem; max-width: 380px; }
+.dojo-empty p { color: var(--ink-600); font-size: 0.875rem; max-width: 440px; }
+.dojo-empty .empty-sub { font-size: 0.8125rem; color: var(--ink-400); }
+/* the terminal prompt that creates cards — the ink slab speaks */
+.dojo-empty .empty-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  text-align: left;
+  background: var(--slab-bg);
+  color: var(--slab-text);
+  border: 1px solid var(--slab-rule);
+  border-radius: 4px;
+  padding: 12px 16px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  max-width: 440px;
+}
+.dojo-empty .empty-prompt .c { color: var(--ink-400); }
+.dojo-empty .empty-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
 /* ============================================================
    MODAL — printed card, hard shadow
