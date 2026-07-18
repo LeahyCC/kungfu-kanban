@@ -7,6 +7,22 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-07-17
+
+### Added — no Mac sleep while cards run
+- The board now keeps the Mac awake while agents are working: every agent
+  process — running cards, Sensei reviews, ✨ draft runs — holds a
+  `caffeinate -w <pid>` power assertion tied to its pid, so the machine can't
+  idle-sleep (or spin down disks) mid-task and the assertion vanishes the
+  moment the agent exits — even across a server restart. Toggle in ⚙ Settings
+  ("keep Mac awake while cards run", on by default).
+- The agent-free gaps are bridged by a timed assertion too: post-run finalize
+  (PR push, notifications, the Sensei handoff) after the last card exits, and
+  subscription cooldowns while cards sit queued — otherwise the reset timer
+  can't fire on a sleeping Mac and the queue parks all night.
+- The display still turns off as usual. Note a closed lid on battery still
+  sleeps — macOS doesn't let userland override that.
+
 ## [0.4.2] — 2026-07-17
 
 ### Changed — marketing site replica no longer drifts
