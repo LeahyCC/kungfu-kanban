@@ -46,7 +46,7 @@
   <div class="toolbar" id="boardToolbar">
     <span class="sub">on your subscription · via claude code cli</span>
     <div class="toolbar-actions">
-      <label class="conc">parallel <input id="maxConcurrent" type="number" min="1" max="8" /></label>
+      <label class="conc" title="How many agent sessions may run at once — extras wait in Queued. Keeps parallel cards from burning your subscription rate limits.">parallel <input id="maxConcurrent" type="number" min="1" max="8" /></label>
       <button id="importBtn" class="ghost" title="Import cards from markdown">⇪ Import</button>
       <button id="settingsBtn" class="ghost" title="Settings">⚙ Settings</button>
       <button id="newTaskBtn" class="primary">＋ New card</button>
@@ -62,10 +62,10 @@
         <span class="who"><b>The Sensei</b><span>triage · dispatch · review</span></span>
       </div>
       <form id="mgrForm">
-        <label class="check-row"><input type="checkbox" name="enabled" /> Manager enabled</label>
+        <label class="check-row" title="The Sensei is an LLM that triages new cards (routing, priority), dispatches work, and reviews finished runs — each trigger is one claude -p call on your subscription"><input type="checkbox" name="enabled" /> Manager enabled</label>
         <div class="row">
-          <label>Model <select name="model"></select></label>
-          <label>Effort <select name="effort"></select></label>
+          <label title="The model the Sensei itself thinks with — not the models it assigns to cards">Model <select name="model"></select></label>
+          <label title="The Sensei's own reasoning budget">Effort <select name="effort"></select></label>
         </div>
         <span class="field-label">Autonomy</span>
         <div class="ladder">
@@ -90,15 +90,15 @@
         </label>
         <fieldset>
           <legend class="field-label">Triggers</legend>
-          <label class="check-row"><input type="checkbox" name="onFinish" /> when a task finishes (review it)</label>
-          <label class="check-row"><input type="checkbox" name="onNewCard" /> when a card is added (triage it)</label>
-          <label class="check-row">every <input type="number" name="intervalMin" min="0" max="240" class="tiny" /> min (0 = off)</label>
+          <label class="check-row" title="When a run lands in Review, the Sensei checks the result against the card's acceptance criteria and proposes approve (→ Done) or reject (→ retry with feedback)"><input type="checkbox" name="onFinish" /> when a task finishes (review it)</label>
+          <label class="check-row" title="New cards get routed: model, effort, skills, priority"><input type="checkbox" name="onNewCard" /> when a card is added (triage it)</label>
+          <label class="check-row" title="Also wake the Sensei on a timer to look over the whole board — each wake is a run on your subscription, so keep it modest">every <input type="number" name="intervalMin" min="0" max="240" class="tiny" /> min (0 = off)</label>
         </fieldset>
         <div class="row">
-          <label>Max launches/hr <input type="number" name="maxLaunchesPerHour" min="1" max="60" /></label>
-          <label>Max retries/task <input type="number" name="maxRetries" min="0" max="5" /></label>
+          <label title="Guardrail: the most runs the Sensei may start per hour. Actions beyond the cap become suggestions for your ✓ instead.">Max launches/hr <input type="number" name="maxLaunchesPerHour" min="1" max="60" /></label>
+          <label title="A rejected card re-runs with the Sensei's feedback appended to its prompt — at most this many times">Max retries/task <input type="number" name="maxRetries" min="0" max="5" /></label>
         </div>
-        <label>Permission ceiling
+        <label title="The most permissive mode the Sensei may assign to a card — it can never grant more than this, whatever it decides">Permission ceiling
           <select name="permissionCeiling"></select>
         </label>
         <button type="submit" class="primary">Save settings</button>
@@ -106,7 +106,7 @@
     </section>
 
     <section class="mgr-col mgr-main">
-      <h2>Chat <span id="mgrBusy" class="pill hidden">thinking…</span></h2>
+      <h2>Chat <span id="mgrBusy" class="pill hidden">thinking…</span> <button type="button" id="clearChatBtn" class="ghost mini" title="Clear the chat history for a fresh start">✕ clear</button></h2>
       <div id="mgrChat" class="mgr-chat"></div>
       <form id="mgrChatForm" class="mgr-chat-input">
         <input name="message" placeholder="e.g. plan the auth refactor into cards, or: what's blocking?" autocomplete="off" />
@@ -117,7 +117,7 @@
     </section>
 
     <section class="mgr-col mgr-log-col">
-      <h2>Activity log</h2>
+      <h2>Activity log <button type="button" id="clearLogBtn" class="ghost mini" title="Clear the activity log for a fresh start">✕ clear</button></h2>
       <div id="mgrLog" class="mgr-log"></div>
     </section>
   </main>
@@ -140,21 +140,21 @@
           </div>
         </label>
         <div class="row">
-          <label>Model
+          <label title="fable › opus › sonnet › haiku — bigger is smarter but eats more of your limits. If a model is capped, launches auto-step down the ladder.">Model
             <select name="model"></select>
           </label>
-          <label>Effort
+          <label title="Thinking budget: low for chores, high+ for genuinely hard problems (costs more subscription usage)">Effort
             <select name="effort"></select>
           </label>
-          <label>Permissions
+          <label title="What the agent may do without asking — acceptEdits: edit files freely (default) · plan: read-only planning · dontAsk/bypassPermissions: no guardrails, use with care">Permissions
             <select name="permissionMode"></select>
           </label>
         </div>
         <div class="row">
-          <label>Agent
+          <label title="Run the card through one of your custom agents from ~/.claude/agents">Agent
             <select name="agent"><option value="">(none)</option></select>
           </label>
-          <label>Priority
+          <label title="Sorts the columns; P2+ shows the vermillion square on the card">Priority
             <select name="priority">
               <option value="0">0 · low</option>
               <option value="1">1 · normal</option>
@@ -164,8 +164,8 @@
           </label>
         </div>
         <div class="row wt-row">
-          <label class="check-row"><input type="checkbox" name="worktree" /> Git worktree</label>
-          <label class="check-row"><input type="checkbox" name="openPr" /> Open PR when done <span class="badge">gh</span></label>
+          <label class="check-row" title="Run in an isolated git worktree on branch kanban-<id> — your main checkout stays untouched while the agent works"><input type="checkbox" name="worktree" /> Git worktree</label>
+          <label class="check-row" title="After a successful run: commit anything left over, push the branch, and open a GitHub PR with your gh login. Needs the worktree box + an origin remote."><input type="checkbox" name="openPr" /> Open PR when done <span class="badge">gh</span></label>
         </div>
         <label>Acceptance criteria <span class="hint-inline">(the manager reviews against this)</span>
           <textarea name="acceptanceCriteria" rows="2" placeholder="e.g. tests pass; README updated; no new dependencies"></textarea>
@@ -173,7 +173,7 @@
         <label>Repeat <span class="hint-inline">(optional — clones &amp; runs on a schedule; card stays in Backlog)</span>
           <input name="schedule" placeholder="e.g. 6h (every 6 hours) or 14:30 (daily)" />
         </label>
-        <span class="field-label">Skills to use</span>
+        <span class="field-label" title="Skill names injected into the prompt so the agent reaches for them; ✦ auto-select lets the agent review its own installed skills instead">Skills to use</span>
         <div id="skillPicker" class="skill-picker"></div>
         <div class="modal-actions">
           <button type="button" id="cancelBtn" class="ghost">Cancel</button>
@@ -239,7 +239,7 @@ The prompt: self-contained instructions for the executing agent.
     <div class="modal">
       <h2>Settings</h2>
       <form id="settingsForm">
-        <label>Default working directory
+        <label title="Pre-filled as the working directory on new cards">Default working directory
           <input name="defaultCwd" placeholder="/Users/you/project" />
         </label>
         <label>Repos directory <span class="hint-inline">(scanned for the card repo picker)</span>

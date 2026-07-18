@@ -843,6 +843,17 @@ $('#mgrForm').addEventListener('submit', async (e) => {
   await loadManager();
 });
 
+$('#clearChatBtn').addEventListener('click', async () => {
+  if (!confirm('Clear the Sensei chat history?')) return;
+  await api('/api/manager/clear', { method: 'POST', body: { chat: true } });
+  await loadManager();
+});
+$('#clearLogBtn').addEventListener('click', async () => {
+  if (!confirm('Clear the activity log?')) return;
+  await api('/api/manager/clear', { method: 'POST', body: { log: true } });
+  await loadManager();
+});
+
 $('#mgrChatForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const input = e.target.message;

@@ -356,6 +356,14 @@ app.post('/api/manager/suggestions/:sid', (req, res) => {
   res.json(manager.resolveSuggestion(req.params.sid, !!(req.body && req.body.approve)));
 });
 
+// Fresh starts: clear the chat and/or the activity log.
+app.post('/api/manager/clear', (req, res) => {
+  const b = req.body || {};
+  if (b.chat) manager.clearChat();
+  if (b.log) manager.clearLog();
+  res.json({ ok: true });
+});
+
 // --- Scheduled cards ---
 // Scheduled cards live in Backlog and never move columns themselves. Once a
 // minute we check each for a due schedule; when due we clone it into a fresh
