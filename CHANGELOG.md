@@ -7,6 +7,12 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Added — web analytics on the public landing site
+- The marketing site (`site/`) now loads PostHog to measure real visitor
+  behaviour — pageviews, scroll, and clicks — via the public project key.
+- The board app itself stays **telemetry-free**: no analytics SDK, no phone
+  home. A fresh clone runs fully offline with nothing reporting anywhere.
+
 ## [0.9.0] — 2026-07-18
 
 ### Added — human bottlenecks bubble up (🖐 blocks N)
