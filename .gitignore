@@ -4,3 +4,4 @@ local/
 .claude/worktrees/
 .env*
 .DS_Store
+.vercel
