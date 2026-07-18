@@ -7,6 +7,14 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.2.8] — 2026-07-17
+
+### Fixed
+- PR base selection asks the actual remote (`ls-remote`) instead of trusting
+  local remote-tracking refs, which go stale when a pushed branch is later
+  deleted on GitHub; falls back to gh's authoritative default branch, with a
+  final retry against it if GitHub still rejects the base
+
 ## [0.2.7] — 2026-07-17
 
 ### Fixed
