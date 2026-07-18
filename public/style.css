@@ -891,6 +891,21 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 .t-entry.error { color: #E06C5F; }
 .t-entry.error::before { content: '✕ '; }
 
+/* markdown-rendered assistant/result entries */
+.t-entry.md { white-space: normal; }
+.t-entry.md p { margin: 0 0 6px; }
+.t-entry.md p:last-child { margin-bottom: 0; }
+.t-entry.md h1, .t-entry.md h2, .t-entry.md h3, .t-entry.md h4, .t-entry.md h5, .t-entry.md h6 { margin: 8px 0 4px; line-height: 1.3; }
+.t-entry.md h1 { font-size: 1.25em; }
+.t-entry.md h2 { font-size: 1.15em; }
+.t-entry.md h3 { font-size: 1.05em; }
+.t-entry.md ul, .t-entry.md ol { margin: 0 0 6px; padding-left: 20px; }
+.t-entry.md li { margin: 2px 0; }
+.t-entry.md code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background: #0000002e; padding: 1px 4px; border-radius: 3px; }
+.t-entry.md pre { background: #0000002e; padding: 8px 10px; border-radius: 4px; overflow-x: auto; margin: 4px 0 6px; }
+.t-entry.md pre code { background: none; padding: 0; }
+.t-entry.md a { color: var(--accent); text-decoration: underline; }
+
 /* responsive */
 @media (max-width: 900px) {
   .board { grid-template-columns: repeat(5, minmax(220px, 1fr)); }
