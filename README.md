@@ -84,6 +84,7 @@ archived history in `data/archive.jsonl` is never deleted automatically.
 | Open PR when done | post-run `gh pr create` | requires worktree; see below |
 | Priority | sort order (0–3) | 2+ shows the vermillion square |
 | Acceptance criteria | manager review rubric | the Sensei approves/rejects against this |
+| Repeat | schedule (interval or daily) | `6h` every 6 hours, `14:30` daily — see [Scheduled cards](#scheduled-cards) |
 | Skills | injected into the prompt | pick from installed skills, or **✦ auto-select** to let the agent choose |
 
 ### Skills & agents discovery
@@ -94,6 +95,21 @@ Auto-discovered at load, no config:
 - Plugin skills: every enabled plugin in `~/.claude/plugins/installed_plugins.json`
   (their `skills/` and `workflow-skills/` dirs), namespaced `plugin:skill`
 - Agents: `~/.claude/agents/*.md`
+
+### Scheduled cards
+
+Give a card a **Repeat** value in the editor to run it on a schedule:
+
+- `6h` (or `6`) — every 6 hours (fractional hours like `0.5h` are allowed)
+- `14:30` — daily at 14:30 (24-hour local time)
+
+The server checks once a minute. When a card is due, it's **cloned into a fresh
+one-shot card** (with no schedule of its own) that's launched via the normal
+runner — so clones respect the **parallel** (maxConcurrent) queue and flow
+Backlog → Running → Review → Done like any other card. The scheduled card itself
+stays in **Backlog** carrying a `⏱` badge and never moves columns on its own;
+drag it elsewhere and it stops firing until it's back in Backlog. Clear the
+Repeat field to turn scheduling off.
 
 ---
 
@@ -171,6 +187,24 @@ authed, push rejected…) log an `✕` line and leave the card in Review — the
 still in the worktree, nothing is lost.
 
 **One-time setup:** `gh auth login` (with push scope to the repos you'll use).
+
+### PR watch — merged PRs ship, conflicted PRs self-heal
+
+Every N minutes (⚙ Settings, default 10, 0 = off) the board checks each Review
+card's PR via `gh`:
+
+- **Merged** → the card moves to Done ("PR merged") and you get a notification.
+- **Closed without merge** → noted once on the card transcript.
+- **Conflicting** (main moved under the branch) → with auto-fix on (default), the
+  board spawns a **fix card**: a fresh agent run *inside the original worktree*
+  that merges the base branch, resolves the conflicts preserving both sides, and
+  pushes — updating the PR in place. Max 2 attempts per PR, one active fixer at a
+  time; after that you get a "needs you" notification and it stops. Fix cards
+  wear an `auto-fix` badge and flow through the normal columns, so the Sensei
+  reviews the resolution like any other run.
+
+Keep local `main` pushed: agent worktrees branch from the default branch, so an
+unpushed main is how you get avoidable conflicts in the first place.
 
 ---
 
