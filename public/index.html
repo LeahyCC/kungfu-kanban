@@ -33,6 +33,8 @@
       <button id="tabManager" class="app-tab">Manager <span id="suggCount" class="pill hidden"></span></button>
     </nav>
     <div class="app-status" aria-label="Board summary">
+      <span id="cooldownChip" class="cooldown-chip hidden" title="Subscription limits hit — auto flow paused; queued cards launch when it resets">⏳ <span id="cooldownTimer">--:--</span></span>
+      <span id="modelChip" class="cooldown-chip model-chip hidden" title="Model capped or unavailable — launches use the next model down until it resets">⬇ <span id="modelChipText"></span></span>
       <span class="status-chip" title="Backlog"><span class="belt-dot belt-todo"></span><span id="countBacklog" class="status-count">0</span></span>
       <span class="status-chip" title="Running"><span class="belt-dot belt-doing"></span><span id="countRunning" class="status-count">0</span></span>
       <span class="status-chip" title="Review"><span class="belt-dot belt-review"></span><span id="countReview" class="status-count">0</span></span>
@@ -236,6 +238,10 @@
     <div id="drawerMeta" class="drawer-meta"></div>
     <div id="drawerActions" class="drawer-actions"></div>
     <div id="transcript" class="transcript slab"></div>
+    <form id="followForm" class="follow-row hidden">
+      <input name="message" placeholder="Follow-up: fix the bug where…, also add…" autocomplete="off" />
+      <button type="submit" class="primary">▶ Send</button>
+    </form>
   </div>
 </div>
 

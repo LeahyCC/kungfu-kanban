@@ -417,6 +417,21 @@ input.tiny { width: 60px; }
 }
 .theme-toggle:hover { border-color: var(--rule-strong); color: var(--ink-900); }
 
+/* subscription-limit countdown */
+.cooldown-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  color: var(--warning);
+  border: 1px solid var(--warning);
+  border-radius: 2px;
+  padding: 2px 8px;
+}
+.cooldown-chip.model-chip { color: var(--info); border-color: var(--info); }
+
 /* ============================================================
    BOARD
    ============================================================ */
@@ -882,6 +897,11 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 .drawer-actions { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
 .drawer-actions button { padding: 6px 14px; font-size: 0.8125rem; }
 
+/* follow-up prompt row under the transcript */
+.follow-row { display: flex; gap: 8px; margin-top: 10px; }
+.follow-row input { flex: 1; }
+.follow-row button { padding: 6px 14px; font-size: 0.8125rem; }
+
 /* transcript — the ink slab fills the rest */
 .transcript {
   flex: 1;
@@ -898,6 +918,8 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 .t-entry.result { border-top: 1px solid var(--slab-rule); padding-top: 8px; }
 .t-entry.pr { color: #6FA3D4; }
 .t-entry.pr::before { content: '⇡ '; }
+.t-entry.user { color: var(--accent-ink); }
+.t-entry.user::before { content: '» '; }
 .t-entry.error { color: #E06C5F; }
 .t-entry.error::before { content: '✕ '; }
 
