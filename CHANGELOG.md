@@ -7,6 +7,18 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Added
+- The kungfu-todo skill installs itself: every server start writes/refreshes
+  `~/.claude/skills/kungfu-todo/` with the clone's real paths and port, so any
+  Claude Code session can "create a kungfu todo" with zero setup. The ⚙ Settings
+  Install/Update button remains as a manual repair hatch.
+
+### Changed
+- Landing page and README sell the skill properly (its own feature cell) and
+  drop the manual `cp` install instructions.
+
+## [0.2.9] — 2026-07-17
+
 ### Fixed
 - Cards no longer sit in a silent, subscription-burning approval loop. When a
   headless run ends blocked on a tool permission — a Bash command that must
