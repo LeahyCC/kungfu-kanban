@@ -7,6 +7,17 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.2.3] — 2026-07-17
+
+### Fixed
+- PR flow survives repos with husky/lint-staged hooks: hooks can't run in a
+  bare worktree (no node_modules), so hook-machinery failures retry the
+  commit/push with --no-verify and note it in the transcript — real git
+  errors still fail loudly
+- The resume command now copies `cd "<run dir>" && claude -r <id>` — sessions
+  are per-directory, so the bare command failed from anywhere else (worktree
+  runs record their actual run directory)
+
 ## [0.2.2] — 2026-07-17
 
 ### Fixed

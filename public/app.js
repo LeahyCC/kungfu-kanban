@@ -643,11 +643,12 @@ function renderDrawerMeta(t) {
     box.appendChild(span);
   }
   if (t.sessionId) {
-    const cmd = `claude -r ${t.sessionId}`;
+    // claude -r resolves sessions per directory — the copy cd's there first
+    const cmd = `cd ${JSON.stringify(t.runCwd || t.cwd)} && claude -r ${t.sessionId}`;
     const b = document.createElement('span');
     b.className = 'badge copyable';
-    b.title = 'Click to copy the resume command';
-    b.textContent = `resume: ${cmd}`;
+    b.title = `Click to copy (sessions are per-directory, so this cd's into the run dir first):\n${cmd}`;
+    b.textContent = `resume: claude -r ${t.sessionId}`;
     b.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(cmd);
