@@ -7,6 +7,17 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.4.2] — 2026-07-17
+
+### Changed — marketing site replica no longer drifts
+- The landing page's "live board replica" (`site/index.html`) is now generated
+  from `site/board.data.json` by `site/build.js` (`npm run build:site`) instead
+  of being hand-copied from the app's board. The generator emits the app's real
+  card/column classes and **fails the build** if any of them stop existing in
+  `public/style.css`, so the replica can't silently fall out of sync as the
+  product evolves (docs/ui-ux-review.md §6). The site stays fully static — the
+  script writes plain HTML that Vercel deploys as-is, no build step required.
+
 ## [0.4.1] — 2026-07-17
 
 ### Fixed — board update check

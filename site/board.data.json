@@ -1,0 +1,43 @@
+{
+  "_comment": "Content for the marketing site's live-board replica. Edit this, then run `npm run build:site` to regenerate the markup in site/index.html. The card/column classes it emits are the app's own (public/style.css) — build.js fails if any of them stop existing there, so this replica can't silently drift from the real board.",
+  "columns": [
+    {
+      "key": "backlog",
+      "label": "Backlog",
+      "cards": [
+        { "title": "Summarize the week’s PR review comments", "model": "haiku", "effort": 1, "schedule": "⏱ mon 09:00" },
+        { "title": "Draft onboarding email sequence", "model": "sonnet", "effort": 2 }
+      ]
+    },
+    {
+      "key": "queued",
+      "label": "Queued",
+      "cards": [
+        { "title": "Summarize competitor pricing pages", "model": "haiku", "effort": 1 }
+      ]
+    },
+    {
+      "key": "running",
+      "label": "Running",
+      "cards": [
+        { "title": "Fix flaky auth test in CI", "model": "opus", "effort": 3, "variant": "running", "priority": "High priority" }
+      ]
+    },
+    {
+      "key": "review",
+      "label": "Review",
+      "cards": [
+        { "title": "Add healthcheck endpoint", "model": "sonnet", "effort": 2, "pr": "PR #142" },
+        { "title": "Migrate icons to SVG sprites", "model": "fable", "effort": 2, "variant": "failed" }
+      ]
+    },
+    {
+      "key": "done",
+      "label": "Done",
+      "cards": [
+        { "title": "Refactor webhook retries", "model": "opus", "effort": 4, "variant": "done", "pr": "PR #138" },
+        { "title": "Draft changelog for v0.4", "model": "haiku", "effort": 1, "variant": "done" }
+      ]
+    }
+  ]
+}
