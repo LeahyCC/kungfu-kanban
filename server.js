@@ -10,6 +10,8 @@ const manager = require('./lib/manager');
 const auth = require('./lib/auth');
 const importer = require('./lib/importer');
 const prwatch = require('./lib/prwatch');
+const cooldown = require('./lib/cooldown');
+const models = require('./lib/models');
 
 const PORT = process.env.PORT || 4747;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -40,6 +42,8 @@ manager.setBroadcaster(broadcast);
 importer.setBroadcaster(broadcast);
 prwatch.setBroadcaster(broadcast);
 prwatch.applyInterval();
+cooldown.setBroadcaster(broadcast);
+models.setBroadcaster(broadcast);
 setTimeout(() => prwatch.sweep(), 30_000); // first pass shortly after boot
 runner.setOnFinish((task) => {
   if (manager.config().triggers.onFinish) {
@@ -66,6 +70,8 @@ app.get('/api/config', (req, res) => {
     agents: discoverAgents(),
     repos: discoverRepos(reposDir()),
     settings: { ...state.settings, reposDir: reposDir() },
+    cooldownUntil: cooldown.active() ? state.settings.cooldownUntil : 0,
+    modelBlocks: models.blocks(),
   });
 });
 
@@ -201,6 +207,15 @@ app.post('/api/tasks/:id/run', (req, res) => {
 
 app.post('/api/tasks/:id/stop', (req, res) => {
   res.json(runner.stopTask(req.params.id));
+});
+
+// Follow-up prompt: resume the card's session with extra instructions.
+app.post('/api/tasks/:id/followup', (req, res) => {
+  const msg = ((req.body && req.body.message) || '').trim();
+  if (!msg) return res.status(400).json({ error: 'empty message' });
+  const out = runner.followUp(req.params.id, msg);
+  if (out.error) return res.status(409).json(out);
+  res.json(out);
 });
 
 // --- Manager ---
