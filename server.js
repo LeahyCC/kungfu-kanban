@@ -227,6 +227,17 @@ app.post('/api/system/update-board', async (req, res) => {
 
 // The kungfu-todo Claude Code skill: check + one-click install/update.
 const skill = require('./lib/skill');
+// Auto-install/refresh at boot — the skill bakes in this install's absolute
+// paths and port, so a moved clone or changed PORT re-syncs on next start.
+try {
+  const s = skill.status();
+  if (!s.current) {
+    skill.install();
+    console.log(`kungfu-todo skill ${s.installed ? 'refreshed' : 'installed'}: ${s.path}`);
+  }
+} catch (e) {
+  console.warn('kungfu-todo skill auto-install failed:', String(e.message || e));
+}
 app.get('/api/skill', (req, res) => res.json(skill.status()));
 app.post('/api/skill/install', (req, res) => {
   try {

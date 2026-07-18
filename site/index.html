@@ -205,13 +205,16 @@
             <div class="paper-cell">
               <span class="kicker">Models</span>
               <h3>Every fighter on the card</h3>
-              <p>Fable, Opus, Sonnet, Haiku — pick per card. When one model hits a cap or an outage, launches step down
-                the ladder automatically and climb back when it clears.</p>
+              <p>Fable, Opus, Sonnet, Haiku — model and belt‑stripe effort picked per card. When one model hits a cap
+                or an outage, launches step down the ladder automatically and climb back when it clears.</p>
             </div>
             <div class="paper-cell">
-              <span class="kicker">Effort</span>
-              <h3>Belt‑stripe effort</h3>
-              <p>Low to max, set per card. Spend reasoning where the work deserves it.</p>
+              <span class="kicker">Skill</span>
+              <h3>&ldquo;Create a kungfu todo&rdquo;</h3>
+              <p>The board auto‑installs a Claude Code skill on your machine, so any session in any project can queue
+                work onto the board: say the word, and it drafts the cards, drops them in the inbox, and the Sensei
+                triages them.</p>
+              <span class="footnote">installed for you at boot. zero setup.</span>
             </div>
             <div class="paper-cell">
               <span class="kicker">Manager</span>
@@ -618,15 +621,15 @@ The test in auth.spec.ts fails intermittently because…
                 <p><strong>⇣ From issues</strong>: pick a repo and pull its open GitHub issues into cards. Their PRs
                   include <code>Fixes #N</code>, so merging the PR closes the issue automatically — issue → card → agent
                   → PR → merged → closed.</p>
-                <p><strong>From Claude Code</strong>: the repo ships a skill — <a
+                <p><strong>From Claude Code</strong>: the board ships a skill — <a
                     href="https://github.com/LeahyCC/kungfu-kanban/blob/main/skills/kungfu-todo/SKILL.md"
-                    target="_blank" rel="noreferrer"><code>skills/kungfu-todo/SKILL.md</code></a> — that teaches every
+                    target="_blank" rel="noreferrer"><code>kungfu-todo</code></a> — that teaches every
                   Claude Code session, in any project, to do this on request: say &ldquo;create a kungfu todo for
-                  …&rdquo; and it drafts the cards, drops the file in the inbox, and confirms the import. Install it
-                  once:</p>
-                <pre><code>cp -r skills/kungfu-todo ~/.claude/skills/
-<span class="c"># then replace every &lt;board&gt; in ~/.claude/skills/kungfu-todo/SKILL.md</span>
-<span class="c"># with your clone's absolute path</span></code></pre>
+                  …&rdquo; and it drafts the cards, drops the file in the inbox, and confirms the import.
+                  <strong>Nothing to install</strong> — the server writes it to
+                  <code>~/.claude/skills/kungfu-todo/</code> at every start, with your clone&rsquo;s real paths and
+                  port baked in, and keeps it current as the board updates. ⚙ Settings shows its status alongside a
+                  manual Install/Update button if you ever need it.</p>
                 <p>Imported cards land in <strong>Backlog</strong> tagged <code>import</code>, and the Sensei gets one
                   triage ping per batch — paste a plan, and routing happens for you.</p>
               </div>
