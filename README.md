@@ -199,12 +199,18 @@ textarea shows what will be created and warns about titles already on the board.
 (`issue: N` field). Their PRs include `Fixes #N`, so merging the PR closes the
 issue automatically — issue → card → agent → PR → merged → closed.
 
-**From Claude Code**: a personal skill at `~/.claude/skills/kungfu-todo/SKILL.md`
-teaches every Claude Code session (any project) to do this on request — say
-"create a kungfu todo for …" and it drafts the cards, drops the file in the
-inbox, and confirms the import. The skill encodes the format, frugal
-model-routing, and the self-contained-prompt rule (card agents start with zero
-conversation context).
+**From Claude Code**: the repo ships a skill —
+[`skills/kungfu-todo/SKILL.md`](skills/kungfu-todo/SKILL.md) — that teaches every
+Claude Code session (any project) to do this on request: say "create a kungfu todo
+for …" and it drafts the cards, drops the file in the inbox, and confirms the
+import. It encodes the format, frugal model-routing, and the self-contained-prompt
+rule (card agents start with zero conversation context). Install it once:
+
+```bash
+cp -r skills/kungfu-todo ~/.claude/skills/
+# then replace every <board> in ~/.claude/skills/kungfu-todo/SKILL.md
+# with this clone's absolute path
+```
 
 Imported cards land in **Backlog** tagged `import`, and the Sensei gets one
 triage ping per batch (if the new-card trigger is on) — so you can paste a plan,

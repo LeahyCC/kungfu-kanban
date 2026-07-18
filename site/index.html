@@ -422,7 +422,13 @@ The test in auth.spec.ts fails intermittently because…
 ## Update the README badges</code></pre>
               <p>Recognized keys (case/space-insensitive): <code>cwd</code> (<code>dir</code>/<code>repo</code>), <code>model</code>, <code>effort</code>, <code>permissions</code>, <code>priority</code> (0–3), <code>worktree</code>, <code>openPr</code> (<code>pr</code>), <code>agent</code>, <code>skills</code>, <code>acceptance</code>. A card with no body uses its title as the prompt.</p>
               <p><strong>Checklist</strong> — a file with no <code>##</code> headings: every unchecked <code>- [ ] item</code> becomes a card (checked items are skipped).</p>
-              <p><strong>From Claude Code</strong>: a personal skill at <code>~/.claude/skills/kungfu-todo/SKILL.md</code> can teach every Claude Code session to do this on request — say &ldquo;create a kungfu todo for …&rdquo; and it drafts the cards and drops the file in the inbox. Imported cards land in <strong>Backlog</strong> tagged <code>import</code>, and the Sensei gets one triage ping per batch — paste a plan, and routing happens for you.</p>
+              <p><strong>✨ Drafting</strong>: describe the work in plain English in the Draft box and the Sensei writes the card doc for review. Pick a repo and check <strong>🔍 explore repo first</strong> to let it read the actual code before writing — slower, but cards reference real files. <strong>↻ Refine</strong> iterates on the draft in the same session; a live preview shows what will be created and warns about titles already on the board.</p>
+              <p><strong>⇣ From issues</strong>: pick a repo and pull its open GitHub issues into cards. Their PRs include <code>Fixes #N</code>, so merging the PR closes the issue automatically — issue → card → agent → PR → merged → closed.</p>
+              <p><strong>From Claude Code</strong>: the repo ships a skill — <a href="https://github.com/LeahyCC/kungfu-kanban/blob/main/skills/kungfu-todo/SKILL.md" target="_blank" rel="noreferrer"><code>skills/kungfu-todo/SKILL.md</code></a> — that teaches every Claude Code session, in any project, to do this on request: say &ldquo;create a kungfu todo for …&rdquo; and it drafts the cards, drops the file in the inbox, and confirms the import. Install it once:</p>
+<pre><code>cp -r skills/kungfu-todo ~/.claude/skills/
+<span class="c"># then replace every &lt;board&gt; in ~/.claude/skills/kungfu-todo/SKILL.md</span>
+<span class="c"># with your clone's absolute path</span></code></pre>
+              <p>Imported cards land in <strong>Backlog</strong> tagged <code>import</code>, and the Sensei gets one triage ping per batch — paste a plan, and routing happens for you.</p>
             </div>
 
             <div class="chapter" id="m-schedule">
