@@ -207,6 +207,18 @@ app.get('/api/usage', (req, res) => {
   res.json({ ...require('./lib/usage').scan(), budgetTokens: state.settings.usageBudgetTokens || 0 });
 });
 
+// Update the Claude Code CLI in place (`claude update` knows its own install
+// method). Running agents keep their already-loaded binary; new runs get the
+// new version.
+app.post('/api/system/update-claude', (req, res) => {
+  execFile('claude', ['update'], { timeout: 300_000, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
+    healthCache = { at: 0, data: null }; // version may have changed — recheck
+    const out = `${stdout || ''}\n${stderr || ''}`.trim().split('\n').filter(Boolean).slice(-3).join('\n');
+    if (err) return res.status(500).json({ error: (out || err.message).slice(0, 300) });
+    res.json({ ok: true, output: out.slice(0, 300) });
+  });
+});
+
 // System health: is the claude CLI reachable, is gh authed? Cached 5 min.
 let healthCache = { at: 0, data: null };
 app.get('/api/health', async (req, res) => {
