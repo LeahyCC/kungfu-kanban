@@ -7,6 +7,10 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Changed
+- README: launchd section uses modern bootstrap/bootout/kickstart commands and
+  documents the "Load failed: 5" already-loaded gotcha
+
 ## [0.2.8] — 2026-07-17
 
 ### Fixed

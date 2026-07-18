@@ -398,9 +398,15 @@ be disabled entirely with the checkbox.
 ```
 
 ```bash
-launchctl load ~/Library/LaunchAgents/com.kungfu-kanban.plist   # start now + at login
-launchctl unload ~/Library/LaunchAgents/com.kungfu-kanban.plist # stop
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.kungfu-kanban.plist  # load: start now + at login
+launchctl kickstart -k gui/$(id -u)/com.kungfu-kanban                            # restart (e.g. after an update)
+launchctl bootout   gui/$(id -u)/com.kungfu-kanban                               # unload / stop
 ```
+
+Gotcha: loading an agent that's **already loaded** fails with the cryptic
+`Load failed: 5: Input/output error` — that's launchd for "nothing to do".
+`launchctl list | grep kungfu` shows whether it's loaded; use `kickstart -k`
+to restart it.
 
 ---
 
