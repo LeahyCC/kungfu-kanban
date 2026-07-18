@@ -202,6 +202,26 @@ app.post('/api/prwatch/sweep', (req, res) => {
   res.json({ ok: true });
 });
 
+// Board version + update check (git-based; fork-friendly).
+const version = require('./lib/version');
+app.get('/api/version', async (req, res) => res.json(await version.check()));
+
+// Pull the latest board code and restart. Blocked while agents run — the
+// restart would orphan their processes. Under launchd, exiting is restarting;
+// under a bare `npm start` the process just stops (the UI says so).
+app.post('/api/system/update-board', async (req, res) => {
+  if (state.tasks.some((t) => t.status === 'running' || t.status === 'stopping')) {
+    return res.status(409).json({ error: 'cards are running — update when the board is idle' });
+  }
+  try {
+    const r = await version.update();
+    res.json({ ok: true, ...r, restarting: true });
+    setTimeout(() => process.exit(0), 800); // launchd KeepAlive brings us back
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e).slice(0, 300) });
+  }
+});
+
 // The kungfu-todo Claude Code skill: check + one-click install/update.
 const skill = require('./lib/skill');
 app.get('/api/skill', (req, res) => res.json(skill.status()));
