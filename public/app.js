@@ -619,9 +619,14 @@ async function openDrawer(id) {
   const box = $('#transcript');
   box.innerHTML = '';
   for (const e of entries) box.appendChild(entryEl(e));
-  // A permission block already lives in the transcript as its own 'blocked'
-  // entry; only synthesize an error line for other (unpersisted) failures.
-  if (t.error && !t.permissionBlocked) box.appendChild(entryEl({ kind: 'error', text: t.error }));
+  // t.error normally isn't persisted, so synthesize a line for it — but a
+  // permission block already lives in the transcript as its own 'blocked'
+  // entry, so skip it only when t.error IS that same note (a later, different
+  // failure like a stop/crash must still show).
+  const blocked = [...entries].reverse().find((e) => e.kind === 'blocked');
+  if (t.error && !(blocked && blocked.text === t.error)) {
+    box.appendChild(entryEl({ kind: 'error', text: t.error }));
+  }
   box.classList.toggle('hidden', !box.children.length && !RUNNING_LIKE[t.status]);
   $('#followForm').classList.toggle('hidden', RUNNING_LIKE[t.status] || !t.sessionId);
 
