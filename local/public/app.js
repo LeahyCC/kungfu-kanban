@@ -412,8 +412,30 @@ es.onmessage = (msg) => {
 };
 
 // ---------- settings ----------
-$('#maxConcurrent').addEventListener('change', async (e) => {
-  await api('/api/settings', { method: 'PUT', body: { maxConcurrent: parseInt(e.target.value, 10) } });
+function openSettings() {
+  const f = $('#settingsForm');
+  f.maxConcurrent.value = config.settings.maxConcurrent || 2;
+  f.defaultCwd.value = config.settings.defaultCwd || '';
+  f.archiveDays.value = config.settings.archiveDays ?? 7;
+  $('#settingsBackdrop').classList.remove('hidden');
+}
+$('#settingsBtn').addEventListener('click', openSettings);
+$('#settingsCancelBtn').addEventListener('click', () => $('#settingsBackdrop').classList.add('hidden'));
+$('#settingsBackdrop').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) $('#settingsBackdrop').classList.add('hidden');
+});
+$('#settingsForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  config.settings = await api('/api/settings', {
+    method: 'PUT',
+    body: {
+      maxConcurrent: parseInt(f.maxConcurrent.value, 10),
+      defaultCwd: f.defaultCwd.value.trim(),
+      archiveDays: parseInt(f.archiveDays.value, 10),
+    },
+  });
+  $('#settingsBackdrop').classList.add('hidden');
 });
 
 // ---------- init ----------
@@ -423,6 +445,5 @@ async function loadTasks() {
 }
 (async () => {
   config = await api('/api/config');
-  $('#maxConcurrent').value = config.settings.maxConcurrent || 2;
   await loadTasks();
 })();

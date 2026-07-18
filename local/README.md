@@ -33,14 +33,27 @@ and enabled plugins in `~/.claude/plugins/installed_plugins.json`.
 Backlog → Queued → Running → Review → Done
 
 - Drag a card to **Queued** (or hit ▶ Run) to launch it.
-- **parallel** (header) caps concurrent sessions so parallel tasks don't burn
-  through your subscription rate limits; extras wait in Queued.
+- **⚙ Settings** (header) controls parallel session cap, default working
+  directory, and Done-column archiving (see below).
 - Click a card for the live transcript, stats, and a `claude -r <session-id>`
   command to resume the session in your terminal.
 - Finished tasks land in **Review** so you can inspect the result/diff before
   marking them Done.
 
 Task data lives in `data/` (JSON + per-task transcripts). Delete it to reset.
+
+### Archiving old Done cards
+
+The Done column would otherwise grow forever, so a daily sweep moves cards out
+once they've sat in Done longer than `settings.archiveDays` (default 7,
+measured from `finishedAt`, falling back to `createdAt`). Archived cards are:
+
+- appended as full JSON to `data/archive.jsonl` (one line per card), and
+- removed from `data/tasks.json`, with their `data/transcripts/<id>.jsonl` file deleted.
+
+The sweep runs once at server startup and every 24h after that. Set
+**Archive "done" cards after (days)** to `0` in ⚙ Settings to turn it off;
+archived history in `data/archive.jsonl` is never deleted automatically.
 
 ## Manager tab
 

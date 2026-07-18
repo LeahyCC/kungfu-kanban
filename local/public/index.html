@@ -19,9 +19,7 @@
       </nav>
     </div>
     <div class="header-actions">
-      <label class="conc">
-        parallel <input id="maxConcurrent" type="number" min="1" max="8" />
-      </label>
+      <button id="settingsBtn" title="Settings" aria-label="Settings">⚙</button>
       <button id="newTaskBtn" class="primary">+ New task</button>
     </div>
   </header>
@@ -129,6 +127,29 @@
         <div id="skillPicker" class="skill-picker"></div>
         <div class="modal-actions">
           <button type="button" id="cancelBtn">Cancel</button>
+          <button type="submit" class="primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div id="settingsBackdrop" class="backdrop hidden">
+    <div class="modal">
+      <h2>Settings</h2>
+      <form id="settingsForm">
+        <label>Parallel tasks
+          <input name="maxConcurrent" type="number" min="1" max="8" />
+        </label>
+        <label>Default working directory
+          <input name="defaultCwd" placeholder="/Users/you/project" />
+        </label>
+        <label>Archive "done" cards after (days)
+          <input name="archiveDays" type="number" min="0" max="365" />
+        </label>
+        <p class="hint">Cards left in Done longer than this are moved to <code>data/archive.jsonl</code> and their transcripts deleted. Set to 0 to turn off archiving.</p>
+        <div class="modal-actions">
+          <button type="button" id="settingsCancelBtn">Cancel</button>
           <button type="submit" class="primary">Save</button>
         </div>
       </form>
