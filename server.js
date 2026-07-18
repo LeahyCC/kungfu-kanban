@@ -202,6 +202,17 @@ app.post('/api/prwatch/sweep', (req, res) => {
   res.json({ ok: true });
 });
 
+// The kungfu-todo Claude Code skill: check + one-click install/update.
+const skill = require('./lib/skill');
+app.get('/api/skill', (req, res) => res.json(skill.status()));
+app.post('/api/skill/install', (req, res) => {
+  try {
+    res.json({ ok: true, ...skill.install() });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e).slice(0, 200) });
+  }
+});
+
 // Rolling 5-hour usage across all local Claude Code activity. Cached 2 min.
 app.get('/api/usage', (req, res) => {
   res.json({ ...require('./lib/usage').scan(), budgetTokens: state.settings.usageBudgetTokens || 0 });

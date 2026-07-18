@@ -423,8 +423,32 @@ function openSettings() {
   f.prWatchAutoFix.checked = config.settings.prWatchAutoFix !== false;
   f.usageBudgetM.value = (config.settings.usageBudgetTokens || 0) / 1_000_000;
   renderUsage();
+  renderSkillStatus();
   $('#settingsBackdrop').classList.remove('hidden');
 }
+async function renderSkillStatus() {
+  const s = await api('/api/skill');
+  const el = $('#skillStatus');
+  const btn = $('#skillInstallBtn');
+  if (s.installed && s.current) {
+    el.textContent = '✓ installed & up to date';
+    btn.classList.add('hidden');
+  } else if (s.installed) {
+    el.textContent = '⚠ installed, update available';
+    btn.textContent = 'Update';
+    btn.classList.remove('hidden');
+  } else {
+    el.textContent = '✕ not installed';
+    btn.textContent = 'Install';
+    btn.classList.remove('hidden');
+  }
+}
+$('#skillInstallBtn').addEventListener('click', async () => {
+  const r = await api('/api/skill/install', { method: 'POST' });
+  $('#skillStatus').textContent = r.ok ? '✓ installed & up to date' : `✕ ${r.error || 'install failed'}`;
+  if (r.ok) $('#skillInstallBtn').classList.add('hidden');
+});
+
 $('#settingsBtn').addEventListener('click', openSettings);
 $('#settingsCancelBtn').addEventListener('click', () => $('#settingsBackdrop').classList.add('hidden'));
 $('#settingsBackdrop').addEventListener('click', (e) => {

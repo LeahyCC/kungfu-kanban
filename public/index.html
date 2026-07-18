@@ -262,6 +262,11 @@ The prompt: self-contained instructions for the executing agent.
           <input name="usageBudgetM" type="number" min="0" max="1000" step="0.5" class="tiny" />
         </label>
         <div id="usageBreakdown" class="footnote"></div>
+        <label title="A personal skill in ~/.claude/skills that teaches every Claude Code session on this Mac to create board cards — say 'create a kungfu todo for…' anywhere">Claude Code skill <span class="hint-inline">("create a kungfu todo for…" from any session)</span></label>
+        <div class="skill-install-row">
+          <span id="skillStatus" class="footnote">checking…</span>
+          <button type="button" id="skillInstallBtn" class="ghost hidden">Install</button>
+        </div>
         <div class="modal-actions">
           <button type="button" id="notifyTestBtn" class="ghost">🔔 Test notification</button>
           <button type="button" id="settingsCancelBtn" class="ghost" title="Close without saving">Cancel</button>
