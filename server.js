@@ -272,13 +272,33 @@ app.get('/api/usage', (req, res) => {
   res.json({ ...require('./lib/usage').scan(), budgetTokens: state.settings.usageBudgetTokens || 0 });
 });
 
-// Update the Claude Code CLI in place (`claude update` knows its own install
-// method). Running agents keep their already-loaded binary; new runs get the
-// new version.
+// Update the Claude Code CLI in place. `claude update` knows its own install
+// method — but a Homebrew-managed install refuses to self-update and answers
+// "To update, run: brew upgrade <formula>", so we run that exact command for
+// the user (the button used to just display it). Running agents keep their
+// already-loaded binary; new runs get the new version.
 app.post('/api/system/update-claude', (req, res) => {
   execFile('claude', ['update'], { timeout: 300_000, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
     healthCache = { at: 0, data: null }; // version may have changed — recheck
-    const out = `${stdout || ''}\n${stderr || ''}`.trim().split('\n').filter(Boolean).slice(-3).join('\n');
+    const all = `${stdout || ''}\n${stderr || ''}`;
+    const tail = (s) => s.trim().split('\n').filter(Boolean).slice(-3).join('\n');
+    // Formula name comes from claude's own output but is shape-checked, and
+    // execFile takes an arg array — nothing shell-interpolates. launchd's PATH
+    // usually lacks brew, so probe the standard install locations first.
+    const brewCmd = all.match(/brew (upgrade|install) ([A-Za-z0-9@._/-]+)/);
+    if (brewCmd) {
+      const fs = require('fs');
+      const brew = ['/opt/homebrew/bin/brew', '/usr/local/bin/brew'].find((p) => fs.existsSync(p)) || 'brew';
+      return execFile(brew, [brewCmd[1], brewCmd[2]], { timeout: 600_000, maxBuffer: 4 * 1024 * 1024 }, (bErr, bOut, bErrOut) => {
+        healthCache = { at: 0, data: null };
+        if (bErr) return res.status(500).json({ error: (tail(`${bOut || ''}\n${bErrOut || ''}`) || bErr.message).slice(0, 300) });
+        execFile('claude', ['--version'], { timeout: 15_000 }, (vErr, vOut) => {
+          const ver = (vOut || '').trim().split('\n')[0];
+          res.json({ ok: true, output: `brew ${brewCmd[1]} ${brewCmd[2]} ✓${ver ? ` — now on ${ver}` : ''}`.slice(0, 300) });
+        });
+      });
+    }
+    const out = tail(all);
     if (err) return res.status(500).json({ error: (out || err.message).slice(0, 300) });
     res.json({ ok: true, output: out.slice(0, 300) });
   });
