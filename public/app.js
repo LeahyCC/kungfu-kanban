@@ -327,16 +327,74 @@ function updatePreview() {
   }, 400);
 }
 $('#importText').addEventListener('input', updatePreview);
-$('#importCancelBtn').addEventListener('click', () => $('#importBackdrop').classList.add('hidden'));
-$('#importBackdrop').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) $('#importBackdrop').classList.add('hidden');
+$('#importCancelBtn').addEventListener('click', () => {
+  if (importOp) importOp.ctrl.abort(); // closing the modal cancels in-flight work
+  $('#importBackdrop').classList.add('hidden');
 });
-async function runDraft(btn, busyLabel, idleLabel, body) {
-  btn.disabled = true;
-  btn.textContent = busyLabel;
-  const r = await api('/api/import/draft', { method: 'POST', body });
-  btn.disabled = false;
-  btn.textContent = idleLabel;
+$('#importBackdrop').addEventListener('click', (e) => {
+  if (e.target !== e.currentTarget) return;
+  if (importOp) importOp.ctrl.abort();
+  $('#importBackdrop').classList.add('hidden');
+});
+// One import-modal operation at a time. The active button becomes ✕ cancel;
+// cancelling aborts the request, which also kills the server-side claude
+// process (no subscription burn continues). Other action buttons disable.
+let importOp = null;
+const importOpBtns = () => [$('#draftBtn'), $('#refineBtn'), $('#issuesBtn')];
+
+function importOpDone() {
+  if (!importOp) return;
+  importOp.btn.textContent = importOp.orig;
+  for (const b of importOpBtns()) b.disabled = false;
+  importOp = null;
+}
+
+function cancelIfBusy(btn) {
+  if (!importOp) return false;
+  if (importOp.btn === btn) importOp.ctrl.abort();
+  return true; // busy either way — swallow the click
+}
+
+async function runImportOp(btn, busyMsg, url, body) {
+  const ctrl = new AbortController();
+  importOp = { ctrl, btn, orig: btn.textContent };
+  for (const b of importOpBtns()) b.disabled = b !== btn;
+  btn.textContent = '✕ cancel';
+  $('#importResult').textContent = busyMsg;
+  let r;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    if (res.status === 401) { location.href = '/login'; return null; }
+    r = await res.json();
+  } catch (e) {
+    r = { error: e.name === 'AbortError' ? 'cancelled' : String(e.message || e) };
+  }
+  importOpDone();
+  return r;
+}
+
+$('#draftBtn').addEventListener('click', async (e) => {
+  if (cancelIfBusy(e.target)) return;
+  const request = $('#draftPrompt').value.trim();
+  if (!request) return;
+  const explore = $('#exploreToggle').checked;
+  const repoPath = $('#draftRepo').value || null;
+  if (explore && !repoPath) {
+    $('#importResult').textContent = '✕ 🔍 explore needs a repo — pick one in the dropdown first';
+    return;
+  }
+  const r = await runImportOp(
+    e.target,
+    explore ? '✨ exploring the repo & drafting (can take a couple minutes) — tap ✕ to cancel' : '✨ drafting — tap ✕ to cancel',
+    '/api/import/draft',
+    { request, repoPath, explore }
+  );
+  if (!r) return;
   if (r.markdown) {
     $('#importText').value = r.markdown;
     draftSessionId = r.sessionId || draftSessionId;
@@ -344,38 +402,34 @@ async function runDraft(btn, busyLabel, idleLabel, body) {
     $('#importResult').textContent = '✓ draft ready — review, edit (or ↻ refine), then Import';
     updatePreview();
   } else {
-    $('#importResult').textContent = `✕ ${r.error || 'draft failed'}`;
+    $('#importResult').textContent = r.error === 'cancelled' ? '✕ cancelled' : `✕ ${r.error || 'draft failed'}`;
   }
-}
-
-$('#draftBtn').addEventListener('click', (e) => {
-  const request = $('#draftPrompt').value.trim();
-  if (!request) return;
-  const explore = $('#exploreToggle').checked;
-  runDraft(e.target, explore ? '✨ exploring & drafting…' : '✨ drafting…', '✨ Draft', {
-    request,
-    repoPath: $('#draftRepo').value || null,
-    explore,
-  });
 });
 
-$('#refineBtn').addEventListener('click', (e) => {
+$('#refineBtn').addEventListener('click', async (e) => {
+  if (cancelIfBusy(e.target)) return;
   const msg = $('#refinePrompt').value.trim();
   if (!msg || !draftSessionId) return;
-  $('#refinePrompt').value = '';
-  runDraft(e.target, '↻ refining…', '↻ Refine', { refine: msg, sessionId: draftSessionId });
+  const r = await runImportOp(e.target, '↻ refining — tap ✕ to cancel', '/api/import/draft', { refine: msg, sessionId: draftSessionId });
+  if (!r) return;
+  if (r.markdown) {
+    $('#refinePrompt').value = '';
+    $('#importText').value = r.markdown;
+    draftSessionId = r.sessionId || draftSessionId;
+    $('#importResult').textContent = '✓ refined — review, then Import';
+    updatePreview();
+  } else {
+    $('#importResult').textContent = r.error === 'cancelled' ? '✕ cancelled' : `✕ ${r.error || 'refine failed'}`;
+  }
 });
 
 $('#issuesBtn').addEventListener('click', async (e) => {
+  if (cancelIfBusy(e.target)) return;
   const repoPath = $('#draftRepo').value;
   if (!repoPath) { $('#importResult').textContent = '✕ pick a repo first'; return; }
-  const btn = e.target;
-  btn.disabled = true;
-  btn.textContent = '⇣ fetching…';
-  const r = await api('/api/import/issues', { method: 'POST', body: { repoPath } });
-  btn.disabled = false;
-  btn.textContent = '⇣ From issues';
-  if (r.error) $('#importResult').textContent = `✕ ${r.error}`;
+  const r = await runImportOp(e.target, '⇣ fetching open issues — tap ✕ to cancel', '/api/import/issues', { repoPath });
+  if (!r) return;
+  if (r.error) $('#importResult').textContent = r.error === 'cancelled' ? '✕ cancelled' : `✕ ${r.error}`;
   else if (!r.count) $('#importResult').textContent = 'no open issues in that repo';
   else {
     $('#importText').value = r.markdown;

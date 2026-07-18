@@ -7,6 +7,14 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.2.7] — 2026-07-17
+
+### Fixed
+- Import-modal housekeeping: one operation at a time (draft/refine/issues
+  disable each other), the active button becomes ✕ cancel, cancelling kills
+  the server-side claude process (no wasted usage), closing the modal aborts
+  in-flight work, and 🔍 explore refuses to start without a repo selected
+
 ## [0.2.6] — 2026-07-17
 
 ### Changed

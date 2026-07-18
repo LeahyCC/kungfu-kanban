@@ -134,24 +134,27 @@ app.post('/api/import/draft', async (req, res) => {
   const b = req.body || {};
   if (cooldown.active()) return res.status(503).json({ error: 'subscription is cooling down — try after the timer' });
   try {
-    let out;
+    let op;
     if (b.refine && b.sessionId) {
-      out = await importer.refine(String(b.sessionId), String(b.refine).slice(0, 5000));
+      op = importer.refine(String(b.sessionId), String(b.refine).slice(0, 5000));
     } else {
       const request = (b.request || '').trim();
       if (!request) return res.status(400).json({ error: 'empty request' });
       const repos = discoverRepos(reposDir());
       const repoPath = repos.some((r) => r.path === b.repoPath) ? b.repoPath : null;
-      out = await importer.draft(request, {
+      if (b.explore && !repoPath) return res.status(400).json({ error: 'explore needs a repo — pick one first' });
+      op = importer.draft(request, {
         repos,
         defaultCwd: state.settings.defaultCwd,
         repoPath,
         explore: !!b.explore && !!repoPath,
       });
     }
-    res.json(out);
+    // cancelled in the UI → stop the claude process, don't burn usage
+    req.on('close', () => { if (!res.writableEnded) op.kill(); });
+    res.json(await op.promise);
   } catch (e) {
-    res.status(500).json({ error: String(e.message || e).slice(0, 300) });
+    if (!res.writableEnded) res.status(500).json({ error: String(e.message || e).slice(0, 300) });
   }
 });
 
