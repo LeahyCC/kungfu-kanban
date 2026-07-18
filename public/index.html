@@ -194,9 +194,10 @@
         </div>
         <div class="draft-row draft-opts">
           <select id="draftRepo"><option value="">repo…</option></select>
-          <label class="check-row"><input type="checkbox" id="exploreToggle" /> 🔍 explore repo first <span class="hint-inline">(slower, grounds cards in real files)</span></label>
+          <label class="check-row explore-check"><input type="checkbox" id="exploreToggle" /><span>🔍 explore repo first</span></label>
           <button type="button" id="issuesBtn" class="ghost" title="Turn the repo's open GitHub issues into cards — PRs will say Fixes #N">⇣ From issues</button>
         </div>
+        <span class="footnote draft-hint">explore = slower, but grounds cards in the repo's real files · From issues turns open GitHub issues into cards (their PRs say <span class="mono">Fixes #N</span>)</span>
         <label>Markdown
           <textarea name="markdown" id="importText" rows="12" class="mono" placeholder="Paste a card doc, pick a file below, tap the template, or let the Sensei draft one from the ✨ box above."></textarea>
         </label>
@@ -205,7 +206,7 @@
           <input id="refinePrompt" placeholder="↻ Refine the draft: split card 2, make the last one opus…" autocomplete="off" />
           <button type="button" id="refineBtn" class="ghost">↻ Refine</button>
         </div>
-        <label class="check-row">…or pick a file
+        <label class="check-row"><span class="nowrap">…or pick a file</span>
           <input type="file" id="importFile" accept=".md,.markdown,.txt" />
         </label>
         <span class="field-label">Format <span class="hint-inline">(tap the block to copy it)</span></span>
