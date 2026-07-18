@@ -128,23 +128,27 @@ function cardEl(t) {
 
   const antenna = isRunning ? '<span class="antenna lit"></span>' : '';
   const seal = t.status === 'done' ? '<span class="seal card-seal seal--stamp">Shipped</span>' : '';
-  const runBtn = !isRunning && t.status !== 'queued' && t.status !== 'done'
-    ? '<button class="card-run" title="Run now" aria-label="Run now">▶</button>' : '';
-  const delBtn = t.status === 'done'
-    ? '<button class="card-run card-del" title="Delete card" aria-label="Delete card">✕</button>' : '';
-  el.innerHTML = `${seal}<div class="card-top"><div class="title">${antenna}${esc(t.title)}</div>${runBtn}${delBtn}</div><div class="meta">${meta.join('')}</div>`;
+  // one quick action per column: Backlog ▶ run · Queued ⏸ unqueue ·
+  // Review ✓ approve · Done ✕ delete (Running gets none — Stop is in the drawer)
+  let quick = '';
+  if (t.status === 'backlog') quick = '<button class="card-run" data-act="run" title="Run now" aria-label="Run now">▶</button>';
+  else if (t.status === 'queued') quick = '<button class="card-run card-unq" data-act="unqueue" title="Pull back to Backlog (unqueue)" aria-label="Unqueue">⏸</button>';
+  else if (t.status === 'review') quick = '<button class="card-run card-ok" data-act="approve" title="Approve — stamp it Done" aria-label="Approve">✓</button>';
+  else if (t.status === 'done') quick = '<button class="card-run card-del" data-act="delete" title="Delete card" aria-label="Delete card">✕</button>';
+  el.innerHTML = `${seal}<div class="card-top"><div class="title">${antenna}${esc(t.title)}</div>${quick}</div><div class="meta">${meta.join('')}</div>`;
   const pr = el.querySelector('.pr-link');
   if (pr) pr.addEventListener('click', (e) => e.stopPropagation());
-  const rb = el.querySelector('.card-run:not(.card-del)');
-  if (rb) rb.addEventListener('click', (e) => {
+  const qb = el.querySelector('.card-run');
+  if (qb) qb.addEventListener('click', async (e) => {
     e.stopPropagation();
-    api(`/api/tasks/${t.id}/run`, { method: 'POST' });
-  });
-  const db = el.querySelector('.card-del');
-  if (db) db.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    if (!confirm('Delete this card?')) return;
-    await api(`/api/tasks/${t.id}`, { method: 'DELETE' });
+    const act = qb.dataset.act;
+    if (act === 'run') api(`/api/tasks/${t.id}/run`, { method: 'POST' });
+    else if (act === 'unqueue') api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: 'backlog' } });
+    else if (act === 'approve') api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: 'done' } });
+    else if (act === 'delete') {
+      if (!confirm('Delete this card?')) return;
+      await api(`/api/tasks/${t.id}`, { method: 'DELETE' });
+    }
   });
   return el;
 }
@@ -620,7 +624,10 @@ function renderDrawerActions(t) {
   if (RUNNING_LIKE[t.status]) {
     mk('⏹ Stop', 'danger', 'Stop the agent (SIGTERM; the partial transcript is kept)', () => api(`/api/tasks/${t.id}/stop`, { method: 'POST' }));
   } else {
-    mk('▶ Run', 'primary', 'Launch now — re-running clears the previous transcript and result', () => api(`/api/tasks/${t.id}/run`, { method: 'POST' }));
+    mk('▶ Run', 'primary', 'Launch now — re-running clears the previous transcript and result', () => {
+      if (t.resultText && !confirm('Re-running clears the previous transcript and result. Continue?')) return;
+      api(`/api/tasks/${t.id}/run`, { method: 'POST' });
+    });
     mk('Edit', 'ghost', 'Edit the card (prompt, model, schedule, …)', () => { $('#drawer').classList.add('hidden'); openModal(t); });
     if (t.status === 'review') mk('✓ Done', '', 'Stamp it shipped — moves the card to Done', async () => {
       await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: 'done' } });
