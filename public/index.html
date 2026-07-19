@@ -39,6 +39,7 @@
       <button id="tabManager" class="app-tab" role="tab" aria-selected="false" tabindex="-1">Sensei <span id="suggCount" class="pill hidden"></span></button>
     </nav>
     <div class="app-status" aria-label="Board summary">
+      <button id="errChip" class="cooldown-chip err-chip hidden" title="Open operational errors & blocks — permission stops, wrong-base PRs, failed launches. Click to review or have the Sensei fix them.">⚠ <span id="errChipText">0</span></button>
       <span id="usageChip" class="cooldown-chip usage-chip hidden" title="All Claude Code output tokens on this Mac in the rolling 5-hour limit window (board + terminal). Set a budget in ⚙ Settings for a % meter.">⛽ <span id="usageChipText"></span></span>
       <span id="cooldownChip" class="cooldown-chip hidden" title="Subscription limits hit — auto flow paused; queued cards launch when it resets">⏳ <span id="cooldownTimer">--:--</span></span>
       <span id="modelChip" class="cooldown-chip model-chip hidden" title="Model capped or unavailable — launches use the next model down until it resets">⬇ <span id="modelChipText"></span></span>
@@ -296,6 +297,20 @@ The prompt: self-contained instructions for the executing agent.
           <button type="submit" class="primary" title="Apply — takes effect immediately, no restart needed">Save</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Error tracker modal -->
+  <div id="errorsBackdrop" class="backdrop hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="errorsTitle">
+      <h2 id="errorsTitle">Error tracker</h2>
+      <p class="hint">Every operational error or block lands here on its own — permission stops, PRs opened against the wrong base branch, PR-flow and launch failures, Sensei stumbles, subscription limits. Entries resolve themselves when the underlying run or PR later succeeds. The Sensei fixes the rest on request — <b>operations only, never your code</b> (failing tests stay with the card's normal review flow).</p>
+      <div id="errList" class="err-list slab"></div>
+      <div class="modal-actions">
+        <button type="button" id="errAskSenseiBtn" class="primary" title="One Sensei run on your subscription: it walks the open entries — raises permissions, retargets wrong-base PRs, re-runs what stalled — and marks what it handled resolved">🥋 Ask the Sensei to fix these</button>
+        <button type="button" id="errResolveAllBtn" class="ghost" title="Mark every open entry resolved without fixing anything">✓ Resolve all</button>
+        <button type="button" id="errCloseBtn" class="ghost">Close</button>
+      </div>
     </div>
   </div>
 

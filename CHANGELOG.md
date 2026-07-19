@@ -5,6 +5,31 @@ All notable changes to Kungfu Kanban. Format follows
 minor bumps for features, patch bumps for fixes. The board's status line
 compares your clone against `origin/main` and offers a one-click update.
 
+## [0.11.0] — 2026-07-18
+
+### Added — auto error tracker: every error and block, logged and Sensei-fixable
+- The board now keeps a persistent error tracker (`data/errors.json`): every
+  operational error or block is logged automatically as it happens —
+  permission stops, PRs opened against the wrong base branch (branch-guard
+  failures like `source-must-be-staging`), PR-flow commit/push/create
+  failures, PR conflicts past auto-fix, launch failures, Sensei action
+  errors, and subscription-limit cooldowns. Repeats bump a counter instead of
+  piling up rows; entries auto-resolve when the thing they describe later
+  succeeds (clean re-run, green PR, merge, cooldown reset).
+- A red ⚠ chip in the header counts open entries; clicking it opens the
+  tracker with per-entry ✓ resolve, links to the card/PR, and one button —
+  "Ask the Sensei to fix these" — that hands the open list to the Sensei.
+- The Sensei sees open entries in every run and gets two new actions:
+  `resolve_error` (mark an entry handled) and `retarget_pr`, which moves an
+  existing PR onto the right base branch via `gh pr edit --base` — so the
+  recurring "card agent opened the PR against main, CI demands staging"
+  failure is a one-ask fix instead of a manual `gh` incantation. Its orders
+  are explicit: fix the operation (permissions, bases, re-runs), never the
+  code — failing tests keep flowing through normal review/reject.
+- New API: `GET /api/errors`, `POST /api/errors/:id/resolve`,
+  `POST /api/errors/resolve-all`; a live `errors` SSE event keeps the chip
+  honest without polling.
+
 ## [0.10.0] — 2026-07-18
 
 ### Added — landing-site SEO overhaul (phase 0)
