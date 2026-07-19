@@ -13,6 +13,7 @@ const prwatch = require('./lib/prwatch');
 const cooldown = require('./lib/cooldown');
 const models = require('./lib/models');
 const depsLib = require('./lib/deps');
+const errlog = require('./lib/errlog');
 
 const PORT = process.env.PORT || 4747;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -45,6 +46,7 @@ prwatch.setBroadcaster(broadcast);
 prwatch.applyInterval();
 cooldown.setBroadcaster(broadcast);
 models.setBroadcaster(broadcast);
+errlog.setBroadcaster(broadcast);
 setTimeout(() => prwatch.sweep(), 30_000); // first pass shortly after boot
 runner.setOnFinish((task) => {
   // A card that just opened/updated a PR: sweep once after CI has had a couple
@@ -222,6 +224,21 @@ app.post('/api/import/issues', (req, res) => {
 // Manual PR-watch pass (also runs on an interval).
 app.post('/api/prwatch/sweep', (req, res) => {
   prwatch.sweep();
+  res.json({ ok: true });
+});
+
+// --- Error tracker: auto-logged operational errors & blocks ---
+app.get('/api/errors', (req, res) => {
+  res.json({ errors: errlog.list(), open: errlog.openCount() });
+});
+
+app.post('/api/errors/resolve-all', (req, res) => {
+  res.json({ ok: true, resolved: errlog.resolveAll('human') });
+});
+
+app.post('/api/errors/:id/resolve', (req, res) => {
+  const e = errlog.resolve(req.params.id, 'human');
+  if (!e) return res.status(404).json({ error: 'not found (already resolved?)' });
   res.json({ ok: true });
 });
 
@@ -472,6 +489,7 @@ app.delete('/api/tasks/:id', (req, res) => {
   if (runner.isRunning(task.id)) return res.status(409).json({ error: 'stop it first' });
   state.tasks = state.tasks.filter((t) => t.id !== task.id);
   save();
+  errlog.resolveTask(task.id); // a deleted card's open errors die with it
   broadcast({ type: 'deleted', taskId: task.id });
   runner.pumpQueue(); // a deleted dep counts as met — free any waiting dependents
   res.json({ ok: true });

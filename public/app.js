@@ -1226,6 +1226,7 @@ document.addEventListener('keydown', (e) => {
     if (!$('#modalBackdrop').classList.contains('hidden')) { e.preventDefault(); closeTaskModal(); }
     else if (!$('#importBackdrop').classList.contains('hidden')) { e.preventDefault(); closeImportModal(); }
     else if (!$('#settingsBackdrop').classList.contains('hidden')) { e.preventDefault(); closeSettings(); }
+    else if (!$('#errorsBackdrop').classList.contains('hidden')) { e.preventDefault(); closeErrors(); }
     else if (!$('#drawer').classList.contains('hidden')) { e.preventDefault(); closeDrawer(); }
     return;
   }
@@ -1383,6 +1384,9 @@ function describeAction(a) {
     case 'run_task': return `Run ${taskTitle(a.taskId)}`;
     case 'approve_task': return `Approve ${taskTitle(a.taskId)} → Done`;
     case 'reject_task': return `Retry ${taskTitle(a.taskId)} with feedback: ${(a.feedback || '').slice(0, 100)}`;
+    case 'requeue_task': return `Requeue ${taskTitle(a.taskId)} (no retry burned)`;
+    case 'retarget_pr': return `Retarget the PR of ${taskTitle(a.taskId)} → base ${a.prBaseBranch || '?'}`;
+    case 'resolve_error': return `Mark error ${(a.errorId || '?')} resolved in the tracker`;
     default: return a.type;
   }
 }
@@ -1444,6 +1448,127 @@ $('#mgrChatForm').addEventListener('submit', (e) => {
   })();
 });
 
+// ---------- error tracker ----------
+let errList = [];
+let errReturnFocus = null;
+
+function renderErrChip(open) {
+  const chip = $('#errChip');
+  $('#errChipText').textContent = open;
+  chip.classList.toggle('hidden', !open);
+}
+
+async function loadErrors() {
+  const r = await api('/api/errors', { quiet: true });
+  if (!Array.isArray(r.errors)) return;
+  errList = r.errors;
+  renderErrChip(r.open || 0);
+  if (!$('#errorsBackdrop').classList.contains('hidden')) renderErrList();
+}
+
+function renderErrList() {
+  const box = $('#errList');
+  box.innerHTML = '';
+  if (!errList.length) {
+    box.innerHTML = '<div class="empty-col">no errors logged — the dojo is at peace 🧘</div>';
+    return;
+  }
+  for (const e of errList) {
+    const row = document.createElement('div');
+    row.className = `err-row${e.resolved ? ' resolved' : ''}`;
+    const head = document.createElement('div');
+    head.className = 'err-head';
+    const kind = document.createElement('span');
+    kind.className = 'badge err-kind';
+    kind.textContent = e.kind;
+    const when = document.createElement('span');
+    when.className = 'err-when';
+    when.textContent = fmtLogTs(e.lastAt || e.ts) + (e.count > 1 ? ` · ×${e.count}` : '');
+    head.append(kind, when);
+    if (e.taskTitle) {
+      const card = document.createElement(e.taskId && tasks.some((t) => t.id === e.taskId) ? 'a' : 'span');
+      card.className = 'err-card';
+      card.textContent = e.taskTitle;
+      if (card.tagName === 'A') {
+        card.href = '#';
+        card.title = 'Open this card';
+        card.addEventListener('click', (ev) => { ev.preventDefault(); closeErrors(); openDrawer(e.taskId); });
+      }
+      head.append(card);
+    }
+    if (e.resolved) {
+      const by = document.createElement('span');
+      by.className = 'err-resolved-by';
+      by.textContent = `✓ resolved${e.resolvedBy ? ` · ${e.resolvedBy}` : ''}`;
+      head.append(by);
+    } else {
+      const ok = document.createElement('button');
+      ok.className = 'ghost mini err-resolve';
+      ok.textContent = '✓ resolve';
+      ok.title = 'Mark handled — it stays in the history below for two weeks';
+      ok.addEventListener('click', () => withBusy(ok, async () => {
+        await api(`/api/errors/${e.id}/resolve`, { method: 'POST' });
+        await loadErrors();
+      }));
+      head.append(ok);
+    }
+    const text = document.createElement('div');
+    text.className = 'err-text';
+    text.textContent = e.text;
+    row.append(head, text);
+    if (e.detail && e.detail !== e.text) {
+      const detail = document.createElement('div');
+      detail.className = 'err-detail';
+      if (/^https:\/\/\S+$/.test(e.detail)) {
+        const a = document.createElement('a');
+        a.href = e.detail;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = e.detail;
+        detail.appendChild(a);
+      } else {
+        detail.textContent = e.detail;
+      }
+      row.append(detail);
+    }
+    box.appendChild(row);
+  }
+}
+
+function openErrors() {
+  errReturnFocus = document.activeElement;
+  renderErrList(); // last known state immediately…
+  $('#errorsBackdrop').classList.remove('hidden');
+  loadErrors(); // …then the fresh list
+}
+function closeErrors() {
+  $('#errorsBackdrop').classList.add('hidden');
+  if (errReturnFocus) { try { errReturnFocus.focus(); } catch {} errReturnFocus = null; }
+}
+
+$('#errChip').addEventListener('click', openErrors);
+$('#errCloseBtn').addEventListener('click', closeErrors);
+$('#errorsBackdrop').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeErrors();
+});
+$('#errResolveAllBtn').addEventListener('click', async (e) => {
+  if (!(await confirmDlg('Mark every open error resolved without fixing anything?', { confirmLabel: '✓ Resolve all' }))) return;
+  await withBusy(e.target, async () => {
+    await api('/api/errors/resolve-all', { method: 'POST' });
+    await loadErrors();
+  });
+});
+$('#errAskSenseiBtn').addEventListener('click', (e) => withBusy(e.target, async () => {
+  const msg = 'Fix the open errors in the error tracker (listed in your prompt under "Open operational errors"). '
+    + 'Operations only: raise permissions and re-run permission-blocked cards, retarget wrong-base PRs (retarget_pr), '
+    + 'recover stalled PR flows and launch failures — never fix code from here; ci-failing test/lint entries get '
+    + 'reject_task with feedback instead. Mark every entry you handle resolved (resolve_error).';
+  const r = await api('/api/manager/chat', { method: 'POST', body: { message: msg } });
+  if (r.error) return;
+  closeErrors();
+  showTab('manager');
+}));
+
 // ---------- live updates ----------
 const es = new EventSource('/api/events');
 // EventSource reconnects on its own; surface the gap so a stale board is
@@ -1469,6 +1594,11 @@ es.onmessage = (msg) => {
   }
   if (evt.type === 'modelblocks') {
     applyModelBlocks(evt.blocks);
+    return;
+  }
+  if (evt.type === 'errors') {
+    renderErrChip(evt.open || 0);
+    if (!$('#errorsBackdrop').classList.contains('hidden')) loadErrors();
     return;
   }
   if (evt.type === 'manager') {
@@ -1697,6 +1827,7 @@ function bootError(msg) {
   if (!(await loadTasks())) { bootError('loaded config, but the task list failed — retry?'); return; }
   renderHealth();
   renderUsage();
+  loadErrors();
 })();
 
 // minimal service worker: makes "add to home screen" a real PWA (cached shell
