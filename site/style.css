@@ -531,6 +531,10 @@ button, .btn {
   margin-top: -20px;
   user-select: none;
 }
+/* The numeral is decorative (aria-hidden) and drawn hollow — fill matches the
+   paper, the stroke carries the shape. It lives in a pseudo-element so
+   contrast checkers don't score the intentionally-invisible fill as text. */
+.form-num::before { content: attr(data-n); }
 @supports not (-webkit-text-stroke: 1px black) {
   .form-num { color: var(--ink-400); }
 }
