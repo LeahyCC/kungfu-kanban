@@ -89,6 +89,14 @@
           },
           {
             "@type": "Question",
+            "name": "How does Kungfu Kanban keep Claude token usage low?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The board ships with the ponytail skill (vendored, MIT), auto-installed and pre-selected on every new card. It steers agents to the smallest working solution — reuse before rewrite, standard library before dependencies, the shortest diff that ships — which ponytail's own benchmarks measure at roughly half the code and about 20% lower cost. On top of that, the Sensei routes frugally (haiku and low effort for trivial work), and a parallel cap plus automatic cooldowns keep runs inside your subscription's rate limits."
+            }
+          },
+          {
+            "@type": "Question",
             "name": "Can I use Kungfu Kanban from my phone?",
             "acceptedAnswer": {
               "@type": "Answer",
@@ -361,6 +369,16 @@
                 disk. Back up a folder, own your board.</p>
               <span class="footnote">your machine. your files. obviously.</span>
             </div>
+            <div class="paper-cell wide">
+              <span class="kicker">Frugal</span>
+              <h3>Fewer tokens per card. On purpose.</h3>
+              <p>The board ships with <a href="https://github.com/DietrichGebert/ponytail" target="_blank"
+                  rel="noreferrer">ponytail</a> — a vendored skill that makes every agent take the laziest solution
+                that works: reuse before rewrite, standard library before dependencies, the shortest diff that ships.
+                Fewer output tokens per card means more cards out of every rate-limit window. Auto-installed at boot,
+                pre-selected on new cards, deselect any time.</p>
+              <span class="footnote">~54% less code, ~20% cheaper, ~27% faster — ponytail&rsquo;s own benchmarks.</span>
+            </div>
           </div>
         </div>
       </section>
@@ -594,8 +612,14 @@ npm start          <span class="c"># → http://localhost:4747</span></code></pr
                 </table>
                 <p>Skills and agents are auto-discovered at load, no config: personal skills from
                   <code>~/.claude/skills/*/SKILL.md</code>, plugin skills from every enabled plugin (namespaced
-                  <code>plugin:skill</code>), agents from <code>~/.claude/agents/*.md</code>.
+                  <code>plugin:skill</code>), agents from <code>~/.claude/agents/*.md</code>. A filter box narrows the
+                  skill list as you type.
                 </p>
+                <p>The board also ships <a href="https://github.com/DietrichGebert/ponytail" target="_blank"
+                    rel="noreferrer"><code>ponytail</code></a> (vendored, MIT) — the lazy-senior-dev discipline:
+                  smallest working diff, standard library before dependencies, fewer output tokens per card.
+                  Auto-installed at boot and pre-selected on new cards; deselect it per card when you want the full
+                  ceremony.</p>
               </div>
 
               <div class="chapter" id="m-prs">

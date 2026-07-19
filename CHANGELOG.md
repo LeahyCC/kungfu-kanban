@@ -29,6 +29,9 @@ compares your clone against `origin/main` and offers a one-click update.
 - Columns now lay dependency chains out in run order (unmet-prerequisite depth,
   then priority); dependency badges get a filled wash so chain links read at a
   glance.
+- site: the landing page tells the frugality story — a full-width "Frugal"
+  feature cell, an FAQ entry on token usage, an llms.txt fact, and a manual
+  note; benchmark numbers attributed to ponytail's own measurements.
 
 ## [0.11.0] — 2026-07-18
 
