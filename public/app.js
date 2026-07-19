@@ -177,7 +177,7 @@ function render() {
     const colTasks = tasks
       .filter(matchesFilter)
       .filter((t) => (col.key === 'running' ? RUNNING_LIKE[t.status] : t.status === col.key))
-      .sort((a, b) => (b.priority || 0) - (a.priority || 0));
+      .sort((a, b) => chainDepth(a) - chainDepth(b) || (b.priority || 0) - (a.priority || 0));
     const el = document.createElement('div');
     el.className = 'column';
     el.dataset.status = col.key;
@@ -357,6 +357,19 @@ function depsUnmet(t) {
     .filter((d) => d && d.status !== 'done');
 }
 
+// How many unmet prerequisites stack under this card. Sorting a column by it
+// (then priority) lays every dependency chain out in the order it will run;
+// unrelated cards are all depth 0 and keep pure priority order, and a shipped
+// prerequisite drops its dependents back to depth 0.
+// ponytail: recomputed per card per render — memoize if boards get huge.
+function chainDepth(t, seen = new Set()) {
+  if (seen.has(t.id)) return 0; // cycle guard
+  seen.add(t.id);
+  let d = 0;
+  for (const dep of depsUnmet(t)) d = Math.max(d, 1 + chainDepth(dep, seen));
+  return d;
+}
+
 function esc(s) {
   return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -458,6 +471,13 @@ function openModal(task) {
   chipify(auto);
   picker.appendChild(auto);
   const selected = new Set(task ? task.skills || [] : []);
+  // New cards pre-select ponytail (the repo-shipped lazy-senior-dev skill).
+  // First match only — skills are sorted, so the user-skill copy wins over a
+  // plugin copy (ponytail:ponytail) and we never double-select.
+  if (!task) {
+    const p = config.skills.find((s) => s.name === 'ponytail' || s.name.endsWith(':ponytail'));
+    if (p) selected.add(p.name);
+  }
   for (const s of config.skills) {
     const chip = document.createElement('span');
     chip.className = 'skill-chip' + (selected.has(s.name) ? ' on' : '');
@@ -467,6 +487,20 @@ function openModal(task) {
     chipify(chip);
     picker.appendChild(chip);
   }
+  // Filter box: hides non-matching chips by name/description; chips already
+  // ON stay visible so a filtered view can't hide what the card will save.
+  const search = $('#skillSearch');
+  search.value = '';
+  search.oninput = () => {
+    const q = search.value.trim().toLowerCase();
+    for (const chip of picker.querySelectorAll('.skill-chip')) {
+      if (chip.dataset.auto) continue; // ✦ auto-select always shows
+      const hit = !q || chip.classList.contains('on')
+        || (chip.dataset.name || '').toLowerCase().includes(q)
+        || (chip.title || '').toLowerCase().includes(q);
+      chip.classList.toggle('hidden', !hit);
+    }
+  };
   // "Runs after" picker: every other card is a candidate prerequisite. Current
   // deps lead, then live cards column-first; done cards only show if already
   // selected (a done dep is met — nothing to add there).
@@ -776,26 +810,24 @@ function openSettings() {
   $('#settingsBackdrop').classList.remove('hidden');
 }
 async function renderSkillStatus() {
-  const s = await api('/api/skill');
+  const r = await api('/api/skill');
+  const list = r.skills || [];
   const el = $('#skillStatus');
   const btn = $('#skillInstallBtn');
-  if (s.installed && s.current) {
-    el.textContent = '✓ installed & up to date';
-    btn.classList.add('hidden');
-  } else if (s.installed) {
-    el.textContent = '⚠ installed, update available';
-    btn.textContent = 'Update';
-    btn.classList.remove('hidden');
-  } else {
-    el.textContent = '✕ not installed';
-    btn.textContent = 'Install';
+  el.textContent = list
+    .map((s) => `${s.installed ? (s.current ? '✓' : '⚠') : '✕'} ${s.name}`)
+    .join(' · ') || '✕ no skills';
+  const stale = list.filter((s) => !s.current);
+  if (!stale.length) btn.classList.add('hidden');
+  else {
+    btn.textContent = stale.some((s) => !s.installed) ? 'Install' : 'Update';
     btn.classList.remove('hidden');
   }
 }
 $('#skillInstallBtn').addEventListener('click', async () => {
   const r = await api('/api/skill/install', { method: 'POST' });
-  $('#skillStatus').textContent = r.ok ? '✓ installed & up to date' : `✕ ${r.error || 'install failed'}`;
-  if (r.ok) $('#skillInstallBtn').classList.add('hidden');
+  if (r.ok) renderSkillStatus();
+  else $('#skillStatus').textContent = `✕ ${r.error || 'install failed'}`;
 });
 
 $('#settingsBtn').addEventListener('click', openSettings);

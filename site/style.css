@@ -568,6 +568,7 @@ button, .btn {
   border-top: 1px solid var(--rule);
 }
 @media (max-width: 860px) { .paper-grid { grid-template-columns: 1fr; } }
+.paper-cell.wide { grid-column: 1 / -1; }
 .paper-cell {
   border-right: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);

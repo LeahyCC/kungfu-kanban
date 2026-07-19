@@ -25,6 +25,10 @@ Key facts:
 - Import work from pasted markdown, dropped `.md` files, or open GitHub
   issues; a bundled `kungfu-todo` skill lets any Claude Code session queue
   cards onto the board.
+- Ships with the ponytail skill (vendored, MIT): agents default to the
+  laziest working solution — less code, fewer output tokens per card, so a
+  subscription rate-limit window goes further. Auto-installed at boot and
+  pre-selected on new cards.
 
 ## Docs
 
