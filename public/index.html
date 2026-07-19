@@ -191,6 +191,7 @@
         <span class="field-label" title="The card waits in Queued until every selected card is Done (approved or PR merged), then launches automatically — chain dependent work instead of babysitting the order">Runs after <span class="hint-inline">(optional — waits until these cards are Done)</span></span>
         <div id="depPicker" class="skill-picker"></div>
         <span class="field-label" title="Skill names injected into the prompt so the agent reaches for them; ✦ auto-select lets the agent review its own installed skills instead">Skills to use</span>
+        <input id="skillSearch" class="skill-search" type="search" placeholder="filter skills…" autocomplete="off" />
         <div id="skillPicker" class="skill-picker"></div>
         <div class="modal-actions">
           <button type="button" id="cancelBtn" class="ghost" title="Discard changes">Cancel</button>
@@ -285,7 +286,7 @@ The prompt: self-contained instructions for the executing agent.
           <input name="prWatchMin" type="number" min="0" max="120" class="tiny" />
         </label>
         <label class="check-row"><input type="checkbox" name="prWatchAutoFix" /> auto-fix PR merge conflicts (spawns a fix card, max 2 tries)</label>
-        <label title="A personal skill in ~/.claude/skills that teaches every Claude Code session on this Mac to create board cards — say 'create a kungfu todo for…' anywhere. Installed and kept current automatically at server start; the button is a manual repair hatch.">Claude Code skill <span class="hint-inline">("create a kungfu todo for…" from any session — auto-installed at boot)</span></label>
+        <label title="Personal skills in ~/.claude/skills, installed and kept current automatically at server start; the button is a manual repair hatch. kungfu-todo: say 'create a kungfu todo for…' in any Claude Code session. ponytail: the lazy-senior-dev discipline (ships with the board, auto-selected on new cards).">Claude Code skills <span class="hint-inline">(kungfu-todo + ponytail — auto-installed at boot)</span></label>
         <div class="skill-install-row">
           <span id="skillStatus" class="footnote">checking…</span>
           <button type="button" id="skillInstallBtn" class="ghost hidden">Install</button>

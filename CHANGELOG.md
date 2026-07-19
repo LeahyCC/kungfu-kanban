@@ -5,6 +5,31 @@ All notable changes to Kungfu Kanban. Format follows
 minor bumps for features, patch bumps for fixes. The board's status line
 compares your clone against `origin/main` and offers a one-click update.
 
+## [Unreleased]
+
+### Added — ponytail ships with the board (v0.12.0)
+- The [ponytail](https://github.com/DietrichGebert/ponytail) skill (MIT,
+  vendored at `skills/ponytail/SKILL.md`) now installs to `~/.claude/skills`
+  automatically at boot alongside kungfu-todo — every board gets the
+  lazy-senior-dev discipline without a separate plugin install. The ⚙ Settings
+  skill row shows and repairs both skills.
+- New cards pre-select the ponytail skill in the card modal (first `ponytail`
+  or `*:ponytail` match; deselect per card as usual).
+- Skill filter box in the card modal — type to filter the skill chips by name
+  or description; selected chips always stay visible.
+
+### Added — Sensei-built dependency chains
+- The manager's `create_task`/`update_task` deps now accept exact card titles
+  and ordinals — including cards created earlier in the same decision — not
+  just ids, reusing the importer's resolver. Unresolvable entries surface as
+  `⛓ unresolved dep` instead of dropping the chain, and the manager prompt now
+  tells the Sensei to chain multi-card plans itself.
+
+### Changed
+- Columns now lay dependency chains out in run order (unmet-prerequisite depth,
+  then priority); dependency badges get a filled wash so chain links read at a
+  glance.
+
 ## [0.11.0] — 2026-07-18
 
 ### Added — auto error tracker: every error and block, logged and Sensei-fixable
