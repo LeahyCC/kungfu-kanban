@@ -1,0 +1,40 @@
+# Kungfu Kanban
+
+> A local-first kanban board for macOS where every card runs a Claude Code
+> agent on your existing Claude subscription — no API keys, no token billing,
+> no cloud. Cards create, route, run, and review themselves; repo cards open
+> real GitHub pull requests. Free, MIT-licensed open source.
+
+Key facts:
+
+- Runs entirely on your machine: one Express server, plain JSON files in
+  `data/`; no accounts, no telemetry from the board app.
+- Uses the Claude Code CLI with your subscription login; the runner strips
+  `ANTHROPIC_API_KEY` from the environment so it can never bill per token.
+- An LLM manager (the "Sensei") triages cards — model, effort, priority,
+  skills — dispatches runs, and reviews results against acceptance criteria,
+  with three autonomy levels (suggest / semi / auto).
+- Repo cards run in isolated git worktrees and open pull requests via the
+  GitHub CLI; merged PRs file themselves into Done; conflicted PRs spawn
+  self-healing fix agents.
+- Subscription rate limits are absorbed: cards requeue, a countdown shows, and
+  everything resumes when the window resets. Model-specific caps step launches
+  down the fable → opus → sonnet → haiku ladder automatically.
+- Phone access via token gate + Tailscale serve (tailnet-only), installable as
+  a PWA, with ntfy push notifications.
+- Import work from pasted markdown, dropped `.md` files, or open GitHub
+  issues; a bundled `kungfu-todo` skill lets any Claude Code session queue
+  cards onto the board.
+
+## Docs
+
+- [The manual](https://kungfu-kanban.com/#manual): complete setup and feature
+  reference — requirements, install, PR flow, the Manager, phone access,
+  limits, security.
+- [README](https://github.com/LeahyCC/kungfu-kanban#readme): the same manual
+  on GitHub.
+
+## Source
+
+- [GitHub repository](https://github.com/LeahyCC/kungfu-kanban): MIT-licensed
+  source code, issues, and releases.

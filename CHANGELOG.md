@@ -5,7 +5,19 @@ All notable changes to Kungfu Kanban. Format follows
 minor bumps for features, patch bumps for fixes. The board's status line
 compares your clone against `origin/main` and offers a one-click update.
 
-## [Unreleased]
+## [0.10.0] — 2026-07-18
+
+### Added — landing-site SEO overhaul (phase 0)
+- `site/` now ships the full indexation kit: `robots.txt`, `sitemap.xml`, and
+  `llms.txt` (an answer-engine summary of the product), plus a keyword-bearing
+  title tag, tightened meta description, canonical URL, Open Graph / Twitter
+  cards backed by a generated 1200×630 `og.png`, and JSON-LD structured data
+  (`WebSite`, `SoftwareApplication`, `FAQPage`).
+- `site/vercel.json`: 308 redirect `www.` → apex (removes the duplicate host
+  Google was seeing) and long-lived cache headers for static assets.
+- The four-forms numerals render via a CSS pseudo-element so contrast checkers
+  stop scoring the intentionally hollow fill as low-contrast text; the hero
+  image loads with `fetchpriority="high"`.
 
 ### Added — web analytics on the public landing site
 - The marketing site (`site/`) now loads PostHog to measure real visitor

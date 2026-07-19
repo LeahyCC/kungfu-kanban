@@ -4,14 +4,110 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kungfu Kanban — every card is a fighter</title>
+  <title>Kungfu Kanban — Kanban Board for Claude Code Agents</title>
   <meta name="description"
-    content="A local kanban board where every card runs a Claude Code agent on your subscription — no API keys, no token billing, no cloud. A Manager triages the queue while you review the PRs.">
+    content="A local-first kanban board where every card runs a Claude Code agent on your subscription — no API keys, no token billing. Cards open real PRs; you press merge.">
+  <link rel="canonical" href="https://kungfu-kanban.com/">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32">
   <link rel="icon" href="/icons/favicon-16x16.png" type="image/png" sizes="16x16">
   <link rel="apple-touch-icon" href="/icons/apple-icon-180x180.png">
   <meta name="theme-color" content="#141210">
+  <!-- Social cards -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Kungfu Kanban">
+  <meta property="og:url" content="https://kungfu-kanban.com/">
+  <meta property="og:title" content="Kungfu Kanban — every card is a fighter">
+  <meta property="og:description"
+    content="A kanban board where every card runs a Claude Code agent on your subscription. No API keys. No token billing. Cards become PRs — you hold the merge button.">
+  <meta property="og:image" content="https://kungfu-kanban.com/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt"
+    content="The Kungfu Kanban cardboard robot beside the words: kanban board for Claude Code agents">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Kungfu Kanban — every card is a fighter">
+  <meta name="twitter:description"
+    content="A kanban board where every card runs a Claude Code agent on your subscription. No API keys. No token billing. Cards become PRs — you hold the merge button.">
+  <meta name="twitter:image" content="https://kungfu-kanban.com/og.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "url": "https://kungfu-kanban.com/",
+        "name": "Kungfu Kanban"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "Kungfu Kanban",
+        "url": "https://kungfu-kanban.com/",
+        "image": "https://kungfu-kanban.com/og.png",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "macOS",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "license": "https://github.com/LeahyCC/kungfu-kanban/blob/main/LICENSE",
+        "softwareRequirements": "Node.js 20+, Claude Code CLI with a Claude subscription",
+        "description": "A local-first kanban board where every card runs a Claude Code agent on your Claude subscription — no API keys, no token billing, no cloud. A Sensei manager triages the queue, repo cards open real pull requests, and everything stays in plain JSON on your machine.",
+        "sameAs": ["https://github.com/LeahyCC/kungfu-kanban"]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Does Kungfu Kanban need an Anthropic API key?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Every card runs the Claude Code CLI on your existing Claude subscription login. The runner strips ANTHROPIC_API_KEY from the environment, so it can never silently fall back to pay-per-token billing."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Kungfu Kanban free?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes — it's MIT-licensed open source. You bring your own Claude subscription; the board itself costs nothing and has no accounts or billing."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can cards open real pull requests?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Repo cards run in an isolated git worktree and open a pull request via the GitHub CLI when done. Merged PRs move the card to Done automatically; conflicted PRs spawn a self-healing fix agent."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens when I hit a Claude usage limit?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The board parses the reset time from the CLI error, requeues the card, pauses all automatic flow, shows a countdown, and resumes everything when the limit resets. Model-specific caps step launches down the fable → opus → sonnet → haiku ladder instead of pausing."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I use Kungfu Kanban from my phone?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. A token gate plus Tailscale serve puts the board on your phone, tailnet-only, and it installs as a PWA. ntfy push notifications tell you when a card lands in Review."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Where is my data stored?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Everything is local: one Express server and plain JSON files in a data/ folder on your machine. No cloud, no accounts, no telemetry from the board app."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -86,7 +182,7 @@
           </div>
           <figure class="hero-figure">
             <img src="/logo.png" alt="The Kungfu Kanban master — a cardboard box robot held together with duct tape"
-              width="462" height="471">
+              width="462" height="471" fetchpriority="high">
             <figcaption class="fig-caption">fig. 1 — the master. cardboard, tape, runs the dojo.</figcaption>
           </figure>
         </div>
@@ -97,7 +193,7 @@
         <div class="mkt-inner">
           <h2 class="section-title">The four forms.</h2>
           <div class="form-band">
-            <div class="form-num" aria-hidden="true">01</div>
+            <div class="form-num" aria-hidden="true" data-n="01"></div>
             <div class="form-body">
               <h3>Say the work exists</h3>
               <p>&ldquo;Create a kungfu todo&rdquo; in any terminal session. A pasted plan. Your open GitHub issues.
@@ -105,7 +201,7 @@
             </div>
           </div>
           <div class="form-band">
-            <div class="form-num" aria-hidden="true">02</div>
+            <div class="form-num" aria-hidden="true" data-n="02"></div>
             <div class="form-body">
               <h3>The Sensei routes</h3>
               <p>Model, effort, priority, skills — triaged per card, automatically. Haiku for drills, Fable for the
@@ -113,7 +209,7 @@
             </div>
           </div>
           <div class="form-band">
-            <div class="form-num" aria-hidden="true">03</div>
+            <div class="form-num" aria-hidden="true" data-n="03"></div>
             <div class="form-body">
               <h3>The dojo runs itself</h3>
               <p>Cards launch, retry with feedback, step down models, and absorb rate limits — unattended, inside your
@@ -121,7 +217,7 @@
             </div>
           </div>
           <div class="form-band">
-            <div class="form-num" aria-hidden="true">04</div>
+            <div class="form-num" aria-hidden="true" data-n="04"></div>
             <div class="form-body">
               <h3>PRs arrive, shipped</h3>
               <p>Repo cards open real pull requests on their own; merged ones file themselves into Done. You hold the
