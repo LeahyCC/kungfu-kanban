@@ -1165,6 +1165,14 @@ function renderDrawerMeta(t) {
   mkSel('effort', config.efforts, t.effort, 'effort');
   // Live too: a card blocked on permission is fixed by raising this, then re-running.
   mkSel('perms', config.permissionModes, t.permissionMode, 'permissionMode');
+  if (t.permissionBlocked && t.permissionBlocked.length) {
+    const bypass = document.createElement('button');
+    bypass.className = 'danger';
+    bypass.textContent = '⚡ Bypass & re-run';
+    bypass.title = `Blocked on: ${t.permissionBlocked.join(', ')}`;
+    bypass.addEventListener('click', (e) => withBusy(e.target, () => bypassAndRerun(t)));
+    box.appendChild(bypass);
+  }
 
   const bits = [`cwd: ${t.cwd}`];
   if (t.prChecks) {
@@ -1759,6 +1767,21 @@ function attnBlocked() {
   return tasks.filter((t) => t.permissionBlocked && t.status === 'review');
 }
 
+// A card stalled because its permission mode wouldn't allow the tool it
+// needed. Bypassing is a deliberate, human-initiated risk choice — it is
+// NOT clamped by the manager's permissionCeiling like manager-picked modes are.
+async function bypassAndRerun(t) {
+  if (!(await confirmDlg(
+    `Re-run "${t.title}" with bypassPermissions? It skips every permission prompt for this card.`,
+    { confirmLabel: '⚡ Bypass & re-run', danger: true },
+  ))) return;
+  const r = await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { permissionMode: 'bypassPermissions' } });
+  if (r.error) return;
+  const r2 = await api(`/api/tasks/${t.id}/run`, { method: 'POST' });
+  if (r2.error) return;
+  toast(`"${t.title}" is back on the mats, running unrestricted.`, 'status');
+}
+
 function blockedCard(t) {
   const div = document.createElement('div');
   div.className = 'suggestion';
@@ -1774,7 +1797,11 @@ function blockedCard(t) {
   open.className = 'ghost';
   open.textContent = 'Open card';
   open.addEventListener('click', () => { closeAttn(); openDrawer(t.id); });
-  actions.append(open);
+  const bypass = document.createElement('button');
+  bypass.className = 'danger';
+  bypass.textContent = '⚡ Bypass & re-run';
+  bypass.addEventListener('click', (e) => withBusy(e.target, () => bypassAndRerun(t)));
+  actions.append(open, bypass);
   div.append(head, why, actions);
   return div;
 }
