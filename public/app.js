@@ -126,6 +126,12 @@ let renderQueued = false;
 let filterText = '';
 let lastRenderFingerprint = null;
 
+// Which group headers are collapsed, by group name — persists across reloads.
+// Purely a display toggle on already-rendered DOM, so it never has to go
+// through render()'s fingerprint-gated rebuild.
+let collapsedGroups = new Set();
+try { collapsedGroups = new Set(JSON.parse(localStorage.getItem('kk-groups-collapsed') || '[]')); } catch {}
+
 function matchesFilter(t) {
   if (!filterText) return true;
   const hay = [t.title, t.prompt, t.cwd, t.model, t.agent, ...(t.skills || [])]
@@ -196,7 +202,16 @@ function render() {
       <div class="col-body"></div>`;
     const body = el.querySelector('.col-body');
     if (!colTasks.length) body.innerHTML = '<div class="empty-col">—</div>';
-    for (const t of colTasks) body.appendChild(cardEl(t));
+    // Ungrouped cards render as before; a card with a `group` joins a wrapper
+    // positioned where the FIRST card of that group falls in the existing
+    // sort — no separate ordering rule invented for groups.
+    const seenGroups = new Set();
+    for (const t of colTasks) {
+      if (!t.group) { body.appendChild(cardEl(t)); continue; }
+      if (seenGroups.has(t.group)) continue;
+      seenGroups.add(t.group);
+      body.appendChild(groupEl(t.group, colTasks.filter((x) => x.group === t.group)));
+    }
 
     if (col.key !== 'running') {
       // depth counter: dragleave fires when crossing into child cards, which
@@ -251,6 +266,35 @@ function updateHeaderStatus() {
 // event — only animate a seal the first time its card lands in Done, or it
 // pops on every rebuild (visible as flicker whenever anything streams).
 const stampedSeals = new Set();
+
+// Visual-only wrapper — drag/drop listeners live on the column, not here, so
+// dragging a grouped card still bubbles up to the column's own handlers.
+function groupEl(name, colGroupTasks) {
+  const wrap = document.createElement('div');
+  const collapsed = collapsedGroups.has(name);
+  wrap.className = 'card-group' + (collapsed ? ' collapsed' : '');
+  const total = tasks.filter((x) => x.group === name).length;
+  const done = tasks.filter((x) => x.group === name && x.status === 'done').length;
+  const head = document.createElement('div');
+  head.className = 'card-group-head';
+  head.tabIndex = 0;
+  head.setAttribute('role', 'button');
+  head.setAttribute('aria-expanded', String(!collapsed));
+  head.innerHTML = `<span class="card-group-chevron">▾</span><span class="card-group-name">${esc(name)}</span><span class="card-group-count">${done}/${total} done</span>`;
+  const toggle = () => {
+    const isCollapsed = wrap.classList.toggle('collapsed');
+    head.setAttribute('aria-expanded', String(!isCollapsed));
+    if (isCollapsed) collapsedGroups.add(name); else collapsedGroups.delete(name);
+    localStorage.setItem('kk-groups-collapsed', JSON.stringify([...collapsedGroups]));
+  };
+  head.addEventListener('click', toggle);
+  head.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+  const cardsBox = document.createElement('div');
+  cardsBox.className = 'card-group-cards';
+  for (const t of colGroupTasks) cardsBox.appendChild(cardEl(t));
+  wrap.append(head, cardsBox);
+  return wrap;
+}
 
 function cardEl(t) {
   const el = document.createElement('div');
@@ -430,7 +474,7 @@ function taskFormSnapshot() {
   return JSON.stringify([
     f.title.value, f.prompt.value, f.cwd.value, f.model.value, f.effort.value,
     f.permissionMode.value, f.agent.value, f.worktree.checked, f.openPr.checked,
-    f.priority.value, f.acceptanceCriteria.value, f.schedule.value,
+    f.priority.value, f.acceptanceCriteria.value, f.group.value, f.schedule.value,
     [...document.querySelectorAll('#skillPicker .skill-chip.on')].map((c) => c.dataset.name || 'auto'),
     [...document.querySelectorAll('#depPicker .skill-chip.on')].map((c) => c.dataset.id),
   ]);
@@ -474,7 +518,10 @@ function openModal(task) {
   f.openPr.checked = task ? !!task.openPr : false;
   f.priority.value = String(task && task.priority ? task.priority : 0);
   f.acceptanceCriteria.value = task ? task.acceptanceCriteria || '' : '';
+  f.group.value = task ? task.group || '' : '';
   f.schedule.value = task ? scheduleToInput(task.schedule) : '';
+  $('#groupList').innerHTML = [...new Set(tasks.map((t) => t.group).filter(Boolean))]
+    .map((g) => `<option value="${esc(g)}"></option>`).join('');
 
   const picker = $('#skillPicker');
   picker.innerHTML = '';
@@ -571,6 +618,7 @@ $('#taskForm').addEventListener('submit', (e) => {
     openPr: f.openPr.checked,
     priority: parseInt(f.priority.value, 10) || 0,
     acceptanceCriteria: f.acceptanceCriteria.value,
+    group: f.group.value,
     schedule: f.schedule.value,
     skills: [...document.querySelectorAll('#skillPicker .skill-chip.on')].filter((c) => !c.dataset.auto).map((c) => c.dataset.name),
     skillsAuto: !!document.querySelector('#skillPicker .skill-chip.auto.on'),

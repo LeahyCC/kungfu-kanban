@@ -392,7 +392,7 @@ app.post('/api/notify/test', (req, res) => {
 const TASK_FIELDS = [
   'title', 'prompt', 'cwd', 'model', 'effort', 'permissionMode',
   'skills', 'skillsAuto', 'agent', 'worktree', 'openPr', 'prBaseBranch', 'status', 'priority', 'acceptanceCriteria',
-  'schedule', 'issueNumber',
+  'schedule', 'issueNumber', 'group',
   'prUrl', // repair hatch: lets a manually-created PR be attached to its card
 ];
 const STATUSES = ['backlog', 'queued', 'running', 'stopping', 'review', 'done'];
@@ -439,6 +439,7 @@ function makeTask(b, createdBy = 'user') {
     prBaseBranch: typeof b.prBaseBranch === 'string' && b.prBaseBranch.trim() ? b.prBaseBranch.trim() : null,
     priority: Number.isInteger(b.priority) ? b.priority : 0,
     acceptanceCriteria: b.acceptanceCriteria || '',
+    group: typeof b.group === 'string' && b.group.trim() ? b.group.trim().slice(0, 60) : null,
     deps: depsLib.sanitize(b.deps, null),
     schedule: parseSchedule(b.schedule),
     issueNumber: Number.isInteger(b.issueNumber) ? b.issueNumber : null,
@@ -489,6 +490,7 @@ app.patch('/api/tasks/:id', (req, res) => {
     if (f === 'title') task.title = (req.body.title || 'Untitled task').slice(0, 200);
     else if (f === 'priority') task.priority = Number.isInteger(req.body.priority) ? req.body.priority : 0;
     else if (f === 'skills') task.skills = Array.isArray(req.body.skills) ? req.body.skills : [];
+    else if (f === 'group') task.group = typeof req.body.group === 'string' && req.body.group.trim() ? req.body.group.trim().slice(0, 60) : null;
     else task[f] = req.body[f];
   }
   if ('schedule' in req.body) task.schedule = parseSchedule(req.body.schedule);

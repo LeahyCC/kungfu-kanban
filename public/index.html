@@ -182,6 +182,10 @@
           <label class="check-row" title="After a successful run: commit anything left over, push the branch, and open a GitHub PR with your gh login. Needs the worktree box + an origin remote."><input type="checkbox" name="openPr" /> Open PR when done <span class="badge">gh</span></label>
         </div>
         <p class="hint">worktree = the agent works on an isolated branch (<span class="mono">kanban-&lt;id&gt;</span>); your checkout stays untouched. Open PR pushes that branch and opens a GitHub PR after a successful run (needs worktree + an origin remote).</p>
+        <label>Group <span class="hint-inline">(optional — clusters related cards together on the board)</span>
+          <input name="group" list="groupList" placeholder="e.g. App quality audit" maxlength="60" />
+          <datalist id="groupList"></datalist>
+        </label>
         <label>Acceptance criteria <span class="hint-inline">(the manager reviews against this)</span>
           <textarea name="acceptanceCriteria" rows="2" placeholder="e.g. tests pass; README updated; no new dependencies"></textarea>
         </label>
