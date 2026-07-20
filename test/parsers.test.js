@@ -60,6 +60,13 @@ test('parseMarkdown: defaultGroup fills in only when no explicit group was set',
   assert.equal(explicit[0].group, 'Explicit');
 });
 
+test('parseMarkdown: frontmatter "queue" (and alias "autoqueue") sets a file-wide default', () => {
+  const cards = parseMarkdown('---\nqueue: true\n---\n## One\nbody\n## Two\nbody');
+  assert.ok(cards.every((c) => c.queue === true));
+  const aliased = parseMarkdown('---\nautoqueue: yes\n---\n## One\nbody');
+  assert.equal(aliased[0].queue, true);
+});
+
 test('labelFromFilename strips extension and a trailing date-time stamp', () => {
   assert.equal(labelFromFilename('app-quality-audit-20260719-2057.md'), 'App quality audit');
   assert.equal(labelFromFilename('quick-fixes.md'), 'Quick fixes');
