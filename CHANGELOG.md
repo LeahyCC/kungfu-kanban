@@ -10,7 +10,7 @@ compares your clone against `origin/main` and offers a one-click update.
 - Mobile layout fixes: site manual overflow, masthead CTA wrap, app header under 360px.
 - site: humanizer pass
 - Open-source contribution gating: CODEOWNERS, dependabot, contributor docs.
-- docs: humanizer pass
+- docs: humanizer audit — already clean (README.md, CONTRIBUTING.md, SECURITY.md, lib/skill.js template strings)
 - Release tags + GitHub Releases published (v0.13.0–v1.0.0 backfilled), and
   required for future releases.
 
