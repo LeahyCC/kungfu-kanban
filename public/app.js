@@ -843,10 +843,12 @@ $('#logoutBtn').addEventListener('click', async () => {
 $('#notifyTestBtn').addEventListener('click', async (e) => {
   // Save the current topic first so the test uses what's in the field.
   const f = $('#settingsForm');
-  config.settings = await api('/api/settings', {
+  const r = await api('/api/settings', {
     method: 'PUT',
     body: { defaultCwd: f.defaultCwd.value, ntfyTopic: f.ntfyTopic.value, notifyMac: f.notifyMac.checked },
   });
+  if (!r || r.error) return;
+  config.settings = r;
   await api('/api/notify/test', { method: 'POST' });
   e.target.textContent = '🔔 Sent — check your phone';
   setTimeout(() => { e.target.textContent = '🔔 Test notification'; }, 3000);
@@ -855,7 +857,7 @@ $('#notifyTestBtn').addEventListener('click', async (e) => {
 $('#settingsForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = e.target;
-  config.settings = await api('/api/settings', {
+  const r = await api('/api/settings', {
     method: 'PUT',
     body: {
       defaultCwd: f.defaultCwd.value,
@@ -870,7 +872,11 @@ $('#settingsForm').addEventListener('submit', async (e) => {
       usageBudgetM: parseFloat(f.usageBudgetM.value) || 0,
     },
   });
-  config = await api('/api/config'); // re-scan repos for the picker
+  if (!r || r.error) return;
+  config.settings = r;
+  const c = await api('/api/config'); // re-scan repos for the picker
+  if (!c || c.error) return;
+  config = c;
   closeSettings();
 });
 
@@ -1618,6 +1624,12 @@ es.addEventListener('open', () => {
     if (!$('#managerView').classList.contains('hidden')) loadManager();
   }
 });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    loadTasks();
+    if (!$('#managerView').classList.contains('hidden')) loadManager();
+  }
+});
 es.onmessage = (msg) => {
   const evt = JSON.parse(msg.data);
   if (evt.type === 'cooldown') {
@@ -1674,7 +1686,9 @@ $('#filterInput').addEventListener('input', (e) => {
 
 // ---------- settings ----------
 $('#maxConcurrent').addEventListener('change', async (e) => {
-  config.settings = await api('/api/settings', { method: 'PUT', body: { maxConcurrent: parseInt(e.target.value, 10) } });
+  const r = await api('/api/settings', { method: 'PUT', body: { maxConcurrent: parseInt(e.target.value, 10) } });
+  if (!r || r.error) return;
+  config.settings = r;
 });
 
 // ---------- init ----------
