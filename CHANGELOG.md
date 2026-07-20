@@ -7,6 +7,49 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-07-19
+
+### Added
+- Stuck cards are now surfaced with a hung-agent watchdog, so a card whose
+  agent silently stops making progress gets flagged instead of sitting idle
+  forever.
+- The SSE connection now sends a heartbeat ping, so the board recovers
+  cleanly from flaky wifi/sleep instead of silently going stale.
+- Imported cards are grouped by their import batch, making large imports
+  easier to scan.
+- Cards held back by an unmet dependency now show their held-until-merge
+  state, and the previously-silent 20-dependency cap is now surfaced
+  instead of failing quietly.
+- A node test harness now covers the import/markdown parsers, catching
+  parser regressions before they ship.
+
+### Changed
+- Dependent cards now release only once their prerequisite's PR has actually
+  merged, instead of as soon as the card closes.
+- Card drag focus and selection now survive live board re-renders instead of
+  resetting.
+- iOS PWA safe-area insets and the home-screen icon got a polish pass.
+
+### Fixed
+- A model-fallback retry storm, double-started runners, and double-fired
+  card spawns are fixed — cards no longer race or duplicate their own runs.
+- Data file writes are now atomic (write-then-rename, with a safe backup
+  ordering), so a crash mid-save can no longer leave the board file missing
+  or corrupt.
+- The write API and auth checks are hardened against edge cases, and the
+  import markdown parser no longer chokes on malformed input.
+- PR-watch base detection, merge-notification spam, and dead PR watches are
+  fixed.
+- The usage scan no longer blocks the UI while it runs.
+- The manager log and imported-inbox no longer grow unbounded.
+- Failed inbox imports are now visible and won't duplicate on retry.
+- Fixed the transcript markdown renderer, drawer/modal state bugs, and
+  Sensei actions repeating themselves against stale state.
+- Worktree cards now sync local main before launching, and base-branch sync
+  no longer refuses to fetch into the currently-checked-out branch.
+- Server shutdown now stops running agents and flushes state cleanly before
+  exiting.
+
 ## [0.12.0] — 2026-07-19
 
 ### Added — ponytail ships with the board
