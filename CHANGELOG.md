@@ -8,6 +8,7 @@ compares your clone against `origin/main` and offers a one-click update.
 ## [Unreleased]
 
 - site: humanizer pass
+- Open-source contribution gating: CODEOWNERS, dependabot, contributor docs.
 
 ## [1.0.0] — 2026-07-20
 
