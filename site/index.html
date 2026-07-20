@@ -76,7 +76,7 @@
             "name": "Can cards open real pull requests?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes. Repo cards run in an isolated git worktree and open a pull request via the GitHub CLI when done. Merged PRs move the card to Done automatically; conflicted PRs spawn a self-healing fix agent."
+              "text": "Yes. Repo cards run in an isolated git worktree and open a pull request via the GitHub CLI when done. Every PR carries CI status; the Sensei can merge it itself once all checks are green (within its autonomy setting), and any merge moves the card to Done automatically. Conflicted PRs spawn a self-healing fix agent."
             }
           },
           {
@@ -334,14 +334,29 @@
             <div class="paper-cell">
               <span class="kicker">Manager</span>
               <h3>A sensei for the queue</h3>
-              <p>Triages new cards, dispatches runs, reviews results against your acceptance criteria. Three autonomy
-                levels; deleting cards is never on the table.</p>
+              <p>Triages new cards, dispatches runs, reviews finished work against your acceptance criteria and the
+                actual PR diff — not just the agent&rsquo;s self-report — and merges green PRs itself when your autonomy
+                setting allows. Three autonomy levels; deleting cards is never on the table.</p>
             </div>
             <div class="paper-cell">
               <span class="kicker">Worktrees</span>
               <h3>Repo cards ship PRs</h3>
               <p>Coding tasks run in an isolated git worktree and open a real pull request via <code>gh</code> when
-                done. PR watch ships merged cards and spawns fix agents for conflicts.</p>
+                done. Every PR runs CI; PR watch ships merged cards and spawns fix agents for conflicts.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Chains</span>
+              <h3>Cards that wait their turn</h3>
+              <p>Give a card &ldquo;Runs after&rdquo; prerequisites and it waits in Queued until every one is actually
+                done — a done card with a still-open, unmerged PR still counts as blocking. The Sensei chains
+                multi-card plans itself.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Groups</span>
+              <h3>Batches run one lane at a time</h3>
+              <p>Cards from the same import or plan cluster under a collapsible group header. Only one card per group
+                is ever in progress, a queue-group button launches the whole batch, and finishing one fires a single
+                notification instead of one per card.</p>
             </div>
             <div class="paper-cell">
               <span class="kicker">Cooldown</span>
@@ -514,8 +529,14 @@ npm start          <span class="c"># → http://localhost:4747</span></code></pr
                   <li>Finished runs land in <strong>Review</strong> (with a vermillion error stripe if they failed).
                     <strong>✓ Done</strong> ships them — hanko seal included.
                   </li>
-                  <li>If the server restarts mid‑run, orphaned &ldquo;running&rdquo; cards are recovered into Review.
-                  </li>
+                  <li>A restart — deliberate or a crash — can&rsquo;t corrupt your board: state writes are atomic, and
+                    a graceful stop (including a launchd restart) marks any running cards into Review instead of
+                    leaving them orphaned.</li>
+                  <li>Live updates arrive over a persistent connection with a heartbeat, so the board recovers
+                    automatically from flaky wifi or your laptop sleeping instead of quietly going stale.</li>
+                  <li>Cards sharing a <strong>Group</strong> cluster under a collapsible header; only one card per
+                    group is ever in progress, a <strong>▶</strong> button on the header queues the whole batch, and
+                    the group fires one notification when it finishes instead of one per card.</li>
                   <li><strong>⚙ Settings</strong> (toolbar): default working directory, repos directory, ntfy topic,
                     notification toggles, PR watch. <strong>☀ / ☾</strong> toggles the day/night dojo; night is the
                     default.</li>
@@ -598,6 +619,17 @@ npm start          <span class="c"># → http://localhost:4747</span></code></pr
                       <td>the Sensei approves/rejects against this</td>
                     </tr>
                     <tr>
+                      <td>Group</td>
+                      <td>batch label</td>
+                      <td>clusters related cards under one collapsible header; one card per group runs at a time</td>
+                    </tr>
+                    <tr>
+                      <td>Runs after</td>
+                      <td><code>deps</code> (task ids)</td>
+                      <td>waits in Queued until every listed card is actually done — an open, unmerged PR still
+                        counts as blocking</td>
+                    </tr>
+                    <tr>
                       <td>Repeat</td>
                       <td>schedule</td>
                       <td><code>6h</code> every 6 hours, <code>14:30</code> daily — see <a href="#m-schedule">chapter
@@ -610,6 +642,11 @@ npm start          <span class="c"># → http://localhost:4747</span></code></pr
                     </tr>
                   </tbody>
                 </table>
+                <p>A dependency isn&rsquo;t satisfied by a card just reaching Done — if that card opened a PR that&rsquo;s
+                  still open and unmerged, the dependent keeps waiting; a merged PR, or a card that never opened one,
+                  releases it. The Sensei chains multi-card plans itself (<a href="#m-manager">chapter 06</a>), and
+                  imported cards chain the same way via <code>after:</code>/<code>sequential:</code> (<a
+                    href="#m-import">chapter 07</a>).</p>
                 <p>Skills and agents are auto-discovered at load, no config: personal skills from
                   <code>~/.claude/skills/*/SKILL.md</code>, plugin skills from every enabled plugin (namespaced
                   <code>plugin:skill</code>), agents from <code>~/.claude/agents/*.md</code>. A filter box narrows the
@@ -647,7 +684,8 @@ npm start          <span class="c"># → http://localhost:4747</span></code></pr
                   <code>gh</code>:
                 </p>
                 <ul>
-                  <li><strong>Merged</strong> → the card moves to Done and you get a notification.</li>
+                  <li><strong>Merged</strong> — by you, or by the Sensei itself once every check is green (<a
+                      href="#m-manager">chapter 06</a>) — moves the card to Done and notifies you.</li>
                   <li><strong>Closed without merge</strong> → noted once on the card transcript.</li>
                   <li><strong>Conflicting</strong> → with auto-fix on (default), the board spawns a <strong>fix
                       card</strong>: a fresh agent run inside the original worktree that merges the base branch,
@@ -664,8 +702,28 @@ npm start          <span class="c"># → http://localhost:4747</span></code></pr
                 <h3>The Manager (the Sensei)</h3>
                 <p>An LLM manager — itself a <code>claude -p</code> structured-output call on your subscription — that
                   triages new cards (model/effort/skills/priority routing), dispatches queued work, reviews finished
-                  cards against their acceptance criteria, and answers you in chat (&ldquo;plan the auth refactor into
-                  cards&rdquo;, &ldquo;what&rsquo;s blocking?&rdquo;).</p>
+                  cards against their acceptance criteria and their actual PR diff, chains multi-card plans with
+                  dependencies, and answers you in chat (&ldquo;plan the auth refactor into cards&rdquo;,
+                  &ldquo;what&rsquo;s blocking?&rdquo;).</p>
+                <h4>Review &amp; fix powers</h4>
+                <p>A review card carries its real PR diff into the Sensei&rsquo;s context, not just the agent&rsquo;s
+                  self-report — the diff is what catches ordering, logic, and safety issues a self-report misses.
+                  From there:</p>
+                <ul>
+                  <li><strong>followup_task</strong> resumes the same agent session with a precise, named fix
+                    instead of burning a full retry — reserved for small, specific flaws; <strong>reject_task</strong>
+                    still handles approach-level failures that need a fresh attempt.</li>
+                  <li><strong>merge_pr</strong> ships the card&rsquo;s PR itself once every CI check on it is green
+                    and the base branch is correct, instead of approving and leaving a &ldquo;done&rdquo; card still
+                    blocking its dependents. It skips with a note when checks are red, pending, or haven&rsquo;t
+                    reported yet.</li>
+                  <li>It resolves entries in the <strong>error tracker</strong> (⚠ chip in the header — permission
+                    stops, wrong-base PRs, failed launches) by fixing the operation, not the code, then marking the
+                    entry handled.</li>
+                </ul>
+                <p>Repeated or stale actions are no-ops rather than errors — running a card that&rsquo;s already
+                  running, approving one already done — so a Sensei decision made against a snapshot that&rsquo;s
+                  since changed underneath it can&rsquo;t double-fire a run.</p>
                 <h4>Autonomy ladder (Manager tab)</h4>
                 <table class="doc-table">
                   <thead>
@@ -726,6 +784,8 @@ cwd: /Users/you/project
 model: sonnet
 worktree: true
 openPr: true
+group: auth-refactor
+queue: true
 ---
 
 ## Fix the flaky login test
@@ -736,11 +796,18 @@ The test in auth.spec.ts fails intermittently because…
 ### Acceptance
 - passes 10x in a row
 
-## Update the README badges</code></pre>
+## Update the README badges
+after: Fix the flaky login test</code></pre>
                 <p>Recognized keys (case/space-insensitive): <code>cwd</code> (<code>dir</code>/<code>repo</code>),
                   <code>model</code>, <code>effort</code>, <code>permissions</code>, <code>priority</code> (0–3),
                   <code>worktree</code>, <code>openPr</code> (<code>pr</code>), <code>agent</code>, <code>skills</code>,
-                  <code>acceptance</code>. A card with no body uses its title as the prompt.
+                  <code>acceptance</code>, <code>group</code> (<code>batch</code>), <code>base</code>
+                  (<code>prBaseBranch</code> — for repos whose branch guards reject PRs straight into main),
+                  <code>after</code> (<code>deps</code>/<code>needs</code> — the exact title of an earlier card;
+                  repeat the line for several), <code>sequential</code> (chain every card in the file to the one
+                  above it), and <code>queue</code> (<code>autoqueue</code> — launch every card on import instead of
+                  leaving them in Backlog; chained cards park in Queued and cascade as prerequisites ship). A card
+                  with no body uses its title as the prompt.
                 </p>
                 <p><strong>Checklist</strong> — a file with no <code>##</code> headings: every unchecked
                   <code>- [ ] item</code> becomes a card (checked items are skipped).
@@ -935,7 +1002,8 @@ launchctl unload ~/Library/LaunchAgents/com.kungfu-kanban.plist <span class="c">
                     </tr>
                     <tr>
                       <td><code>settings.json</code></td>
-                      <td>parallel cap, default cwd, ntfy topic, notification toggle, manager config</td>
+                      <td>parallel cap, default cwd, ntfy topic, notification toggle, manager config,
+                        <code>maxRunMinutes</code> hung-agent watchdog (default 120, 0 disables it)</td>
                     </tr>
                     <tr>
                       <td><code>manager.json</code></td>
@@ -983,6 +1051,10 @@ launchctl unload ~/Library/LaunchAgents/com.kungfu-kanban.plist <span class="c">
                   <li><strong>Hitting subscription rate limits</strong> — lower <strong>parallel</strong>, prefer
                     haiku/sonnet + low effort for routine cards, disable the manager interval trigger, or lean on the
                     Sensei&rsquo;s frugality bias (it routes cheap by default).</li>
+                  <li><strong>A card runs forever without finishing</strong> — the watchdog stops it after
+                    <code>maxRunMinutes</code> (default 120) and marks it &ldquo;stopped by watchdog&rdquo; in Review;
+                    tune the value in <code>data/settings.json</code>, or set it to <code>0</code> to disable it for
+                    genuinely long-running cards.</li>
                   <li><strong>Server won&rsquo;t start: &ldquo;Refusing to bind …&rdquo;</strong> — you set
                     <code>HOST</code> without a token. Create <code>data/auth-token</code> (or unset <code>HOST</code>
                     and use Tailscale serve, which works with loopback).
