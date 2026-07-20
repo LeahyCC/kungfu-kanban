@@ -45,6 +45,7 @@ function broadcast(msg) {
   for (const res of sseClients) res.write(data);
 }
 bus.subscribe(broadcast);
+prwatch.backfillMergedAt();
 prwatch.applyInterval();
 setTimeout(() => prwatch.sweep(), 30_000); // first pass shortly after boot
 runner.setOnFinish((task) => {
@@ -364,6 +365,7 @@ app.post('/api/tasks/:id/pr', (req, res) => {
     if (action === 'merge') {
       task.status = 'done';
       task.managerVerdict = 'PR merged';
+      task.prMergedAt = new Date().toISOString();
       note('pr', 'PR merged from the board');
       require('./lib/notify').notify('Kungfu Kanban — PR merged', task.title, task.prUrl);
       runner.pumpQueue(); // the merge may free dependent cards
