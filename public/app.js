@@ -307,7 +307,10 @@ function groupEl(name, colGroupTasks) {
     localStorage.setItem('kk-groups-collapsed', JSON.stringify([...collapsedGroups]));
   };
   head.addEventListener('click', toggle);
-  head.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+  head.addEventListener('keydown', (e) => {
+    if (e.target !== head) return;
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
   const cardsBox = document.createElement('div');
   cardsBox.className = 'card-group-cards';
   for (const t of colGroupTasks) cardsBox.appendChild(cardEl(t));
