@@ -16,6 +16,6 @@
     "test": "node --test --test-concurrency=1"
   },
   "dependencies": {
-    "express": "^4.19.0"
+    "express": "^5.2.1"
   }
 }
