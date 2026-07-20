@@ -7,6 +7,12 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Added
+- Import frontmatter now takes `queue: true` (alias `autoqueue`) to auto-launch
+  every card in the file on import, instead of dropping them in Backlog where
+  nothing picks them up. Chained cards (`after:`/`sequential:`) park in Queued
+  and cascade automatically as their prerequisites ship.
+
 ## [0.13.0] — 2026-07-19
 
 ### Added
