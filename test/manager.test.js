@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const store = require('../lib/store');
-const { executeAction } = require('../lib/manager');
+const { executeAction, suggestionLive } = require('../lib/manager');
 
 // --- executeAction merge_pr gates --------------------------------------
 
@@ -35,4 +35,50 @@ test('merge_pr holds on every unready state and never merges', () => {
 test('merge_pr: an unknown taskId errors without touching state', () => {
   const res = executeAction({ type: 'merge_pr', taskId: 'does-not-exist', reasoning: 'test' });
   assert.ok(res.error);
+});
+
+// --- suggestionLive: a suggestion dies once its target card has moved past
+// the state where approving it would actually do anything ---------------
+
+test('suggestionLive: run_task goes dead once the card has already run', () => {
+  const task = { id: 'ran', status: 'done' };
+  store.state.tasks.push(task);
+  try {
+    const s = { action: { type: 'run_task', taskId: task.id } };
+    assert.equal(suggestionLive(s), false);
+    task.status = 'backlog';
+    assert.equal(suggestionLive(s), true);
+    task.status = 'queued';
+    assert.equal(suggestionLive(s), true);
+  } finally {
+    store.state.tasks.length = store.state.tasks.length - 1;
+  }
+});
+
+test('suggestionLive: review-gated actions die once the card leaves review', () => {
+  const task = { id: 'reviewed', status: 'review' };
+  store.state.tasks.push(task);
+  try {
+    for (const type of ['approve_task', 'reject_task', 'merge_pr', 'followup_task']) {
+      const s = { action: { type, taskId: task.id } };
+      assert.equal(suggestionLive(s), true, type);
+    }
+    task.status = 'done';
+    for (const type of ['approve_task', 'reject_task', 'merge_pr', 'followup_task']) {
+      const s = { action: { type, taskId: task.id } };
+      assert.equal(suggestionLive(s), false, type);
+    }
+  } finally {
+    store.state.tasks.length = store.state.tasks.length - 1;
+  }
+});
+
+test('suggestionLive: a deleted/archived target card is always dead', () => {
+  const s = { action: { type: 'run_task', taskId: 'does-not-exist' } };
+  assert.equal(suggestionLive(s), false);
+});
+
+test('suggestionLive: card-less actions (create_task, resolve_error) are always live', () => {
+  assert.equal(suggestionLive({ action: { type: 'create_task' } }), true);
+  assert.equal(suggestionLive({ action: { type: 'resolve_error', errorId: 'x' } }), true);
 });
