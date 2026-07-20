@@ -273,14 +273,18 @@ app.post('/api/system/update-board', async (req, res) => {
 const skill = require('./lib/skill');
 // Auto-install/refresh at boot — kungfu-todo bakes in this install's absolute
 // paths and port, so a moved clone or changed PORT re-syncs on next start.
-try {
-  const stale = skill.status().filter((s) => !s.current);
-  if (stale.length) {
-    skill.install();
-    console.log(`skills installed/refreshed: ${stale.map((s) => s.name).join(', ')}`);
+// Skipped under KFK_TEST: a scratch/test-spawned server's absolute paths and
+// random port must never overwrite the real installed skill in ~/.claude/skills.
+if (!process.env.KFK_TEST) {
+  try {
+    const stale = skill.status().filter((s) => !s.current);
+    if (stale.length) {
+      skill.install();
+      console.log(`skills installed/refreshed: ${stale.map((s) => s.name).join(', ')}`);
+    }
+  } catch (e) {
+    console.warn('skill auto-install failed:', String(e.message || e));
   }
-} catch (e) {
-  console.warn('skill auto-install failed:', String(e.message || e));
 }
 app.get('/api/skill', (req, res) => res.json({ skills: skill.status() }));
 app.post('/api/skill/install', (req, res) => {

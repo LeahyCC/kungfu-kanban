@@ -29,7 +29,9 @@ function tryBoot(env) {
     const base = `http://127.0.0.1:${port}`;
     const child = spawn(process.execPath, ['server.js'], {
       cwd: ROOT,
-      env: { ...process.env, PORT: String(port), HOST: '127.0.0.1', ...env },
+      // KFK_TEST skips boot-time skill auto-install — this checkout's absolute
+      // paths + random test port must never overwrite ~/.claude/skills/kungfu-todo.
+      env: { ...process.env, PORT: String(port), HOST: '127.0.0.1', KFK_TEST: '1', ...env },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stderr = '';
@@ -150,12 +152,35 @@ describe('lib/schedule', () => {
 
 // --- HTTP contract, unauthenticated board -----------------------------------
 
+// Safety skip: these two describes wipe and rewrite data/. Checked BEFORE
+// anything below ever touches the filesystem — if this checkout's data/
+// already holds a real token or real cards, two servers sharing one data
+// dir would corrupt live state, so refuse instead of guessing.
+const liveDataReason = (() => {
+  try {
+    if (fs.existsSync(path.join(DATA_DIR, 'auth-token'))) return 'data/auth-token already exists';
+    const tasks = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'tasks.json'), 'utf8'));
+    if (Array.isArray(tasks) && tasks.length) return 'data/tasks.json is non-empty';
+  } catch {
+    // no data/ yet, or unreadable — nothing live to protect
+  }
+  return null;
+})();
+
+if (liveDataReason) {
+  test(`server integration suite skipped — ${liveDataReason}; this looks like a live checkout, refusing to wipe data/`, { skip: true }, () => {});
+} else {
+
 describe('HTTP contract (no auth gate)', () => {
   let child, base;
 
   before(async () => {
     wipeData();
     ({ child, base } = await bootServer());
+    // The Sensei is enabled by default with onNewCard triggers — first API
+    // call after boot, before any task-creating test, so a POST /api/tasks
+    // below never fans out into a real `claude -p` invocation.
+    await putJson(base, '/api/manager/config', { enabled: false });
   });
 
   after(async () => {
@@ -291,3 +316,5 @@ describe('auth gate', () => {
     assert.equal(res.status, 200);
   });
 });
+
+}
