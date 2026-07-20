@@ -13,7 +13,7 @@
   "scripts": {
     "start": "node server.js",
     "build:site": "node site/build.js",
-    "test": "node --test"
+    "test": "node --test --test-concurrency=1"
   },
   "dependencies": {
     "express": "^4.19.0"

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kungfu Kanban vs Vibe Kanban, Conductor &amp; Crystal — how it compares</title>
+  <meta name="description"
+    content="How Kungfu Kanban compares to Vibe Kanban, Conductor, and Crystal/Nimbalyst: subscription-only billing, merge-gated dependency chains, an LLM manager that reviews the real PR diff, and a one-dependency footprint.">
+  <link rel="canonical" href="https://kungfu-kanban.com/compare">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="/icons/favicon-16x16.png" type="image/png" sizes="16x16">
+  <link rel="apple-touch-icon" href="/icons/apple-icon-180x180.png">
+  <meta name="theme-color" content="#141210">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Kungfu Kanban">
+  <meta property="og:url" content="https://kungfu-kanban.com/compare">
+  <meta property="og:title" content="Kungfu Kanban vs Vibe Kanban, Conductor &amp; Crystal">
+  <meta property="og:description"
+    content="Subscription-only billing, merge-gated dependency chains, an LLM manager that reads the real PR diff, one npm dependency. How Kungfu Kanban stacks up against the adjacent tools.">
+  <meta property="og:image" content="https://kungfu-kanban.com/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt"
+    content="The Kungfu Kanban cardboard robot beside the words: kanban board for Claude Code agents">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Kungfu Kanban vs Vibe Kanban, Conductor &amp; Crystal">
+  <meta name="twitter:description"
+    content="Subscription-only billing, merge-gated dependency chains, an LLM manager that reads the real PR diff, one npm dependency. How Kungfu Kanban stacks up.">
+  <meta name="twitter:image" content="https://kungfu-kanban.com/og.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Kungfu Kanban", "item": "https://kungfu-kanban.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Compare", "item": "https://kungfu-kanban.com/compare" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Kungfu Kanban the same thing as Vibe Kanban?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "They're the closest thing to direct competitors in this space — both are kanban boards for orchestrating coding agents. The differences: Vibe Kanban runs 10+ agent backends (Claude Code, Codex, Gemini CLI, Copilot, Cursor, and more) with a compiled Rust server and SQLite; Kungfu Kanban runs only the Claude Code CLI, only on your Claude subscription login, as one Express process with plain JSON files."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Kungfu Kanban support Codex, Cursor, or Gemini CLI like Vibe Kanban does?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Kungfu Kanban is Claude Code only, and the runner strips ANTHROPIC_API_KEY from every card's environment so a run can never silently fall back to pay-per-token billing. If you need one board to drive several different agent backends side by side, Vibe Kanban is built for that."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Conductor a kanban board?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Not really. Conductor is a Mac app for running Claude Code, Codex, or Cursor sessions in isolated git-worktree workspaces — one tab per task, with GitHub/Linear as the system of record. There's no backlog/queued/running/review/done flow and no dependency chains between tasks."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Crystal still maintained?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The open-source Crystal project — an MIT-licensed, git-worktree session manager for Claude Code and Codex — was renamed and moved to a proprietary successor, Nimbalyst, in February 2026. The Crystal code still runs but isn't the actively developed version anymore."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does Kungfu Kanban only support one agent?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Because subscription-only billing is the point of the project. Supporting other agent backends would mean supporting their API-key billing paths too — exactly the per-token metering Kungfu Kanban strips out on purpose."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <script>try { if (localStorage.getItem('kk-theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) { }</script>
+  <script>
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording capture_pageview debug getPageViewId captureTraceFeedback captureTraceMetric".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    posthog.init('phc_rC3SRDUYj2yHaEM8RCEby3PcXvdZGcRAhiZrjdj7GpBd', {
+      api_host: 'https://us.i.posthog.com',
+      ui_host: 'https://us.posthog.com',
+      defaults: '2025-05-24',
+      person_profiles: 'identified_only'
+    });
+  </script>
+</head>
+
+<body>
+  <div class="mkt">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="masthead">
+      <div class="mkt-inner">
+        <a href="/#main" class="wordmark">Kungfu Kanban <span class="antenna" aria-hidden="true"></span></a>
+        <nav aria-label="Site">
+          <a href="/#forms">The four forms</a>
+          <a href="/#manual">The manual</a>
+          <a href="/docs">Docs</a>
+          <a href="/compare" aria-current="page">Compare</a>
+          <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer">GitHub</a>
+          <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to day dojo"
+            aria-pressed="false" title="Day / night dojo">☀</button>
+          <a href="/#manual" class="btn ink">Build the dojo</a>
+        </nav>
+      </div>
+      <div class="scroll-progress" aria-hidden="true"><i id="scroll-progress-bar"></i></div>
+    </header>
+
+    <main id="main">
+      <section class="manual-section section-pad" id="compare">
+        <div class="mkt-inner">
+          <h2 class="section-title">How it stacks up.</h2>
+          <p class="manual-sub">
+            The honest version. Three tools people actually put next to Kungfu Kanban when they're
+            deciding how to run coding agents: <strong>Vibe Kanban</strong> (the other kanban board
+            for agents), and <strong>Conductor</strong> / <strong>Crystal</strong> (now
+            <strong>Nimbalyst</strong>) — worktree-per-task session managers people evaluate for the
+            same job. Every claim below is something you can check yourself in each project's docs
+            or repo.
+          </p>
+
+          <div class="manual-grid">
+            <nav class="manual-toc" aria-label="Comparison sections">
+              <a href="#at-a-glance"><b>01</b>At a glance</a>
+              <a href="#vs-vibe-kanban"><b>02</b>vs Vibe Kanban</a>
+              <a href="#vs-conductor"><b>03</b>vs Conductor</a>
+              <a href="#vs-crystal"><b>04</b>vs Crystal / Nimbalyst</a>
+              <a href="#pick"><b>05</b>Which one to pick</a>
+            </nav>
+            <div class="manual-body">
+
+              <div class="chapter" id="at-a-glance">
+                <span class="kicker">§ 01</span>
+                <h3>At a glance</h3>
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th>Thing</th>
+                      <th>Kungfu Kanban</th>
+                      <th>Vibe Kanban</th>
+                      <th>Conductor</th>
+                      <th>Crystal / Nimbalyst</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Interface</td>
+                      <td>Kanban columns: Backlog → Queued → Running → Review → Done</td>
+                      <td>Kanban board</td>
+                      <td>One tab per task workspace</td>
+                      <td>One tab per session</td>
+                    </tr>
+                    <tr>
+                      <td>Agent backends</td>
+                      <td>Claude Code only</td>
+                      <td>10+ (Claude Code, Codex, Gemini CLI, Copilot, Cursor, Amp, OpenCode, and more)</td>
+                      <td>Claude Code, Codex, Cursor</td>
+                      <td>Claude Code, Codex</td>
+                    </tr>
+                    <tr>
+                      <td>Billing</td>
+                      <td>Claude subscription only — <code>ANTHROPIC_API_KEY</code> stripped from every run</td>
+                      <td>whatever the chosen backend bills — API keys for most non-Claude agents</td>
+                      <td>whatever the chosen backend bills</td>
+                      <td>whatever the chosen backend bills</td>
+                    </tr>
+                    <tr>
+                      <td>Task import</td>
+                      <td>Markdown paste/drop, open GitHub issues, LLM drafting</td>
+                      <td>manual card creation</td>
+                      <td>manual workspace creation</td>
+                      <td>manual session creation</td>
+                    </tr>
+                    <tr>
+                      <td>Dependencies</td>
+                      <td>&ldquo;Runs after&rdquo; chains gated on the PR actually being merged, not just card
+                        status</td>
+                      <td>board can filter to unblocked work</td>
+                      <td>no queue/dependency model — each workspace stands alone</td>
+                      <td>no queue/dependency model — each session stands alone</td>
+                    </tr>
+                    <tr>
+                      <td>Reviewer</td>
+                      <td>LLM manager (the Sensei) reads the real PR diff, merges green PRs itself within its
+                        autonomy setting, sends targeted follow-ups instead of blind retries</td>
+                      <td>you review diffs and leave inline comments in the UI</td>
+                      <td>you review via GitHub/Linear; the agent can respond to review comments</td>
+                      <td>you review diffs in-app</td>
+                    </tr>
+                    <tr>
+                      <td>Data</td>
+                      <td>plain JSON files in <code>data/</code>, nothing else</td>
+                      <td>SQLite database managed by a compiled Rust server</td>
+                      <td>GitHub/Linear as system of record</td>
+                      <td>local SQLite (Electron)</td>
+                    </tr>
+                    <tr>
+                      <td>Install footprint</td>
+                      <td>one npm dependency (<code>express</code>)</td>
+                      <td>compiled Rust binary + SQLite + React, shipped via <code>npx</code></td>
+                      <td>native Mac app</td>
+                      <td>Electron app</td>
+                    </tr>
+                    <tr>
+                      <td>License / status</td>
+                      <td>MIT, self-hosted, free</td>
+                      <td>MIT — sunsetting as a company product, continuing community-maintained</td>
+                      <td>free today; Series A-funded company, paid collaboration features planned</td>
+                      <td>MIT, but development moved to a proprietary successor (Nimbalyst)</td>
+                    </tr>
+                    <tr>
+                      <td>Phone access</td>
+                      <td>token gate + Tailscale serve, installs as a PWA</td>
+                      <td>not part of the product</td>
+                      <td>Mac only</td>
+                      <td>desktop only</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="note">Nothing here is a knock — Vibe Kanban, Conductor, and Crystal all solve real
+                  problems well. They're just solving a different one than Kungfu Kanban is: running any agent
+                  fast, versus running one agent on a bill you already pay.</div>
+              </div>
+
+              <div class="chapter" id="vs-vibe-kanban">
+                <span class="kicker">§ 02</span>
+                <h3>vs Vibe Kanban</h3>
+                <p>Vibe Kanban is the closest thing to a direct competitor: an open-source kanban board
+                  (BloopAI) purpose-built for orchestrating coding agents, with real strengths Kungfu Kanban
+                  doesn't have — 10+ supported agent backends (Claude Code, Codex, Gemini CLI, GitHub Copilot,
+                  Cursor, Amp, OpenCode, and more), an in-app browser preview with devtools and device
+                  emulation, and virtualized diff review built for large changesets. If you want one board to
+                  run several different coding agents side by side, it's the better fit.</p>
+                <p>The split is billing and footprint. Vibe Kanban's cost model follows whichever backend a
+                  card uses — plenty of those bill per API token. Kungfu Kanban only drives the Claude Code
+                  CLI, and the runner deletes <code>ANTHROPIC_API_KEY</code> from every card's environment so
+                  a run can never quietly fall back to pay-per-token; everything runs against your existing
+                  Claude subscription. Vibe Kanban ships a compiled Rust server plus a SQLite database via
+                  <code>npx</code>; Kungfu Kanban is one Express process with one dependency and plain JSON
+                  files you can read with a text editor. And where Vibe Kanban's review step is a human reading
+                  diffs in the UI, Kungfu Kanban's Sensei is an LLM manager that reads the actual PR diff itself
+                  and can merge it when every CI check is green, within whatever autonomy level you've set.</p>
+                <p>Worth knowing: Vibe Kanban is sunsetting as a company product and continuing as
+                  community-maintained open source — a fact worth weighing if roadmap continuity matters to
+                  you.</p>
+              </div>
+
+              <div class="chapter" id="vs-conductor">
+                <span class="kicker">§ 03</span>
+                <h3>vs Conductor</h3>
+                <p>Conductor is a well-built Mac app for running Claude Code, Codex, or Cursor in parallel:
+                  every new task gets its own git-worktree workspace, its own branch, its own agent, and
+                  connects with GitHub and Linear so the agent can open PRs, read diffs, comment, and respond
+                  to review feedback. If your team already lives in GitHub/Linear and wants a slick native Mac
+                  experience, that's a genuine strength.</p>
+                <p>It isn't a kanban board, though — there's no backlog/queued/running/review/done flow, no
+                  markdown or GitHub-issue import, and no dependency chains between tasks the way &ldquo;Runs
+                  after&rdquo; works in Kungfu Kanban. It's also a funded company product (a $22M Series A as of
+                  mid-2026) that's free today with paid collaboration features on the roadmap, versus Kungfu
+                  Kanban's MIT license and plain-JSON local state with nothing to migrate if a company changes
+                  direction.</p>
+              </div>
+
+              <div class="chapter" id="vs-crystal">
+                <span class="kicker">§ 04</span>
+                <h3>vs Crystal / Nimbalyst</h3>
+                <p>Crystal (MIT-licensed, Electron) runs multiple Claude Code or Codex sessions in parallel
+                  git worktrees, with session persistence, diff/change tracking, and desktop notifications — a
+                  clean way to compare a few approaches to the same task side by side. As of February 2026 the
+                  project was renamed and its active development moved to a proprietary successor, Nimbalyst;
+                  the original Crystal code still runs but isn't the maintained version going forward.</p>
+                <p>Like Conductor, it's a session manager rather than a task board: one tab per session, no
+                  queue, no dependency chains, no markdown/issue import, no manager reviewing and merging work
+                  on your behalf. Kungfu Kanban's Sensei, merge-gated dependency chains, and scheduled/recurring
+                  cards don't have an equivalent here.</p>
+              </div>
+
+              <div class="chapter" id="pick">
+                <span class="kicker">§ 05</span>
+                <h3>Which one to pick</h3>
+                <ul>
+                  <li><strong>Vibe Kanban</strong> — you want one board driving several different agent
+                    backends, not just Claude Code, and you're fine with each backend's own billing.</li>
+                  <li><strong>Conductor</strong> — you're on a Mac, you want tight GitHub/Linear integration,
+                    and a workspace-per-task tab layout suits how your team already works.</li>
+                  <li><strong>Crystal / Nimbalyst</strong> — you mainly want to run a few parallel attempts at
+                    the same task and compare them, not manage an ongoing backlog.</li>
+                  <li><strong>Kungfu Kanban</strong> — you want everything to run on the Claude subscription
+                    you already pay for with no separate API bill possible, a queue that imports from markdown
+                    or GitHub issues, dependency chains gated on real merges, and a manager that reads the
+                    actual diff before it ships anything — all as one Express server and a folder of JSON you
+                    fully own.</li>
+                </ul>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="colophon">
+        <div class="mkt-inner">
+          <div class="colophon-grid">
+            <div>
+              <b>The dojo</b>
+              <a href="/#forms">The four forms</a>
+              <a href="/#features">The discipline</a>
+              <a href="/#manual">The manual</a>
+              <a href="/docs">Docs</a>
+              <a href="/compare">Compare</a>
+            </div>
+            <div>
+              <b>Source</b>
+              <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer">GitHub</a>
+              <a href="https://github.com/LeahyCC/kungfu-kanban#readme" target="_blank" rel="noreferrer">README</a>
+              <a href="https://github.com/LeahyCC/kungfu-kanban/issues" target="_blank" rel="noreferrer">Issues</a>
+            </div>
+            <div>
+              <b>Colophon</b>
+              <span style="color: var(--ink-400)">© 2026 Kungfu Kanban</span>
+            </div>
+          </div>
+          <div class="colophon-bow">
+            <img src="/icons/android-icon-48x48.png" alt="" width="48" height="48">
+            <p>
+              Set in Bricolage Grotesque, Instrument Sans &amp; IBM Plex Mono.
+              Ink, paper, and one cardboard master. No stock photos. No accounts. No billing.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var btn = document.getElementById('theme-toggle');
+      var themeMeta = document.querySelector('meta[name="theme-color"]');
+      function render() {
+        var light = document.documentElement.dataset.theme === 'light';
+        btn.textContent = light ? '☾' : '☀';
+        btn.title = light ? 'Night dojo' : 'Day dojo';
+        btn.setAttribute('aria-label', light ? 'Switch to night dojo' : 'Switch to day dojo');
+        btn.setAttribute('aria-pressed', String(light));
+        if (themeMeta) themeMeta.content = light ? '#F6F2E9' : '#141210';
+      }
+      btn.addEventListener('click', function () {
+        var next = !(document.documentElement.dataset.theme === 'light');
+        if (next) document.documentElement.dataset.theme = 'light';
+        else delete document.documentElement.dataset.theme;
+        try { localStorage.setItem('kk-theme', next ? 'light' : 'dark'); } catch (e) { }
+        render();
+      });
+      render();
+    })();
+
+    (function () {
+      var bar = document.getElementById('scroll-progress-bar');
+      if (!bar) return;
+      var ticking = false;
+      function update() {
+        ticking = false;
+        var doc = document.documentElement;
+        var max = doc.scrollHeight - window.innerHeight;
+        bar.style.transform = 'scaleX(' + (max > 0 ? Math.min(1, window.scrollY / max) : 0) + ')';
+      }
+      window.addEventListener('scroll', function () {
+        if (!ticking) { ticking = true; requestAnimationFrame(update); }
+      }, { passive: true });
+      window.addEventListener('resize', update);
+      update();
+    })();
+
+    (function () {
+      var links = Array.prototype.slice.call(document.querySelectorAll('.manual-toc a[href^="#"]'));
+      var chapters = links
+        .map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); })
+        .filter(Boolean);
+      if (!chapters.length) return;
+      var byId = {};
+      links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+      function activate(id) {
+        links.forEach(function (a) {
+          var on = a === byId[id];
+          a.classList.toggle('active', on);
+          if (on) a.setAttribute('aria-current', 'true');
+          else a.removeAttribute('aria-current');
+        });
+      }
+      var section = document.getElementById('compare');
+      function spy() {
+        spyTicking = false;
+        var line = window.innerHeight / 3;
+        var r = section.getBoundingClientRect();
+        if (r.top > line || r.bottom < 0) { activate(null); return; }
+        var current = chapters[0];
+        for (var i = 0; i < chapters.length; i++) {
+          if (chapters[i].getBoundingClientRect().top <= line) current = chapters[i];
+        }
+        activate(current.id);
+      }
+      var spyTicking = false;
+      window.addEventListener('scroll', function () {
+        if (!spyTicking) { spyTicking = true; requestAnimationFrame(spy); }
+      }, { passive: true });
+      window.addEventListener('resize', spy);
+      spy();
+    })();
+  </script>
+</body>
+
+</html>
