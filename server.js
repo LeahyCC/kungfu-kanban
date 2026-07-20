@@ -465,6 +465,9 @@ app.patch('/api/tasks/:id', (req, res) => {
     // Only allow no-op / status moves are blocked while running
     return res.status(409).json({ error: 'task is running' });
   }
+  if ('status' in req.body && (req.body.status === 'running' || req.body.status === 'stopping')) {
+    return res.status(400).json({ error: 'status cannot be set directly to running/stopping' });
+  }
   if ('deps' in req.body) {
     const clean = depsLib.sanitize(req.body.deps, task.id);
     if (depsLib.wouldCycle(task.id, clean)) {
@@ -474,7 +477,11 @@ app.patch('/api/tasks/:id', (req, res) => {
     delete task.depsUnresolved;
   }
   for (const f of TASK_FIELDS) {
-    if (f in req.body) task[f] = req.body[f];
+    if (!(f in req.body)) continue;
+    if (f === 'title') task.title = (req.body.title || 'Untitled task').slice(0, 200);
+    else if (f === 'priority') task.priority = Number.isInteger(req.body.priority) ? req.body.priority : 0;
+    else if (f === 'skills') task.skills = Array.isArray(req.body.skills) ? req.body.skills : [];
+    else task[f] = req.body[f];
   }
   if ('schedule' in req.body) task.schedule = parseSchedule(req.body.schedule);
   if (!STATUSES.includes(task.status)) task.status = 'backlog';
@@ -509,7 +516,9 @@ app.post('/api/tasks/:id/run', (req, res) => {
 });
 
 app.post('/api/tasks/:id/stop', (req, res) => {
-  res.json(runner.stopTask(req.params.id));
+  const out = runner.stopTask(req.params.id);
+  if (out.error) return res.status(409).json(out);
+  res.json(out);
 });
 
 // Follow-up prompt: resume the card's session with extra instructions.
@@ -524,12 +533,22 @@ app.post('/api/tasks/:id/followup', (req, res) => {
 // --- Manager ---
 app.get('/api/manager', (req, res) => res.json(manager.publicState()));
 
+const MANAGER_MODELS = ['default', 'fable', 'opus', 'sonnet', 'haiku'];
+const MANAGER_EFFORTS = ['default', 'low', 'medium', 'high', 'xhigh', 'max'];
+const MANAGER_AUTONOMY = ['suggest', 'semi', 'auto'];
+const MANAGER_PERM_CEILINGS = ['plan', 'acceptEdits', 'auto', 'dontAsk', 'bypassPermissions'];
+
 app.put('/api/manager/config', (req, res) => {
   const c = manager.config();
   const b = req.body || {};
-  for (const f of ['enabled', 'model', 'effort', 'autonomy', 'stylePrompt', 'maxLaunchesPerHour', 'maxRetries', 'permissionCeiling']) {
-    if (f in b) c[f] = b[f];
-  }
+  if ('enabled' in b) c.enabled = !!b.enabled;
+  if ('model' in b && MANAGER_MODELS.includes(b.model)) c.model = b.model;
+  if ('effort' in b && MANAGER_EFFORTS.includes(b.effort)) c.effort = b.effort;
+  if ('autonomy' in b && MANAGER_AUTONOMY.includes(b.autonomy)) c.autonomy = b.autonomy;
+  if ('stylePrompt' in b) c.stylePrompt = String(b.stylePrompt || '');
+  if ('maxLaunchesPerHour' in b && Number.isInteger(b.maxLaunchesPerHour)) c.maxLaunchesPerHour = Math.max(0, b.maxLaunchesPerHour);
+  if ('maxRetries' in b && Number.isInteger(b.maxRetries)) c.maxRetries = Math.max(0, b.maxRetries);
+  if ('permissionCeiling' in b && MANAGER_PERM_CEILINGS.includes(b.permissionCeiling)) c.permissionCeiling = b.permissionCeiling;
   if (b.triggers) c.triggers = { ...c.triggers, ...b.triggers };
   save();
   manager.applyInterval();
