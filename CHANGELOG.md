@@ -7,11 +7,15 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
-### Tests
-- Split the parser smoke test into per-module suites under `test/` with
-  decision-table coverage of the importer, deps, models, cooldown, prwatch,
-  runner, errlog, auth, and skill install/status logic.
-
+### Added
+- `test/server.integration.test.js` boots the real server as a child process
+  to cover route-level regressions unit tests miss: validation coercions,
+  the auth gate, and status-code contracts. `parseSchedule`/`scheduleDue`
+  moved to `lib/schedule.js` so they're directly unit-testable. Every
+  spawned server gets its own `KFK_DATA_DIR` (a fresh temp directory), an
+  env override honored by `lib/store.js` and everything that derives its
+  data paths from it, so the integration suite never touches this
+  checkout's real `data/`.
 - README: badge row (CI, latest release, MIT license), hero image slot, and a
   tighter positioning paragraph up top for people landing cold.
 - The humanizer skill (MIT, vendored at `skills/humanizer/SKILL.md`) now ships
@@ -33,6 +37,11 @@ compares your clone against `origin/main` and offers a one-click update.
   Crystal/Nimbalyst) and `/docs` (linkable reference sections — import
   format, the Sensei's actions/autonomy, dependency/merge-gate semantics,
   groups & lanes), wired into nav, sitemap, and structured data.
+
+### Tests
+- Split the parser smoke test into per-module suites under `test/` with
+  decision-table coverage of the importer, deps, models, cooldown, prwatch,
+  runner, errlog, auth, and skill install/status logic.
 
 ## [1.0.0] — 2026-07-20
 

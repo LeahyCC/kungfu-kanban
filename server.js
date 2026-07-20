@@ -273,14 +273,18 @@ app.post('/api/system/update-board', async (req, res) => {
 const skill = require('./lib/skill');
 // Auto-install/refresh at boot — kungfu-todo bakes in this install's absolute
 // paths and port, so a moved clone or changed PORT re-syncs on next start.
-try {
-  const stale = skill.status().filter((s) => !s.current);
-  if (stale.length) {
-    skill.install();
-    console.log(`skills installed/refreshed: ${stale.map((s) => s.name).join(', ')}`);
+// Skipped under KFK_TEST: a scratch/test-spawned server's absolute paths and
+// random port must never overwrite the real installed skill in ~/.claude/skills.
+if (!process.env.KFK_TEST) {
+  try {
+    const stale = skill.status().filter((s) => !s.current);
+    if (stale.length) {
+      skill.install();
+      console.log(`skills installed/refreshed: ${stale.map((s) => s.name).join(', ')}`);
+    }
+  } catch (e) {
+    console.warn('skill auto-install failed:', String(e.message || e));
   }
-} catch (e) {
-  console.warn('skill auto-install failed:', String(e.message || e));
 }
 app.get('/api/skill', (req, res) => res.json({ skills: skill.status() }));
 app.post('/api/skill/install', (req, res) => {
@@ -392,30 +396,7 @@ const TASK_FIELDS = [
 ];
 const STATUSES = ['backlog', 'queued', 'running', 'stopping', 'review', 'done'];
 
-// A card's optional `schedule` is either a repeating interval in hours or a
-// daily HH:MM time. The client sends a freeform "repeat" string ("6h", "14:30");
-// we normalize it to an object (or null). Passing an already-normalized object
-// back through is idempotent so re-saves don't lose the parse or `lastFired`.
-function parseSchedule(raw) {
-  if (!raw) return null;
-  if (typeof raw === 'object') return raw.kind ? raw : null;
-  const s = String(raw).trim();
-  if (!s) return null;
-  const daily = s.match(/^(\d{1,2}):(\d{2})$/);
-  if (daily) {
-    const h = +daily[1];
-    const m = +daily[2];
-    if (h > 23 || m > 59) return null;
-    const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    return { kind: 'daily', time, lastFired: null };
-  }
-  const interval = s.match(/^(\d+(?:\.\d+)?)\s*h?$/i);
-  if (interval) {
-    const hours = parseFloat(interval[1]);
-    if (hours > 0) return { kind: 'interval', hours, lastFired: null };
-  }
-  return null;
-}
+const { parseSchedule, scheduleDue } = require('./lib/schedule');
 
 function makeTask(b, createdBy = 'user') {
   return {
@@ -587,29 +568,6 @@ app.post('/api/manager/clear', (req, res) => {
 // one-shot card (no schedule of its own) and launch it via runner.startTask,
 // which respects the maxConcurrent queue — the clone flows through the board
 // like any other card while the original stays put in Backlog.
-function localDay(d) {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
-
-function scheduleDue(task, now) {
-  const sc = task.schedule;
-  if (!sc) return false;
-  if (sc.kind === 'interval') {
-    const last = sc.lastFired ? new Date(sc.lastFired) : new Date(task.createdAt);
-    return now - last >= sc.hours * 3600 * 1000;
-  }
-  if (sc.kind === 'daily') {
-    // Due once the target time has passed today — not only in the exact
-    // minute — so a sleeping laptop catches up on wake instead of skipping.
-    const [h, m] = sc.time.split(':').map(Number);
-    const target = new Date(now);
-    target.setHours(h, m, 0, 0);
-    if (now < target) return false;
-    return !sc.lastFired || localDay(new Date(sc.lastFired)) !== localDay(now);
-  }
-  return false;
-}
-
 function checkSchedules() {
   const now = new Date();
   for (const task of state.tasks) {
