@@ -7,6 +7,12 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Added
+- Import frontmatter now takes `queue: true` (alias `autoqueue`) to auto-launch
+  every card in the file on import, instead of dropping them in Backlog where
+  nothing picks them up. Chained cards (`after:`/`sequential:`) park in Queued
+  and cascade automatically as their prerequisites ship.
+
 ### Fixed
 - PR-watch conflict fixer no longer spawns against an already-resolved PR: the
   sweep re-checks state/mergeable right before creating the fix card, and the
