@@ -1400,6 +1400,7 @@ document.addEventListener('keydown', (e) => {
     else if (!$('#importBackdrop').classList.contains('hidden')) { e.preventDefault(); closeImportModal(); }
     else if (!$('#settingsBackdrop').classList.contains('hidden')) { e.preventDefault(); closeSettings(); }
     else if (!$('#errorsBackdrop').classList.contains('hidden')) { e.preventDefault(); closeErrors(); }
+    else if (!$('#attnBackdrop').classList.contains('hidden')) { e.preventDefault(); closeAttn(); }
     else if (!$('#drawer').classList.contains('hidden')) { e.preventDefault(); closeDrawer(); }
     return;
   }
@@ -1500,34 +1501,7 @@ function renderManager() {
   const sug = $('#mgrSuggestions');
   sug.innerHTML = '';
   if (!mgrState.suggestions.length) sug.innerHTML = '<div class="empty-col">nothing pending</div>';
-  for (const s of mgrState.suggestions) {
-    const div = document.createElement('div');
-    div.className = 'suggestion';
-    const head = document.createElement('div');
-    head.className = 'sugg-head';
-    head.textContent = describeAction(s.action) + (s.guard ? ` ⚠️ ${s.guard}` : '');
-    const why = document.createElement('div');
-    why.className = 'sugg-why';
-    why.textContent = s.action.reasoning || '';
-    const actions = document.createElement('div');
-    actions.className = 'sugg-actions';
-    const ok = document.createElement('button');
-    ok.className = 'primary';
-    ok.textContent = '✓ Approve';
-    const no = document.createElement('button');
-    no.className = 'danger';
-    no.textContent = '✗ Reject';
-    const decide = async (approve) => {
-      ok.disabled = no.disabled = true;
-      await api(`/api/manager/suggestions/${s.id}`, { method: 'POST', body: { approve } });
-      await Promise.all([loadManager(), approve ? loadTasks() : Promise.resolve()]);
-    };
-    ok.addEventListener('click', () => decide(true));
-    no.addEventListener('click', () => decide(false));
-    actions.append(ok, no);
-    div.append(head, why, actions);
-    sug.appendChild(div);
-  }
+  for (const s of mgrState.suggestions) sug.appendChild(suggestionCard(s));
   const pill = $('#suggCount');
   pill.textContent = mgrState.suggestions.length;
   pill.classList.toggle('hidden', !mgrState.suggestions.length);
@@ -1541,6 +1515,38 @@ function renderManager() {
     div.textContent = `${fmtLogTs(e.ts)} · ${e.kind} · ${e.text}`;
     logBox.appendChild(div);
   }
+
+  renderAttn();
+}
+
+// shared by the "Pending suggestions" panel and the attention popup
+function suggestionCard(s) {
+  const div = document.createElement('div');
+  div.className = 'suggestion';
+  const head = document.createElement('div');
+  head.className = 'sugg-head';
+  head.textContent = describeAction(s.action) + (s.guard ? ` ⚠️ ${s.guard}` : '');
+  const why = document.createElement('div');
+  why.className = 'sugg-why';
+  why.textContent = s.action.reasoning || '';
+  const actions = document.createElement('div');
+  actions.className = 'sugg-actions';
+  const ok = document.createElement('button');
+  ok.className = 'primary';
+  ok.textContent = '✓ Approve';
+  const no = document.createElement('button');
+  no.className = 'danger';
+  no.textContent = '✗ Reject';
+  const decide = async (approve) => {
+    ok.disabled = no.disabled = true;
+    await api(`/api/manager/suggestions/${s.id}`, { method: 'POST', body: { approve } });
+    await Promise.all([loadManager(), approve ? loadTasks() : Promise.resolve()]);
+  };
+  ok.addEventListener('click', () => decide(true));
+  no.addEventListener('click', () => decide(false));
+  actions.append(ok, no);
+  div.append(head, why, actions);
+  return div;
 }
 
 // log timestamps: time-of-day today, date + time otherwise (no ambiguity after midnight)
@@ -1743,6 +1749,83 @@ $('#errAskSenseiBtn').addEventListener('click', (e) => withBusy(e.target, async 
   showTab('manager');
 }));
 
+// ---------- attention popup (Sensei suggestions + permission-blocked cards) ----------
+// non-nagging: only auto-opens on the 0→N transition, mirroring errChip
+let attnDismissed = false;
+let attnPrevCount = 0;
+let attnReturnFocus = null;
+
+function attnBlocked() {
+  return tasks.filter((t) => t.permissionBlocked && t.status === 'review');
+}
+
+function blockedCard(t) {
+  const div = document.createElement('div');
+  div.className = 'suggestion';
+  const head = document.createElement('div');
+  head.className = 'sugg-head';
+  head.textContent = `Permission-blocked: "${t.title}"`;
+  const why = document.createElement('div');
+  why.className = 'sugg-why';
+  why.textContent = (t.permissionBlocked || []).join(', ');
+  const actions = document.createElement('div');
+  actions.className = 'sugg-actions';
+  const open = document.createElement('button');
+  open.className = 'ghost';
+  open.textContent = 'Open card';
+  open.addEventListener('click', () => { closeAttn(); openDrawer(t.id); });
+  actions.append(open);
+  div.append(head, why, actions);
+  return div;
+}
+
+function renderAttn() {
+  const sugg = (mgrState && mgrState.suggestions) || [];
+  const blocked = attnBlocked();
+  const count = sugg.length + blocked.length;
+
+  $('#attnChipText').textContent = count;
+  $('#attnChip').classList.toggle('hidden', !count);
+
+  const box = $('#attnList');
+  box.innerHTML = '';
+  if (!count) box.innerHTML = '<div class="empty-col">nothing needs you — the dojo is at peace 🧘</div>';
+  else {
+    for (const s of sugg) box.appendChild(suggestionCard(s));
+    for (const t of blocked) box.appendChild(blockedCard(t));
+  }
+
+  if (count > 0 && attnPrevCount === 0 && !attnDismissed) openAttn();
+  if (count === 0) attnDismissed = false;
+  attnPrevCount = count;
+}
+
+function openAttn() {
+  attnReturnFocus = document.activeElement;
+  $('#attnBackdrop').classList.remove('hidden');
+}
+function closeAttn() {
+  $('#attnBackdrop').classList.add('hidden');
+  attnDismissed = true;
+  if (attnReturnFocus) { try { attnReturnFocus.focus(); } catch {} attnReturnFocus = null; }
+}
+
+$('#attnChip').addEventListener('click', openAttn);
+$('#attnCloseBtn').addEventListener('click', closeAttn);
+$('#attnBackdrop').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeAttn();
+});
+$('#attnApproveAllBtn').addEventListener('click', (e) => withBusy(e.target, async () => {
+  const sugg = (mgrState && mgrState.suggestions) || [];
+  await Promise.all(sugg.map((s) => api(`/api/manager/suggestions/${s.id}`, { method: 'POST', body: { approve: true } })));
+  await Promise.all([loadManager(), loadTasks()]);
+}));
+$('#attnRejectAllBtn').addEventListener('click', (e) => withBusy(e.target, async () => {
+  const sugg = (mgrState && mgrState.suggestions) || [];
+  await Promise.all(sugg.map((s) => api(`/api/manager/suggestions/${s.id}`, { method: 'POST', body: { approve: false } })));
+  await loadManager();
+}));
+
 // ---------- live updates ----------
 const es = new EventSource('/api/events');
 // EventSource reconnects on its own; surface the gap so a stale board is
@@ -1797,6 +1880,8 @@ es.onmessage = (msg) => {
     const i = tasks.findIndex((t) => t.id === evt.task.id);
     if (i >= 0) tasks[i] = evt.task; else tasks.unshift(evt.task);
     render();
+    renderAttn(); // reflect permission-blocked status now; loadManager() below re-syncs pruned suggestions
+    loadManager();
     if (drawerId === evt.task.id) {
       renderDrawerMeta(evt.task);
       renderDrawerActions(evt.task);
@@ -1806,6 +1891,8 @@ es.onmessage = (msg) => {
   } else if (evt.type === 'deleted') {
     tasks = tasks.filter((t) => t.id !== evt.taskId);
     render();
+    renderAttn();
+    loadManager();
     if (drawerId === evt.taskId) closeDrawer(true);
   } else if (evt.type === 'output' && drawerId === evt.taskId) {
     const box = $('#transcript');
@@ -2011,6 +2098,7 @@ function bootError(msg) {
   renderHealth();
   renderUsage();
   loadErrors();
+  loadManager();
 })();
 
 // minimal service worker: makes "add to home screen" a real PWA (cached shell
