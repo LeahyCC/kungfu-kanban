@@ -509,7 +509,12 @@ button, .btn {
   position: relative;
   z-index: 1;
 }
-@media (max-width: 520px) { .fig-caption { white-space: normal; max-width: 240px; } }
+@media (max-width: 520px) {
+  .fig-caption { white-space: normal; max-width: 240px; }
+  /* side-by-side CTAs squeeze into two-line buttons here — stack them instead */
+  .hero-ctas { flex-direction: column; align-items: stretch; }
+  .hero-ctas .btn { text-align: center; }
+}
 
 /* the four forms */
 .forms-section { border-bottom: 2px solid var(--rule-strong); }
@@ -645,7 +650,9 @@ button, .btn {
   align-items: start;
 }
 @media (max-width: 900px) {
-  .manual-grid { grid-template-columns: 1fr; gap: 8px; }
+  /* minmax(0,…): a bare 1fr's auto minimum lets wide <pre>/<table> content
+     blow the track past the viewport and sideways-scroll the whole page */
+  .manual-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 }
 .manual-toc {
   position: sticky;
@@ -824,7 +831,16 @@ pre code { background: none; border: none; padding: 0; white-space: pre; font-si
 }
 @media (max-width: 640px) {
   .masthead nav a:not(.btn) { display: none; }
+  /* keep "Build the dojo" on one line: the row only fits if everything slims down */
+  .masthead .wordmark { font-size: 18px; }
+  .masthead nav { gap: 12px; }
+  .masthead nav .btn { white-space: nowrap; padding: 8px 14px; font-size: 0.875rem; }
   /* long inline commands must wrap, not push the page sideways */
   p code, li code, td code { white-space: normal; overflow-wrap: anywhere; }
   .doc-table { display: block; overflow-x: auto; }
+}
+@media (max-width: 360px) {
+  .masthead .wordmark { font-size: 16px; }
+  .masthead .wordmark .antenna { display: none; }
+  .masthead nav .btn { padding: 8px 10px; }
 }
