@@ -9,6 +9,8 @@ compares your clone against `origin/main` and offers a one-click update.
 
 - Open-source contribution gating: CODEOWNERS, dependabot, contributor docs.
 - docs: humanizer pass
+- Release tags + GitHub Releases published (v0.13.0–v1.0.0 backfilled), and
+  required for future releases.
 
 ## [1.0.0] — 2026-07-20
 
