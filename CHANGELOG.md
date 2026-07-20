@@ -7,7 +7,9 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
-### Added — ponytail ships with the board (v0.12.0)
+## [0.12.0] — 2026-07-19
+
+### Added — ponytail ships with the board
 - The [ponytail](https://github.com/DietrichGebert/ponytail) skill (MIT,
   vendored at `skills/ponytail/SKILL.md`) now installs to `~/.claude/skills`
   automatically at boot alongside kungfu-todo — every board gets the
