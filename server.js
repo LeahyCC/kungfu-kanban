@@ -4,7 +4,7 @@ const path = require('path');
 const { execFile } = require('child_process');
 const { discoverSkills, discoverAgents, discoverRepos } = require('./lib/discovery');
 const os = require('os');
-const { state, save, getTask, readTranscript, clearTranscript, sweepArchive } = require('./lib/store');
+const { state, save, flush, getTask, readTranscript, clearTranscript, sweepArchive } = require('./lib/store');
 const runner = require('./lib/runner');
 const manager = require('./lib/manager');
 const auth = require('./lib/auth');
@@ -14,6 +14,7 @@ const cooldown = require('./lib/cooldown');
 const models = require('./lib/models');
 const depsLib = require('./lib/deps');
 const errlog = require('./lib/errlog');
+const bus = require('./lib/bus');
 
 const PORT = process.env.PORT || 4747;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -43,14 +44,9 @@ function broadcast(msg) {
   const data = `data: ${JSON.stringify(msg)}\n\n`;
   for (const res of sseClients) res.write(data);
 }
-runner.setBroadcaster(broadcast);
-manager.setBroadcaster(broadcast);
-importer.setBroadcaster(broadcast);
-prwatch.setBroadcaster(broadcast);
+bus.subscribe(broadcast);
+prwatch.backfillMergedAt();
 prwatch.applyInterval();
-cooldown.setBroadcaster(broadcast);
-models.setBroadcaster(broadcast);
-errlog.setBroadcaster(broadcast);
 setTimeout(() => prwatch.sweep(), 30_000); // first pass shortly after boot
 runner.setOnFinish((task) => {
   // A card that just opened/updated a PR: sweep once after CI has had a couple
@@ -369,6 +365,7 @@ app.post('/api/tasks/:id/pr', (req, res) => {
     if (action === 'merge') {
       task.status = 'done';
       task.managerVerdict = 'PR merged';
+      task.prMergedAt = new Date().toISOString();
       note('pr', 'PR merged from the board');
       require('./lib/notify').notify('Kungfu Kanban — PR merged', task.title, task.prUrl);
       runner.pumpQueue(); // the merge may free dependent cards
@@ -643,6 +640,19 @@ if (HOST !== '127.0.0.1' && HOST !== 'localhost' && !auth.getToken()) {
   );
   process.exit(1);
 }
+
+// launchd's kickstart sends SIGTERM; a bare Ctrl-C sends SIGINT. Neither used
+// to be handled, so a restart while cards were running just yanked the rug:
+// children orphaned, and the debounced save could lose the final write. Now
+// we stop every running child, mark its card honestly, and flush synchronously
+// before exiting — a restart is safe even with cards in flight.
+function shutdown() {
+  runner.stopAll();
+  flush();
+  process.exit(0);
+}
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 app.listen(PORT, HOST, () => {
   console.log(`kungfu-kanban running at http://localhost:${PORT}`);
