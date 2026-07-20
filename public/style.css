@@ -152,7 +152,7 @@ h1, h2, h3 {
 /* toasts: non-blocking error/status messages */
 #toasts {
   position: fixed;
-  bottom: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -461,12 +461,12 @@ input.tiny { width: 60px; }
   position: sticky;
   top: 0;
   z-index: 40;
-  height: 56px;
+  height: calc(56px + env(safe-area-inset-top));
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 0 20px;
+  padding: env(safe-area-inset-top) 20px 0;
   background: var(--paper-0);
   border-bottom: 1px solid var(--rule-strong);
 }
@@ -1188,7 +1188,7 @@ a.err-card:hover { text-decoration: underline; }
   z-index: 60;
   display: flex;
   flex-direction: column;
-  padding: 18px 20px;
+  padding: 18px 20px calc(18px + env(safe-area-inset-bottom));
   animation: drawerin 200ms var(--ease) both;
 }
 @keyframes drawerin { from { transform: translateX(24px); opacity: 0; } }
