@@ -35,6 +35,10 @@ app.get('/api/events', (req, res) => {
   req.on('close', () => sseClients.delete(res));
 });
 
+setInterval(() => {
+  for (const res of sseClients) res.write(': ping\n\n');
+}, 25_000);
+
 function broadcast(msg) {
   const data = `data: ${JSON.stringify(msg)}\n\n`;
   for (const res of sseClients) res.write(data);
