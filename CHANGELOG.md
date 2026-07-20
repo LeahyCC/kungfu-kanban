@@ -7,20 +7,37 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
-## [0.14.1] — 2026-07-20
+- Mobile layout fixes: site manual overflow, masthead CTA wrap, app header under 360px.
+- site: humanizer pass
+- Open-source contribution gating: CODEOWNERS, dependabot, contributor docs.
+- Release tags + GitHub Releases published (v0.13.0–v1.0.0 backfilled), and
+  required for future releases.
 
-### Fixed
-- Site: the Manual section no longer forces ~340px of sideways scroll on
-  phones — the mobile grid track is now `minmax(0, 1fr)`, so wide `<pre>`
-  slabs and tables scroll inside their own boxes instead of stretching the
-  page (this also fixed the clipped table-of-contents and the code-comment
-  fragments that spilled past the right edge).
-- Site: the masthead "Build the dojo" button no longer wraps to two lines on
-  phones; hero CTAs stack full-width under 520px instead of squeezing
-  side-by-side into two-line buttons.
-- App: under ~360px the header no longer paints the logo over the Board tab —
-  the brand stops flex-collapsing, the row slims down, and it wraps to a
-  second line if the occasional cooldown/error chips need the width.
+## [1.0.0] — 2026-07-20
+
+Kungfu Kanban hits 1.0: the board now runs its whole intended loop. 0.13.0
+cleared a full quality audit — atomic state writes, safe restarts,
+merge-gated dependency chains, hardened import/PR plumbing. 0.14.0 closed the
+loop on the Sensei — it reviews the actual PR diff, merges green PRs within
+its autonomy setting, and sends precise same-session follow-ups instead of
+blind retries, with every PR gated by CI. 0.15.0 made batched work flow as
+grouped lanes with one-click queueing and group-complete notifications. 1.0.0
+declares the surfaces stable: the import format, the HTTP API, the on-disk
+data files, and the generated skill.
+
+## [0.15.0] — 2026-07-20
+
+### Added
+- Grouped cards now run one lane at a time: at most one card per group is
+  in progress at once, an in-progress group drains before a fresh one
+  starts, and a manual run still bypasses the lane when you need it now.
+- A queue-group button on group headers launches every backlog card in
+  that group with one click, instead of queuing them one by one.
+
+### Changed
+- A group now sends a single notification when it completes instead of one
+  per card, and the Sensei prefers finishing an in-progress group over
+  starting a new one and reviews a completed group's cards as a batch.
 
 ## [0.14.0] — 2026-07-20
 
