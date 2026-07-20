@@ -124,6 +124,7 @@ function relTime(ts) {
 let draggingNow = false;
 let renderQueued = false;
 let filterText = '';
+let lastRenderFingerprint = null;
 
 function matchesFilter(t) {
   if (!filterText) return true;
@@ -134,11 +135,20 @@ function matchesFilter(t) {
 
 function render() {
   if (draggingNow) { renderQueued = true; return; }
+  // task events fire every ~2s per running task; skip the rebuild when
+  // nothing render-relevant actually changed to avoid churning focus/selection
+  const fingerprint = JSON.stringify(tasks) + '|' + filterText;
+  if (fingerprint === lastRenderFingerprint) return;
+  lastRenderFingerprint = fingerprint;
+
   const board = $('#board');
   const scrolls = {};
   for (const c of board.querySelectorAll('.column')) {
     scrolls[c.dataset.status] = c.querySelector('.col-body').scrollTop;
   }
+  const focused = document.activeElement && document.activeElement.closest && document.activeElement.closest('.card');
+  const focusedId = focused ? focused.dataset.id : null;
+
   board.innerHTML = '';
   board.classList.toggle('is-empty', !tasks.length);
 
@@ -217,6 +227,11 @@ function render() {
     const body2 = el.querySelector('.col-body');
     if (scrolls[col.key]) body2.scrollTop = scrolls[col.key];
   }
+
+  if (focusedId) {
+    const toFocus = board.querySelector(`.card[data-id="${CSS.escape(focusedId)}"]`);
+    if (toFocus) toFocus.focus();
+  }
 }
 
 function updateHeaderStatus() {
@@ -241,6 +256,7 @@ function cardEl(t) {
   const el = document.createElement('div');
   const isRunning = RUNNING_LIKE[t.status];
   if (t.status !== 'done') stampedSeals.delete(t.id); // re-arm if it leaves Done
+  el.dataset.id = t.id;
   el.className = 'card'
     + (isRunning ? ' running-card brush' : '')
     + (t.status === 'done' ? ' done-card' : '')
@@ -938,6 +954,7 @@ paintThemeToggle();
 
 // ---------- drawer ----------
 let drawerReturnFocus = null;
+let lastDrawerActionsStatus = null; // rebuild only when status changes — a rebuild between mousedown/mouseup eats the click
 
 async function closeDrawer(force = false) {
   const t = tasks.find((x) => x.id === drawerId);
@@ -956,6 +973,7 @@ async function openDrawer(id) {
   if (!t) return;
   $('#drawerTitle').textContent = t.title;
   renderDrawerMeta(t);
+  lastDrawerActionsStatus = null; // force rebuild — opening a card is not a status change
   renderDrawerActions(t);
   const entries = await api(`/api/tasks/${id}/transcript`);
   const box = $('#transcript');
@@ -1099,6 +1117,8 @@ function renderDrawerMeta(t) {
 }
 
 function renderDrawerActions(t) {
+  if (t.status === lastDrawerActionsStatus) return; // e.g. Stop mid-click would eat the click
+  lastDrawerActionsStatus = t.status;
   const box = $('#drawerActions');
   box.innerHTML = '';
   const mk = (label, cls, title, fn) => {
