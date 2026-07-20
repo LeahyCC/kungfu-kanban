@@ -344,8 +344,9 @@ function cardEl(t) {
   if ((t.depsUnresolved || []).length) {
     meta.push(`<span class="badge err" title="Unresolved after: ${esc(t.depsUnresolved.join(' · '))} — edit the card or let the Sensei fix the link">⛓ unresolved dep</span>`);
   }
-  // Bottleneck flag: this verdict is what queued work is waiting for.
-  if (t.status === 'review') {
+  // Bottleneck flag: this verdict (or an unmerged PR on an already-approved
+  // card) is what queued work is waiting for.
+  if (t.status === 'review' || isPrUnshipped(t)) {
     const held = tasks.filter((x) => x.status === 'queued' && (x.deps || []).includes(t.id));
     if (held.length) meta.push(`<span class="badge dep" title="Queued work waits on this verdict: ${esc(held.map((x) => x.title).join(' · '))} — ${t.prUrl ? 'merge its PR or approve' : 'approve or reject'} to release">🖐 blocks ${held.length}</span>`);
   }
@@ -410,11 +411,18 @@ function cardEl(t) {
 const CTX_WINDOW = 200_000;
 
 // The dep cards that still block this one (deleted/archived ids count as met —
-// same rule as the server).
+// same rule as the server). A done card whose PR is still open unmerged also
+// blocks — its code hasn't reached the default branch yet.
 function depsUnmet(t) {
   return (t.deps || [])
     .map((id) => tasks.find((x) => x.id === id))
-    .filter((d) => d && d.status !== 'done');
+    .filter((d) => d && (d.status !== 'done' || isPrUnshipped(d)));
+}
+
+// Done, but its PR is still open unmerged — the code hasn't reached the
+// default branch, so it still blocks any card that depends on it.
+function isPrUnshipped(t) {
+  return t.status === 'done' && t.openPr && t.prUrl && !t.prMergedAt && !t.prClosedNoted;
 }
 
 // How many unmet prerequisites stack under this card. Sorting a column by it
@@ -1131,7 +1139,7 @@ function renderDrawerMeta(t) {
   if (unmetD.length) bits.push(`⛓ waits for: ${unmetD.map((d) => d.title).join(' · ')}`);
   else if ((t.deps || []).length) bits.push('⛓ all prerequisites done');
   const held = tasks.filter((x) => x.status === 'queued' && (x.deps || []).includes(t.id));
-  if (held.length && t.status !== 'done') bits.push(`🖐 blocks: ${held.map((x) => x.title).join(' · ')}`);
+  if (held.length && (t.status !== 'done' || isPrUnshipped(t))) bits.push(`🖐 blocks: ${held.map((x) => x.title).join(' · ')}`);
   if ((t.depsUnresolved || []).length) bits.push(`⛓ unresolved: ${t.depsUnresolved.join(' · ')}`);
   if (t.createdAt) bits.push(`created ${relTime(t.createdAt)}`);
   if (t.updatedAt && t.updatedAt !== t.createdAt) bits.push(`updated ${relTime(t.updatedAt)}`);
@@ -1271,19 +1279,24 @@ function entryEl(e) {
 
 // ---------- tiny markdown renderer (headings, bold/italic, inline code, fences, lists, links) ----------
 function mdInline(s) {
-  s = s.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
-  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  // code spans and links are stashed before emphasis regexes run, so a
+  // snake_case identifier or __-laden URL inside them doesn't get <em>-mangled
+  const spans = [];
+  const stash = (html) => `\x01${spans.push(html) - 1}\x01`;
+  s = s.replace(/`([^`]+)`/g, (_, c) => stash(`<code>${c}</code>`));
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, text, href) => stash(`<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`));
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
   s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
   s = s.replace(/_([^_]+)_/g, '<em>$1</em>');
+  s = s.replace(/\x01(\d+)\x01/g, (_, i) => spans[Number(i)]);
   return s;
 }
 
 function mdToHtml(raw) {
   const blocks = [];
   const text = esc(raw).replace(/```([\s\S]*?)```/g, (_, code) => {
-    blocks.push(`<pre><code>${code.replace(/^\n/, '')}</code></pre>`);
+    blocks.push(`<pre><code>${code.replace(/^[ \t]*[A-Za-z0-9_+-]*\n/, '')}</code></pre>`);
     return `\x00BLOCK${blocks.length - 1}\x00`;
   });
 

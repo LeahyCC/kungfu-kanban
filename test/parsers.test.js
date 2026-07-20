@@ -5,7 +5,7 @@ const { parseMarkdown, labelFromFilename } = require('../lib/importer');
 const { detect, parseReset } = require('../lib/cooldown');
 const { summarizeChecks } = require('../lib/prwatch');
 const { newer } = require('../lib/version');
-const { sanitize, wouldCycle } = require('../lib/deps');
+const { sanitize, wouldCycle, unmet } = require('../lib/deps');
 const { fallbackFor } = require('../lib/models');
 
 // --- importer.parseMarkdown -------------------------------------------------
@@ -149,6 +149,23 @@ test('wouldCycle detects a direct cycle back to the card itself', () => {
     assert.ok(!wouldCycle('a', []));
   } finally {
     store.state.tasks.length = store.state.tasks.length - 2;
+  }
+});
+
+test('unmet blocks a done card only while its PR is open and unmerged', () => {
+  const store = require('../lib/store');
+  const shipped = { id: 'shipped', status: 'done', openPr: true, prUrl: 'https://x', prMergedAt: '2026-01-01T00:00:00Z' };
+  const noPr = { id: 'no-pr', status: 'done' };
+  const closed = { id: 'closed', status: 'done', openPr: true, prUrl: 'https://x', prClosedNoted: true };
+  const openUnmerged = { id: 'open-unmerged', status: 'done', openPr: true, prUrl: 'https://x' };
+  store.state.tasks.push(shipped, noPr, closed, openUnmerged);
+  try {
+    assert.deepEqual(unmet({ deps: ['shipped'] }), []);
+    assert.deepEqual(unmet({ deps: ['no-pr'] }), []);
+    assert.deepEqual(unmet({ deps: ['closed'] }), []);
+    assert.deepEqual(unmet({ deps: ['open-unmerged'] }).map((d) => d.id), ['open-unmerged']);
+  } finally {
+    store.state.tasks.length = store.state.tasks.length - 4;
   }
 });
 
