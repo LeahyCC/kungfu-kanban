@@ -4,7 +4,7 @@ const path = require('path');
 const { execFile } = require('child_process');
 const { discoverSkills, discoverAgents, discoverRepos } = require('./lib/discovery');
 const os = require('os');
-const { state, save, getTask, readTranscript, clearTranscript, sweepArchive } = require('./lib/store');
+const { state, save, flush, getTask, readTranscript, clearTranscript, sweepArchive } = require('./lib/store');
 const runner = require('./lib/runner');
 const manager = require('./lib/manager');
 const auth = require('./lib/auth');
@@ -641,6 +641,19 @@ if (HOST !== '127.0.0.1' && HOST !== 'localhost' && !auth.getToken()) {
   );
   process.exit(1);
 }
+
+// launchd's kickstart sends SIGTERM; a bare Ctrl-C sends SIGINT. Neither used
+// to be handled, so a restart while cards were running just yanked the rug:
+// children orphaned, and the debounced save could lose the final write. Now
+// we stop every running child, mark its card honestly, and flush synchronously
+// before exiting — a restart is safe even with cards in flight.
+function shutdown() {
+  runner.stopAll();
+  flush();
+  process.exit(0);
+}
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 app.listen(PORT, HOST, () => {
   console.log(`kungfu-kanban running at http://localhost:${PORT}`);
