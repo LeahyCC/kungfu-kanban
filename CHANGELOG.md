@@ -12,6 +12,16 @@ compares your clone against `origin/main` and offers a one-click update.
   into its review context for cards under review, instead of judging only
   the agent's self-report — the two serious flaws a human caught in the
   0.13.0 batch were invisible in the self-report and obvious in the diff.
+- Import frontmatter now takes `queue: true` (alias `autoqueue`) to auto-launch
+  every card in the file on import, instead of dropping them in Backlog where
+  nothing picks them up. Chained cards (`after:`/`sequential:`) park in Queued
+  and cascade automatically as their prerequisites ship.
+
+### Fixed
+- PR-watch conflict fixer no longer spawns against an already-resolved PR: the
+  sweep re-checks state/mergeable right before creating the fix card, and the
+  fixer prompt itself re-verifies and bails as a no-op if the PR turns out
+  merged, closed, or no-longer-conflicting by the time it starts.
 
 ## [0.13.0] — 2026-07-19
 
