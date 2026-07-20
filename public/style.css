@@ -663,6 +663,10 @@ input.tiny { width: 60px; }
   font-size: 11px;
   color: var(--ink-400);
 }
+.card-group-queue { margin-left: 4px; }
+.card-group-head:hover .card-group-queue,
+.card-group-head:focus-within .card-group-queue,
+.card-group-queue:focus-visible { opacity: 1; }
 .card-group-cards {
   display: flex;
   flex-direction: column;
