@@ -8,9 +8,13 @@ Conventions for coding sessions in this repo:
   check shows users the new version, so keep them honest.
 - **The live server runs under launchd** (`com.kungfu-kanban`). Frontend files
   serve fresh from disk; server-side changes need
-  `launchctl kickstart -k gui/$(id -u)/com.kungfu-kanban` — but NEVER restart
-  while cards are running (check `/api/tasks` first; restarting orphans agent
-  processes).
+  `launchctl kickstart -k gui/$(id -u)/com.kungfu-kanban`. A SIGTERM/SIGINT
+  handler in `server.js` stops any running cards and stamps them
+  `error: 'interrupted by server restart'` (status `review`) before exiting, so
+  a restart is safe even with cards in flight — but it still kills whatever
+  those agents were mid-doing, so avoid restarting mid-run when you can wait.
+  A hard kill (SIGKILL, crash) skips the handler; `lib/store.js`'s boot sweep
+  applies the same error marker as a fallback.
 - **Verify against the real server**: `TOKEN=$(cat data/auth-token)` then curl
   with `Authorization: Bearer $TOKEN`. The token gate reads per-request.
 - **The kungfu-todo skill is generated** by `lib/skill.js` — edit the template
