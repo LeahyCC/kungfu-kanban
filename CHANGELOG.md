@@ -7,6 +7,18 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-07-20
+
+Kungfu Kanban hits 1.0: the board now runs its whole intended loop. 0.13.0
+cleared a full quality audit — atomic state writes, safe restarts,
+merge-gated dependency chains, hardened import/PR plumbing. 0.14.0 closed the
+loop on the Sensei — it reviews the actual PR diff, merges green PRs within
+its autonomy setting, and sends precise same-session follow-ups instead of
+blind retries, with every PR gated by CI. 0.15.0 made batched work flow as
+grouped lanes with one-click queueing and group-complete notifications. 1.0.0
+declares the surfaces stable: the import format, the HTTP API, the on-disk
+data files, and the generated skill.
+
 ## [0.15.0] — 2026-07-20
 
 ### Added
