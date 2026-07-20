@@ -14,6 +14,9 @@ compares your clone against `origin/main` and offers a one-click update.
 - Open-source contribution gating: CODEOWNERS, dependabot, contributor docs.
 - Release tags + GitHub Releases published (v0.13.0–v1.0.0 backfilled), and
   required for future releases.
+- site: accuracy pass on the manual/FAQ/llms.txt — dependency chains, group
+  batching, and the Sensei's diff review/merge/follow-up/error-tracker
+  powers were live since 0.12–0.14 but undocumented on kungfu-kanban.com.
 
 ## [1.0.0] — 2026-07-20
 
