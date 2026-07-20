@@ -337,7 +337,12 @@ function cardEl(t) {
   if (unmetDeps.length) {
     const first = unmetDeps[0].title;
     const more = unmetDeps.length > 1 ? ` +${unmetDeps.length - 1}` : '';
-    meta.push(`<span class="badge dep" title="Waits until done: ${esc(unmetDeps.map((d) => d.title).join(' · '))}">⛓ after: ${esc(first.slice(0, 30))}${first.length > 30 ? '…' : ''}${more}</span>`);
+    const firstIsMergeWait = isPrUnshipped(unmetDeps[0]);
+    const label = firstIsMergeWait ? '⛓ waits for merge:' : '⛓ after:';
+    const title = firstIsMergeWait
+      ? `${unmetDeps[0].title} is approved but its PR is still open — merging releases this card`
+      : `Waits until done: ${esc(unmetDeps.map((d) => d.title).join(' · '))}`;
+    meta.push(`<span class="badge dep" title="${esc(title)}">${label} ${esc(first.slice(0, 30))}${first.length > 30 ? '…' : ''}${more}</span>`);
   } else if ((t.deps || []).length) {
     meta.push(`<span class="badge dep-met" title="All prerequisites are done">⛓ deps met</span>`);
   }
@@ -380,7 +385,10 @@ function cardEl(t) {
   // one quick action per column: Backlog ▶ run · Queued ⏸ unqueue ·
   // Review ✓ approve · Done ✕ delete (Running gets none — Stop is in the drawer)
   let quick = '';
-  if (t.status === 'backlog') quick = '<button class="card-run" data-act="run" title="Run now" aria-label="Run now">▶</button>';
+  if (t.status === 'backlog') {
+    const runTitle = unmetDeps.length ? `Queues after: ${unmetDeps[0].title}` : 'Run now';
+    quick = `<button class="card-run" data-act="run" title="${esc(runTitle)}" aria-label="Run now">▶</button>`;
+  }
   else if (t.status === 'queued') quick = '<button class="card-run card-unq" data-act="unqueue" title="Pull back to Backlog (unqueue)" aria-label="Unqueue">⏸</button>';
   else if (t.status === 'review') quick = '<button class="card-run card-ok" data-act="approve" title="Approve — stamp it Done" aria-label="Approve">✓</button>';
   else if (t.status === 'done') quick = '<button class="card-run card-del" data-act="delete" title="Delete card" aria-label="Delete card">✕</button>';
@@ -392,7 +400,10 @@ function cardEl(t) {
     e.stopPropagation();
     withBusy(qb, async () => {
       const act = qb.dataset.act;
-      if (act === 'run') await api(`/api/tasks/${t.id}/run`, { method: 'POST' });
+      if (act === 'run') {
+        const r = await api(`/api/tasks/${t.id}/run`, { method: 'POST' });
+        if (r.queued && r.waitingOn && r.waitingOn.length) toast(`⛓ queued — waits on: ${r.waitingOn.join(' · ')}`, 'status');
+      }
       else if (act === 'unqueue') await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: 'backlog' } });
       else if (act === 'approve') {
         if (!(await confirmDlg(`Approve "${t.title}" — stamp it Done?`, { confirmLabel: '✓ Approve' }))) return;
@@ -413,6 +424,7 @@ const CTX_WINDOW = 200_000;
 // The dep cards that still block this one (deleted/archived ids count as met —
 // same rule as the server). A done card whose PR is still open unmerged also
 // blocks — its code hasn't reached the default branch yet.
+// Mirrors lib/deps.js's unmet()/prUnshipped() — keep both in sync.
 function depsUnmet(t) {
   return (t.deps || [])
     .map((id) => tasks.find((x) => x.id === id))
@@ -1136,8 +1148,10 @@ function renderDrawerMeta(t) {
     bits.push(`CI: ${c.failing ? `✕ ${c.failing} failing — ${(c.failed || []).join(' · ')}` : c.pending ? `… ${c.pending} running` : `✓ ${c.passing} green`}${c.base ? ` · base ${c.base}` : ''}${c.wrongBase ? ` (card wants ${t.prBaseBranch})` : ''}`);
   }
   const unmetD = depsUnmet(t);
-  if (unmetD.length) bits.push(`⛓ waits for: ${unmetD.map((d) => d.title).join(' · ')}`);
-  else if ((t.deps || []).length) bits.push('⛓ all prerequisites done');
+  if (unmetD.length) {
+    const parts = unmetD.map((d) => isPrUnshipped(d) ? `${d.title} (done, awaiting merge)` : `${d.title} (not done)`);
+    bits.push(`⛓ waits for: ${parts.join(' · ')}`);
+  } else if ((t.deps || []).length) bits.push('⛓ all prerequisites done (satisfied)');
   const held = tasks.filter((x) => x.status === 'queued' && (x.deps || []).includes(t.id));
   if (held.length && (t.status !== 'done' || isPrUnshipped(t))) bits.push(`🖐 blocks: ${held.map((x) => x.title).join(' · ')}`);
   if ((t.depsUnresolved || []).length) bits.push(`⛓ unresolved: ${t.depsUnresolved.join(' · ')}`);
