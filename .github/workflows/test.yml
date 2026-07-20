@@ -4,11 +4,19 @@ on:
   push:
     branches: [main]
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  suite:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - run: npm test
+      - run: node --test --experimental-test-coverage
+  test:
+    needs: [suite]
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 0
