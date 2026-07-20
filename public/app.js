@@ -1533,6 +1533,7 @@ function describeAction(a) {
     case 'run_task': return `Run ${taskTitle(a.taskId)}`;
     case 'approve_task': return `Approve ${taskTitle(a.taskId)} → Done`;
     case 'reject_task': return `Retry ${taskTitle(a.taskId)} with feedback: ${(a.feedback || '').slice(0, 100)}`;
+    case 'followup_task': return `Follow up ${taskTitle(a.taskId)}: ${(a.message || '').slice(0, 100)}`;
     case 'requeue_task': return `Requeue ${taskTitle(a.taskId)} (no retry burned)`;
     case 'retarget_pr': return `Retarget the PR of ${taskTitle(a.taskId)} → base ${a.prBaseBranch || '?'}`;
     case 'resolve_error': return `Mark error ${(a.errorId || '?')} resolved in the tracker`;

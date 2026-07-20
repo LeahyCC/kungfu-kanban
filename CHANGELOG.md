@@ -8,6 +8,12 @@ compares your clone against `origin/main` and offers a one-click update.
 ## [Unreleased]
 
 ### Added
+- The Sensei can now `followup_task` a review card: resume its own agent
+  session with precise feedback instead of always `reject_task`ing into a
+  full fresh run. Reserved for small, specific flaws (name the file, name the
+  fix); `reject_task` still handles approach-level failures that need a
+  restart. `run_task` on an already-running/stopping card is now a no-op
+  instead of an error, matching the other stale-snapshot races.
 - The Sensei now pulls the actual PR diff (`gh pr diff`, capped and truncated)
   into its review context for cards under review, instead of judging only
   the agent's self-report — the two serious flaws a human caught in the
