@@ -7,6 +7,8 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-07-20
+
 ### Added
 - `test/server.integration.test.js` boots the real server as a child process
   to cover route-level regressions unit tests miss: validation coercions,
@@ -16,6 +18,16 @@ compares your clone against `origin/main` and offers a one-click update.
   env override honored by `lib/store.js` and everything that derives its
   data paths from it, so the integration suite never touches this
   checkout's real `data/`.
+- Split the parser smoke test into per-module suites under `test/` with
+  decision-table coverage of the importer, deps, models, cooldown, prwatch,
+  runner, errlog, auth, and skill install/status logic.
+- CI now runs the suite on ubuntu-latest and macos-latest (matrix) and prints
+  `node --test` coverage on every run (no threshold gate yet).
+- Open-source contribution gating: CODEOWNERS, dependabot, contributor docs.
+- Release tags + GitHub Releases published (v0.13.0–v1.0.0 backfilled), and
+  required for future releases.
+
+### Changed
 - README: badge row (CI, latest release, MIT license), hero image slot, and a
   tighter positioning paragraph up top for people landing cold.
 - The humanizer skill (MIT, vendored at `skills/humanizer/SKILL.md`) now ships
@@ -24,12 +36,7 @@ compares your clone against `origin/main` and offers a one-click update.
   it to PR titles, PR descriptions, and result summaries.
 - Mobile layout fixes: site manual overflow, masthead CTA wrap, app header under 360px.
 - site: humanizer pass
-- CI now runs the suite on ubuntu-latest and macos-latest (matrix) and prints
-  `node --test` coverage on every run (no threshold gate yet).
-- Open-source contribution gating: CODEOWNERS, dependabot, contributor docs.
 - docs: humanizer audit — already clean (README.md, CONTRIBUTING.md, SECURITY.md, lib/skill.js template strings)
-- Release tags + GitHub Releases published (v0.13.0–v1.0.0 backfilled), and
-  required for future releases.
 - site: accuracy pass on the manual/FAQ/llms.txt — dependency chains, group
   batching, and the Sensei's diff review/merge/follow-up/error-tracker
   powers were live since 0.12–0.14 but undocumented on kungfu-kanban.com.
@@ -37,11 +44,6 @@ compares your clone against `origin/main` and offers a one-click update.
   Crystal/Nimbalyst) and `/docs` (linkable reference sections — import
   format, the Sensei's actions/autonomy, dependency/merge-gate semantics,
   groups & lanes), wired into nav, sitemap, and structured data.
-
-### Tests
-- Split the parser smoke test into per-module suites under `test/` with
-  decision-table coverage of the importer, deps, models, cooldown, prwatch,
-  runner, errlog, auth, and skill install/status logic.
 
 ## [1.0.0] — 2026-07-20
 
