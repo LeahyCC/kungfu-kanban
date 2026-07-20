@@ -5,7 +5,11 @@ Conventions for coding sessions in this repo:
 - **Version + changelog discipline**: every meaningful change bumps
   `package.json` version (minor = feature, patch = fix) and adds a line under
   `## [Unreleased]` → move to a dated section when pushed. The in-app update
-  check shows users the new version, so keep them honest.
+  check shows users the new version, so keep them honest. If a card's prompt
+  explicitly overrides this (e.g. a batch whose release card owns the version
+  bump), the card prompt wins — three batch agents following this convention
+  against explicit card instructions caused avoidable merge conflicts on
+  2026-07-20.
 - **The live server runs under launchd** (`com.kungfu-kanban`). Frontend files
   serve fresh from disk; server-side changes need
   `launchctl kickstart -k gui/$(id -u)/com.kungfu-kanban`. A SIGTERM/SIGINT
