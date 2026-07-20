@@ -7,7 +7,7 @@ const { summarizeChecks } = require('../lib/prwatch');
 const { newer } = require('../lib/version');
 const { sanitize, wouldCycle, unmet } = require('../lib/deps');
 const { fallbackFor } = require('../lib/models');
-const { nextRunnable } = require('../lib/runner');
+const { nextRunnable, notifyGroupCompletions } = require('../lib/runner');
 
 // --- importer.parseMarkdown -------------------------------------------------
 
@@ -192,6 +192,23 @@ test('nextRunnable holds a group to one lane while a member runs', () => {
     assert.ok(picked === a || picked === b);
   } finally {
     store.state.tasks.length = store.state.tasks.length - 3;
+  }
+});
+
+test('notifyGroupCompletions stamps the group once and does not re-fire on later pumps', () => {
+  const store = require('../lib/store');
+  store.state.settings.notifyMac = false;
+  const a = { id: 'gc-a', status: 'done', group: 'batch-x', finishedAt: '2026-01-01T00:00:00Z' };
+  const b = { id: 'gc-b', status: 'done', group: 'batch-x', finishedAt: '2026-01-02T00:00:00Z' };
+  store.state.tasks.push(a, b);
+  try {
+    notifyGroupCompletions();
+    assert.ok(a.groupNotified || b.groupNotified);
+    const stamped = { a: a.groupNotified, b: b.groupNotified };
+    notifyGroupCompletions();
+    assert.deepEqual({ a: a.groupNotified, b: b.groupNotified }, stamped);
+  } finally {
+    store.state.tasks.length = store.state.tasks.length - 2;
   }
 });
 
