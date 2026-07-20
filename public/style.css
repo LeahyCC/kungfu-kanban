@@ -538,6 +538,14 @@ input.tiny { width: 60px; }
   cursor: pointer;
 }
 .err-chip:hover { filter: brightness(1.15); }
+/* attention popup chip: same dressed-as-chip button, warning color to sit next to err-chip's error color */
+.attn-chip {
+  color: var(--warning);
+  border-color: var(--warning);
+  background: none;
+  cursor: pointer;
+}
+.attn-chip:hover { filter: brightness(1.15); }
 .usage-chip { color: var(--ink-600); border-color: var(--rule); }
 .usage-chip.warn { color: var(--warning); border-color: var(--warning); }
 .usage-chip.bad { color: var(--error); border-color: var(--error); }
