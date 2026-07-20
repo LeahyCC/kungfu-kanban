@@ -12,6 +12,10 @@ compares your clone against `origin/main` and offers a one-click update.
   to cover route-level regressions unit tests miss: validation coercions,
   the auth gate, and status-code contracts. `parseSchedule`/`scheduleDue`
   moved to `lib/schedule.js` so they're directly unit-testable.
+- The humanizer skill (MIT, vendored at `skills/humanizer/SKILL.md`) now ships
+  with the board alongside ponytail: installs to `~/.claude/skills` at boot,
+  pre-selects on new cards, and the kungfu-todo template tells agents to apply
+  it to PR titles, PR descriptions, and result summaries.
 - Mobile layout fixes: site manual overflow, masthead CTA wrap, app header under 360px.
 - site: humanizer pass
 - CI now runs the suite on ubuntu-latest and macos-latest (matrix) and prints
@@ -20,6 +24,9 @@ compares your clone against `origin/main` and offers a one-click update.
 - docs: humanizer audit — already clean (README.md, CONTRIBUTING.md, SECURITY.md, lib/skill.js template strings)
 - Release tags + GitHub Releases published (v0.13.0–v1.0.0 backfilled), and
   required for future releases.
+- site: accuracy pass on the manual/FAQ/llms.txt — dependency chains, group
+  batching, and the Sensei's diff review/merge/follow-up/error-tracker
+  powers were live since 0.12–0.14 but undocumented on kungfu-kanban.com.
 
 ## [1.0.0] — 2026-07-20
 
