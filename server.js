@@ -131,6 +131,7 @@ app.put('/api/settings', (req, res) => {
     if (!keepAwake) require('./lib/awake').clear();
   }
   save();
+  runner.pumpQueue();
   res.json(state.settings);
 });
 
