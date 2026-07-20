@@ -12,7 +12,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build:site": "node site/build.js"
+    "build:site": "node site/build.js",
+    "test": "node --test"
   },
   "dependencies": {
     "express": "^4.19.0"
