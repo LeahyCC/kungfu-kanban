@@ -16,6 +16,15 @@ compares your clone against `origin/main` and offers a one-click update.
   every card in the file on import, instead of dropping them in Backlog where
   nothing picks them up. Chained cards (`after:`/`sequential:`) park in Queued
   and cascade automatically as their prerequisites ship.
+- The Sensei can now merge a card's PR itself (`merge_pr`), gated the same way
+  as its other powers: a one-click suggestion under `suggest`, held for
+  approval under `semi`, done alone under `auto`. It only merges when the
+  card is in review, its PR checks are all green (no failing, no pending, no
+  unknown/absent checks, right base), and it skips with a note otherwise —
+  closing the gap where approve-without-merge left a "done" card still
+  blocking its dependents. The 0.13.0 batch stalled at 14 finished cards and
+  0 merges for exactly this reason; the human no longer has to be the merge
+  button.
 
 ### Fixed
 - PR-watch conflict fixer no longer spawns against an already-resolved PR: the
