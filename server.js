@@ -97,7 +97,7 @@ app.get('/api/config', (req, res) => {
 });
 
 app.put('/api/settings', (req, res) => {
-  const { maxConcurrent, defaultCwd, archiveDays, ntfyTopic, notifyMac, keepAwake, reposDir: rd, prWatchMin, prWatchAutoFix } = req.body || {};
+  const { maxConcurrent, defaultCwd, archiveDays, ntfyTopic, notifyMac, keepAwake, reposDir: rd, prWatchMin, prWatchAutoFix, maxRunMinutes } = req.body || {};
   // an empty string clears the setting (falls back to the default scan dir)
   if (typeof rd === 'string') {
     if (rd.trim()) state.settings.reposDir = rd.trim();
@@ -114,6 +114,9 @@ app.put('/api/settings', (req, res) => {
   }
   if (Number.isInteger(maxConcurrent) && maxConcurrent >= 1 && maxConcurrent <= 8) {
     state.settings.maxConcurrent = maxConcurrent;
+  }
+  if (Number.isInteger(maxRunMinutes) && maxRunMinutes >= 0 && maxRunMinutes <= 1440) {
+    state.settings.maxRunMinutes = maxRunMinutes;
   }
   if (typeof defaultCwd === 'string') state.settings.defaultCwd = defaultCwd.trim(); // empty clears it
   const { defaultPermissionMode } = req.body || {};
