@@ -4,7 +4,7 @@ const path = require('path');
 const { execFile } = require('child_process');
 const { discoverSkills, discoverAgents, discoverRepos } = require('./lib/discovery');
 const os = require('os');
-const { state, save, getTask, readTranscript, sweepArchive } = require('./lib/store');
+const { state, save, getTask, readTranscript, clearTranscript, sweepArchive } = require('./lib/store');
 const runner = require('./lib/runner');
 const manager = require('./lib/manager');
 const auth = require('./lib/auth');
@@ -502,6 +502,7 @@ app.delete('/api/tasks/:id', (req, res) => {
   if (runner.isRunning(task.id)) return res.status(409).json({ error: 'stop it first' });
   state.tasks = state.tasks.filter((t) => t.id !== task.id);
   save();
+  clearTranscript(task.id);
   errlog.resolveTask(task.id); // a deleted card's open errors die with it
   broadcast({ type: 'deleted', taskId: task.id });
   runner.pumpQueue(); // a deleted dep counts as met — free any waiting dependents
@@ -509,6 +510,7 @@ app.delete('/api/tasks/:id', (req, res) => {
 });
 
 app.get('/api/tasks/:id/transcript', (req, res) => {
+  if (!/^[0-9a-f-]{36}$/.test(req.params.id)) return res.status(404).json({ error: 'not found' });
   res.json(readTranscript(req.params.id));
 });
 
