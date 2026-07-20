@@ -7,6 +7,12 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Fixed
+- PR-watch conflict fixer no longer spawns against an already-resolved PR: the
+  sweep re-checks state/mergeable right before creating the fix card, and the
+  fixer prompt itself re-verifies and bails as a no-op if the PR turns out
+  merged, closed, or no-longer-conflicting by the time it starts.
+
 ## [0.13.0] — 2026-07-19
 
 ### Added
