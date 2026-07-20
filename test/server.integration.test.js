@@ -1,42 +1,32 @@
 // Boots the REAL server.js as a child process and exercises the HTTP
 // contract end to end. Isolation: PORT is a random ephemeral port (retried
-// on clash), HOST is loopback-only, and cwd is this checkout — so its data/
-// dir (created fresh by lib/store.js) is this checkout's own, never the
-// live board's data on :4747.
+// on clash), HOST is loopback-only, and KFK_DATA_DIR points every spawned
+// server at its own fresh os.tmpdir() directory — never this checkout's
+// data/, which other test files in this same `node --test` run (spawned as
+// their own concurrent processes) read and write directly in-process.
 const { test, describe, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
 const fs = require('node:fs');
+const os = require('node:os');
 
 const { parseSchedule, scheduleDue } = require('../lib/schedule');
 
 const ROOT = path.join(__dirname, '..');
-const DATA_DIR = path.join(ROOT, 'data');
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const TEST_TOKEN = 'kfk-integration-test-token';
 
-// Only the specific files these tests write — NEVER the data/ directory
-// itself. `node --test` runs every test file in this repo as its own
-// process, all sharing this checkout's filesystem; another file's debounced
-// store.save() can still be mid-flight (its 150ms setTimeout fires after its
-// own tests finish) and open data/tasks.json.tmp — rm -rf'ing the directory
-// out from under that write raises ENOENT there and fails the whole run
-// (verified 2026-07-20). Deleting individual files is safe even mid-write:
-// writeJsonAtomic tolerates a missing target (skips the .bak copy) and always
-// recreates it via rename.
-const DATA_FILES = [
-  'tasks.json', 'tasks.json.tmp', 'tasks.json.bak',
-  'settings.json', 'settings.json.tmp', 'settings.json.bak',
-  'auth-token',
-];
-function wipeData() {
-  for (const name of DATA_FILES) fs.rmSync(path.join(DATA_DIR, name), { force: true });
+function mkTempDataDir() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'kfk-test-'));
 }
 
-// One boot attempt on a random high port. Resolves the running {child, base}
-// once the server answers any HTTP response, or null if it never came up
-// (port clash or slow CI) so the caller can retry on a fresh port.
+// One boot attempt on a random high port. Resolves { ok: true, child, base }
+// once the server answers any HTTP response, or { ok: false, detail } for a
+// retry-worthy failure (port clash, slow readiness). A genuine crash (bad
+// require, uncaught exception) rejects immediately with the full stderr
+// instead of burning through retries on a cause retrying can't fix — boot
+// failures must be loud, not silently retried into a "cancelled" test.
 function tryBoot(env) {
   return new Promise((resolve, reject) => {
     const port = 20000 + Math.floor(Math.random() * 30000);
@@ -51,11 +41,11 @@ function tryBoot(env) {
     let stderr = '';
     child.stderr.on('data', (d) => { stderr += d; });
     let settled = false;
-    child.once('exit', () => {
+    child.once('exit', (code, signal) => {
       if (settled) return;
       settled = true;
-      if (/EADDRINUSE/.test(stderr)) resolve(null);
-      else reject(new Error(`test server exited before it came up:\n${stderr.slice(-800)}`));
+      if (/EADDRINUSE/.test(stderr)) return resolve({ ok: false, detail: 'port already in use' });
+      reject(new Error(`test server exited before it came up (code ${code}, signal ${signal}):\n${stderr.slice(-1000)}`));
     });
 
     const deadline = Date.now() + 15_000;
@@ -64,7 +54,7 @@ function tryBoot(env) {
         try {
           await fetch(`${base}/api/config`);
           settled = true;
-          return resolve({ child, base });
+          return resolve({ ok: true, child, base });
         } catch {
           await new Promise((r) => setTimeout(r, 150));
         }
@@ -72,18 +62,20 @@ function tryBoot(env) {
       if (!settled) {
         settled = true;
         child.kill('SIGKILL');
-        resolve(null);
+        resolve({ ok: false, detail: `server never answered ${base} within 15s` });
       }
     })();
   });
 }
 
 async function bootServer(env = {}) {
+  let lastDetail = 'unknown';
   for (let attempt = 0; attempt < 5; attempt++) {
     const result = await tryBoot(env);
-    if (result) return result;
+    if (result.ok) return result;
+    lastDetail = result.detail;
   }
-  throw new Error('could not boot test server after 5 attempts (port contention?)');
+  throw new Error(`could not boot test server after 5 attempts — last failure: ${lastDetail}`);
 }
 
 function killChild(child) {
@@ -166,31 +158,12 @@ describe('lib/schedule', () => {
 
 // --- HTTP contract, unauthenticated board -----------------------------------
 
-// Safety skip: these two describes wipe and rewrite data/. Checked BEFORE
-// anything below ever touches the filesystem — if this checkout's data/
-// already holds a real token or real cards, two servers sharing one data
-// dir would corrupt live state, so refuse instead of guessing.
-const liveDataReason = (() => {
-  try {
-    if (fs.existsSync(path.join(DATA_DIR, 'auth-token'))) return 'data/auth-token already exists';
-    const tasks = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'tasks.json'), 'utf8'));
-    if (Array.isArray(tasks) && tasks.length) return 'data/tasks.json is non-empty';
-  } catch {
-    // no data/ yet, or unreadable — nothing live to protect
-  }
-  return null;
-})();
-
-if (liveDataReason) {
-  test(`server integration suite skipped — ${liveDataReason}; this looks like a live checkout, refusing to wipe data/`, { skip: true }, () => {});
-} else {
-
 describe('HTTP contract (no auth gate)', () => {
-  let child, base;
+  let child, base, dataDir;
 
   before(async () => {
-    wipeData();
-    ({ child, base } = await bootServer());
+    dataDir = mkTempDataDir();
+    ({ child, base } = await bootServer({ KFK_DATA_DIR: dataDir }));
     // The Sensei is enabled by default with onNewCard triggers — first API
     // call after boot, before any task-creating test, so a POST /api/tasks
     // below never fans out into a real `claude -p` invocation.
@@ -199,6 +172,7 @@ describe('HTTP contract (no auth gate)', () => {
 
   after(async () => {
     await killChild(child);
+    fs.rmSync(dataDir, { recursive: true, force: true });
   });
 
   test('GET /api/config — 200 with the expected shape', async () => {
@@ -296,18 +270,17 @@ describe('HTTP contract (no auth gate)', () => {
 // --- Auth gate ---------------------------------------------------------------
 
 describe('auth gate', () => {
-  let child, base;
+  let child, base, dataDir;
 
   before(async () => {
-    wipeData();
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(path.join(DATA_DIR, 'auth-token'), TEST_TOKEN);
-    ({ child, base } = await bootServer());
+    dataDir = mkTempDataDir();
+    fs.writeFileSync(path.join(dataDir, 'auth-token'), TEST_TOKEN);
+    ({ child, base } = await bootServer({ KFK_DATA_DIR: dataDir }));
   });
 
   after(async () => {
     await killChild(child);
-    wipeData();
+    fs.rmSync(dataDir, { recursive: true, force: true });
   });
 
   test('no Authorization header — 401 on /api/*', async () => {
@@ -330,5 +303,3 @@ describe('auth gate', () => {
     assert.equal(res.status, 200);
   });
 });
-
-}
