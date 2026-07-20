@@ -1,9 +1,18 @@
 # Kungfu Kanban 🥋
 
-A personal kanban board where every card is an AI task, executed by the **Claude Code
-CLI on your subscription login** — no API keys, no token billing, no cloud. The runner
-strips `ANTHROPIC_API_KEY` from the environment before spawning, so it can never
-silently fall back to pay-per-token.
+[![CI](https://img.shields.io/github/actions/workflow/status/LeahyCC/kungfu-kanban/test.yml?branch=main&label=CI)](https://github.com/LeahyCC/kungfu-kanban/actions/workflows/test.yml)
+[![Release](https://img.shields.io/github/v/release/LeahyCC/kungfu-kanban)](https://github.com/LeahyCC/kungfu-kanban/releases)
+[![License: MIT](https://img.shields.io/github/license/LeahyCC/kungfu-kanban)](LICENSE)
+
+![Kungfu Kanban board](docs/board.png)
+
+Kungfu Kanban is a local kanban board where Claude Code agents work the cards on your
+own subscription login, no API keys, no per-token billing. Cards can chain into
+dependencies gated by merge, an AI "Manager" reads the actual diff on every finished
+card and merges the green ones itself, and the whole stack leans on one runtime
+dependency (the `claude` CLI) with CI checking every push. It's for a single developer
+who wants a fleet of agents chewing through a backlog without standing up a SaaS or a
+database to do it.
 
 **[kungfu-kanban.com](https://kungfu-kanban.com)** — this README as an illustrated manual.
 

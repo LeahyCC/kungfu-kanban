@@ -7,6 +7,8 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+- README: badge row (CI, latest release, MIT license), hero image slot, and a
+  tighter positioning paragraph up top for people landing cold.
 - The humanizer skill (MIT, vendored at `skills/humanizer/SKILL.md`) now ships
   with the board alongside ponytail: installs to `~/.claude/skills` at boot,
   pre-selects on new cards, and the kungfu-todo template tells agents to apply
