@@ -1806,6 +1806,36 @@ function blockedCard(t) {
   return div;
 }
 
+// shown once when any held suggestion is capped, so the human can either
+// approve-all (runs regardless of the cap) or raise the ceiling for next time
+function capNotice() {
+  const div = document.createElement('div');
+  div.className = 'suggestion';
+  const why = document.createElement('div');
+  why.className = 'sugg-why';
+  const cur = (mgrState && mgrState.config && mgrState.config.maxLaunchesPerHour) || 0;
+  why.textContent = `Some suggestions are held by the hourly launch cap (${cur}/hr). Approve-all still runs them now — Raise cap lifts the ceiling for future auto-launches.`;
+  const actions = document.createElement('div');
+  actions.className = 'sugg-actions';
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '0';
+  input.value = cur + 10;
+  input.style.width = '5em';
+  const raise = document.createElement('button');
+  raise.className = 'ghost';
+  raise.textContent = 'Raise cap';
+  raise.addEventListener('click', (e) => withBusy(e.target, async () => {
+    const n = parseInt(input.value, 10);
+    if (!Number.isInteger(n) || n < 0) return;
+    await api('/api/manager/config', { method: 'PUT', body: { maxLaunchesPerHour: n } });
+    await loadManager();
+  }));
+  actions.append(input, raise);
+  div.append(why, actions);
+  return div;
+}
+
 function renderAttn() {
   const sugg = (mgrState && mgrState.suggestions) || [];
   const blocked = attnBlocked();
@@ -1818,6 +1848,7 @@ function renderAttn() {
   box.innerHTML = '';
   if (!count) box.innerHTML = '<div class="empty-col">nothing needs you — the dojo is at peace 🧘</div>';
   else {
+    if (sugg.some((s) => s.guard === 'hourly launch cap reached')) box.appendChild(capNotice());
     for (const s of sugg) box.appendChild(suggestionCard(s));
     for (const t of blocked) box.appendChild(blockedCard(t));
   }
