@@ -7,6 +7,7 @@ const { summarizeChecks } = require('../lib/prwatch');
 const { newer } = require('../lib/version');
 const { sanitize, wouldCycle, unmet } = require('../lib/deps');
 const { fallbackFor } = require('../lib/models');
+const { nextRunnable } = require('../lib/runner');
 
 // --- importer.parseMarkdown -------------------------------------------------
 
@@ -173,6 +174,24 @@ test('unmet blocks a done card only while its PR is open and unmerged', () => {
     assert.deepEqual(unmet({ deps: ['open-unmerged'] }).map((d) => d.id), ['open-unmerged']);
   } finally {
     store.state.tasks.length = store.state.tasks.length - 4;
+  }
+});
+
+// --- runner.nextRunnable (group lane) -----------------------------------------
+
+test('nextRunnable holds a group to one lane while a member runs', () => {
+  const store = require('../lib/store');
+  const busy = { id: 'g-running', status: 'running', group: 'batch-1' };
+  const a = { id: 'g-a', status: 'queued', group: 'batch-1' };
+  const b = { id: 'g-b', status: 'queued', group: 'batch-1' };
+  store.state.tasks.push(busy, a, b);
+  try {
+    assert.equal(nextRunnable(), null);
+    busy.status = 'done';
+    const picked = nextRunnable();
+    assert.ok(picked === a || picked === b);
+  } finally {
+    store.state.tasks.length = store.state.tasks.length - 3;
   }
 });
 
