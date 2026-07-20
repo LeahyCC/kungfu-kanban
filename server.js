@@ -286,8 +286,9 @@ app.post('/api/skill/install', (req, res) => {
 });
 
 // Rolling 5-hour usage across all local Claude Code activity. Cached 2 min.
-app.get('/api/usage', (req, res) => {
-  res.json({ ...require('./lib/usage').scan(), budgetTokens: state.settings.usageBudgetTokens || 0 });
+app.get('/api/usage', async (req, res) => {
+  const usage = await require('./lib/usage').scan();
+  res.json({ ...usage, budgetTokens: state.settings.usageBudgetTokens || 0 });
 });
 
 // Update the Claude Code CLI in place. `claude update` knows its own install
