@@ -247,6 +247,11 @@ Imported cards land in **Backlog** tagged `import`, and the Sensei gets one
 triage ping per batch (if the new-card trigger is on) — so you can paste a plan,
 and routing/prioritization happens for you.
 
+The board also ships the [ponytail](https://github.com/DietrichGebert/ponytail)
+(MIT) lazy-senior-dev discipline and the humanizer skill (strips AI writing
+tells from PR titles, descriptions, and result summaries) — both auto-install
+to `~/.claude/skills` and pre-select on new cards.
+
 ## Repo cards → real PRs
 
 Give a card a working directory that's a git repo with an `origin` remote, check
@@ -521,6 +526,12 @@ This is a personal tool that happens to be public. Issues and PRs are welcome, b
 scope is deliberately narrow: single-user, local-first, subscription-auth only. Feature
 requests for multi-tenancy, hosted deployment, API-key providers, or billing will be
 closed with a polite bow — that version existed and was deleted on purpose.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the fork-and-PR workflow, and
+[SECURITY.md](SECURITY.md) if you've found a vulnerability — report it privately
+through GitHub, not as a public issue.
 
 ## License
 

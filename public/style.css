@@ -1357,3 +1357,16 @@ a.err-card:hover { text-decoration: underline; }
   .wordmark { display: none; } /* logo + antenna carry the brand on phones */
   .app-tab { padding: 6px 8px; }
 }
+/* ~360px and under the header's minimum content width (≈366px) no longer
+   fits: .app-brand (min-width:0) collapses and the logo/antenna paint over
+   the Board tab. Pin the brand, slim everything, and let the row wrap if the
+   occasional chips (⏳ cooldown, ⚠ errors) claim more width than exists. */
+@media (max-width: 360px) {
+  .app-header { flex-wrap: wrap; height: auto; min-height: calc(56px + env(safe-area-inset-top)); }
+  .app-brand { flex: none; }
+  .app-brand .antenna { display: none; } /* the Running count dot carries this signal */
+  .app-logo { width: 20px; height: 20px; }
+  .app-tab { padding: 6px; }
+  .app-status { gap: 4px; }
+  .status-chip { gap: 3px; }
+}
