@@ -7,21 +7,13 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-07-20
+
 ### Added
-- The Sensei can now `followup_task` a review card: resume its own agent
-  session with precise feedback instead of always `reject_task`ing into a
-  full fresh run. Reserved for small, specific flaws (name the file, name the
-  fix); `reject_task` still handles approach-level failures that need a
-  restart. `run_task` on an already-running/stopping card is now a no-op
-  instead of an error, matching the other stale-snapshot races.
 - The Sensei now pulls the actual PR diff (`gh pr diff`, capped and truncated)
   into its review context for cards under review, instead of judging only
   the agent's self-report — the two serious flaws a human caught in the
   0.13.0 batch were invisible in the self-report and obvious in the diff.
-- Import frontmatter now takes `queue: true` (alias `autoqueue`) to auto-launch
-  every card in the file on import, instead of dropping them in Backlog where
-  nothing picks them up. Chained cards (`after:`/`sequential:`) park in Queued
-  and cascade automatically as their prerequisites ship.
 - The Sensei can now merge a card's PR itself (`merge_pr`), gated the same way
   as its other powers: a one-click suggestion under `suggest`, held for
   approval under `semi`, done alone under `auto`. It only merges when the
@@ -31,6 +23,18 @@ compares your clone against `origin/main` and offers a one-click update.
   blocking its dependents. The 0.13.0 batch stalled at 14 finished cards and
   0 merges for exactly this reason; the human no longer has to be the merge
   button.
+- The Sensei can now `followup_task` a review card: resume its own agent
+  session with precise feedback instead of always `reject_task`ing into a
+  full fresh run. Reserved for small, specific flaws (name the file, name the
+  fix); `reject_task` still handles approach-level failures that need a
+  restart. `run_task` on an already-running/stopping card is now a no-op
+  instead of an error, matching the other stale-snapshot races.
+- Import frontmatter now takes `queue: true` (alias `autoqueue`) to auto-launch
+  every card in the file on import, instead of dropping them in Backlog where
+  nothing picks them up. Chained cards (`after:`/`sequential:`) park in Queued
+  and cascade automatically as their prerequisites ship.
+- Every PR now runs the test suite in CI, so a red run is machine-checkable
+  before the Sensei ever considers merging it.
 
 ### Fixed
 - PR-watch conflict fixer no longer spawns against an already-resolved PR: the
