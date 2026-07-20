@@ -67,6 +67,7 @@ manager.applyInterval();
 function runArchiveSweep() {
   const archived = sweepArchive();
   for (const t of archived) broadcast({ type: 'deleted', taskId: t.id });
+  importer.sweepImported();
 }
 runArchiveSweep();
 setInterval(runArchiveSweep, 24 * 60 * 60 * 1000);
