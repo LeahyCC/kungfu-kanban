@@ -151,6 +151,8 @@
         <nav aria-label="Site">
           <a href="#forms">The four forms</a>
           <a href="#manual">The manual</a>
+          <a href="/docs">Docs</a>
+          <a href="/compare">Compare</a>
           <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer">GitHub</a>
           <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to day dojo"
             aria-pressed="false" title="Day / night dojo">☀</button>
@@ -536,7 +538,8 @@ npm start          <span class="c"># → http://localhost:4747</span></code></pr
                     automatically from flaky wifi or your laptop sleeping instead of quietly going stale.</li>
                   <li>Cards sharing a <strong>Group</strong> cluster under a collapsible header; only one card per
                     group is ever in progress, a <strong>▶</strong> button on the header queues the whole batch, and
-                    the group fires one notification when it finishes instead of one per card.</li>
+                    the group fires one notification when it finishes instead of one per card
+                    (<a href="/docs#groups">details →</a>).</li>
                   <li><strong>⚙ Settings</strong> (toolbar): default working directory, repos directory, ntfy topic,
                     notification toggles, PR watch. <strong>☀ / ☾</strong> toggles the day/night dojo; night is the
                     default.</li>
@@ -647,6 +650,8 @@ npm start          <span class="c"># → http://localhost:4747</span></code></pr
                   releases it. The Sensei chains multi-card plans itself (<a href="#m-manager">chapter 06</a>), and
                   imported cards chain the same way via <code>after:</code>/<code>sequential:</code> (<a
                     href="#m-import">chapter 07</a>).</p>
+                <p><a href="/docs#dependencies">Dependency &amp; merge-gate semantics, as their own reference page →</a>
+                </p>
                 <p>Skills and agents are auto-discovered at load, no config: personal skills from
                   <code>~/.claude/skills/*/SKILL.md</code>, plugin skills from every enabled plugin (namespaced
                   <code>plugin:skill</code>), agents from <code>~/.claude/agents/*.md</code>. A filter box narrows the
@@ -763,6 +768,7 @@ npm start          <span class="c"># → http://localhost:4747</span></code></pr
                   tasks&rdquo;, &ldquo;never auto-approve migrations&rdquo;) — no code changes needed. The
                   manager&rsquo;s own model/effort (default opus/medium) are configurable; it can also be disabled
                   entirely.</p>
+                <p><a href="/docs#sensei">The Sensei&rsquo;s actions &amp; autonomy levels, as their own reference page →</a></p>
               </div>
 
               <div class="chapter" id="m-import">
@@ -831,6 +837,7 @@ after: Fix the flaky login test</code></pre>
                   manual Install/Update button if you ever need it.</p>
                 <p>Imported cards land in <strong>Backlog</strong> tagged <code>import</code>, and the Sensei gets one
                   triage ping per batch — paste a plan, and routing happens for you.</p>
+                <p><a href="/docs#import-format">The import format, as its own reference page →</a></p>
               </div>
 
               <div class="chapter" id="m-schedule">
@@ -1092,6 +1099,8 @@ launchctl unload ~/Library/LaunchAgents/com.kungfu-kanban.plist <span class="c">
               <a href="#forms">The four forms</a>
               <a href="#features">The discipline</a>
               <a href="#manual">The manual</a>
+              <a href="/docs">Docs</a>
+              <a href="/compare">Compare</a>
             </div>
             <div>
               <b>Source</b>
