@@ -16,8 +16,22 @@ const DATA_DIR = path.join(ROOT, 'data');
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const TEST_TOKEN = 'kfk-integration-test-token';
 
+// Only the specific files these tests write — NEVER the data/ directory
+// itself. `node --test` runs every test file in this repo as its own
+// process, all sharing this checkout's filesystem; another file's debounced
+// store.save() can still be mid-flight (its 150ms setTimeout fires after its
+// own tests finish) and open data/tasks.json.tmp — rm -rf'ing the directory
+// out from under that write raises ENOENT there and fails the whole run
+// (verified 2026-07-20). Deleting individual files is safe even mid-write:
+// writeJsonAtomic tolerates a missing target (skips the .bak copy) and always
+// recreates it via rename.
+const DATA_FILES = [
+  'tasks.json', 'tasks.json.tmp', 'tasks.json.bak',
+  'settings.json', 'settings.json.tmp', 'settings.json.bak',
+  'auth-token',
+];
 function wipeData() {
-  fs.rmSync(DATA_DIR, { recursive: true, force: true });
+  for (const name of DATA_FILES) fs.rmSync(path.join(DATA_DIR, name), { force: true });
 }
 
 // One boot attempt on a random high port. Resolves the running {child, base}
