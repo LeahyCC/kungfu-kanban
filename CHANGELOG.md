@@ -7,6 +7,9 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+- CI now runs the suite on ubuntu-latest and macos-latest (matrix) and prints
+  `node --test` coverage on every run (no threshold gate yet).
+
 ## [1.0.0] — 2026-07-20
 
 Kungfu Kanban hits 1.0: the board now runs its whole intended loop. 0.13.0
