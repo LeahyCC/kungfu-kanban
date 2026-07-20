@@ -522,6 +522,12 @@ scope is deliberately narrow: single-user, local-first, subscription-auth only. 
 requests for multi-tenancy, hosted deployment, API-key providers, or billing will be
 closed with a polite bow — that version existed and was deleted on purpose.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the fork-and-PR workflow, and
+[SECURITY.md](SECURITY.md) if you've found a vulnerability — report it privately
+through GitHub, not as a public issue.
+
 ## License
 
 [MIT](LICENSE)
