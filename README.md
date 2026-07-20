@@ -247,6 +247,11 @@ Imported cards land in **Backlog** tagged `import`, and the Sensei gets one
 triage ping per batch (if the new-card trigger is on) — so you can paste a plan,
 and routing/prioritization happens for you.
 
+The board also ships the [ponytail](https://github.com/DietrichGebert/ponytail)
+(MIT) lazy-senior-dev discipline and the humanizer skill (strips AI writing
+tells from PR titles, descriptions, and result summaries) — both auto-install
+to `~/.claude/skills` and pre-select on new cards.
+
 ## Repo cards → real PRs
 
 Give a card a working directory that's a git repo with an `origin` remote, check
