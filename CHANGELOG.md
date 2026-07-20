@@ -17,6 +17,7 @@ compares your clone against `origin/main` and offers a one-click update.
 - CI now runs the suite on ubuntu-latest and macos-latest (matrix) and prints
   `node --test` coverage on every run (no threshold gate yet).
 - Open-source contribution gating: CODEOWNERS, dependabot, contributor docs.
+- docs: humanizer audit — already clean (README.md, CONTRIBUTING.md, SECURITY.md, lib/skill.js template strings)
 - Release tags + GitHub Releases published (v0.13.0–v1.0.0 backfilled), and
   required for future releases.
 
