@@ -7,6 +7,21 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.14.1] — 2026-07-20
+
+### Fixed
+- Site: the Manual section no longer forces ~340px of sideways scroll on
+  phones — the mobile grid track is now `minmax(0, 1fr)`, so wide `<pre>`
+  slabs and tables scroll inside their own boxes instead of stretching the
+  page (this also fixed the clipped table-of-contents and the code-comment
+  fragments that spilled past the right edge).
+- Site: the masthead "Build the dojo" button no longer wraps to two lines on
+  phones; hero CTAs stack full-width under 520px instead of squeezing
+  side-by-side into two-line buttons.
+- App: under ~360px the header no longer paints the logo over the Board tab —
+  the brand stops flex-collapsing, the row slims down, and it wraps to a
+  second line if the occasional cooldown/error chips need the width.
+
 ## [0.14.0] — 2026-07-20
 
 ### Added
