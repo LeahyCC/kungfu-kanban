@@ -6,7 +6,10 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![License: MIT](https://img.shields.io/github/license/LeahyCC/kungfu-kanban)](LICENSE)
 
-![Kungfu Kanban board](docs/board.png)
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/board-light.png">
+  <img alt="Kungfu Kanban board — dark theme, five columns, grouped cards with live agent telemetry" src="docs/board.png">
+</picture>
 
 Kungfu Kanban is a local kanban board where Claude Code agents work the cards on your
 own subscription login, no API keys, no per-token billing. Cards can chain into
