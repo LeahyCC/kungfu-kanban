@@ -628,6 +628,49 @@ input.tiny { width: 60px; }
   gap: 8px;
 }
 
+/* Visual-only cluster for cards sharing a `group` — one imported batch.
+   Never a drop target: drag/drop listeners stay on .column. */
+.card-group {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--paper-2);
+}
+.card-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.card-group-head:hover .card-group-name { color: var(--ink-900); }
+.card-group-chevron { flex: none; color: var(--ink-400); transition: transform 120ms var(--ease); }
+.card-group.collapsed .card-group-chevron { transform: rotate(-90deg); }
+.card-group-name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink-600);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-group-count {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--ink-400);
+}
+.card-group-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 8px 8px;
+}
+.card-group.collapsed .card-group-cards { display: none; }
+
 .card {
   background: var(--paper-1);
   border: 1px solid var(--rule);
