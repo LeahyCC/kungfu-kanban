@@ -47,6 +47,7 @@ runner.setBroadcaster(broadcast);
 manager.setBroadcaster(broadcast);
 importer.setBroadcaster(broadcast);
 prwatch.setBroadcaster(broadcast);
+prwatch.backfillMergedAt();
 prwatch.applyInterval();
 cooldown.setBroadcaster(broadcast);
 models.setBroadcaster(broadcast);
@@ -369,6 +370,7 @@ app.post('/api/tasks/:id/pr', (req, res) => {
     if (action === 'merge') {
       task.status = 'done';
       task.managerVerdict = 'PR merged';
+      task.prMergedAt = new Date().toISOString();
       note('pr', 'PR merged from the board');
       require('./lib/notify').notify('Kungfu Kanban — PR merged', task.title, task.prUrl);
       runner.pumpQueue(); // the merge may free dependent cards
