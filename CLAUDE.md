@@ -9,7 +9,10 @@ Conventions for coding sessions in this repo:
   explicitly overrides this (e.g. a batch whose release card owns the version
   bump), the card prompt wins — three batch agents following this convention
   against explicit card instructions caused avoidable merge conflicts on
-  2026-07-20.
+  2026-07-20. Every release card also creates the annotated git tag
+  (`vX.Y.Z`) and the GitHub Release from the dated CHANGELOG section it
+  wrote — the release feed was backfilled 2026-07-20 and is now required
+  going forward.
 - **The live server runs under launchd** (`com.kungfu-kanban`). Frontend files
   serve fresh from disk; server-side changes need
   `launchctl kickstart -k gui/$(id -u)/com.kungfu-kanban`. A SIGTERM/SIGINT

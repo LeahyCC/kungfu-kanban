@@ -12,6 +12,13 @@ compares your clone against `origin/main` and offers a one-click update.
   to cover route-level regressions unit tests miss: validation coercions,
   the auth gate, and status-code contracts. `parseSchedule`/`scheduleDue`
   moved to `lib/schedule.js` so they're directly unit-testable.
+- Mobile layout fixes: site manual overflow, masthead CTA wrap, app header under 360px.
+- site: humanizer pass
+- CI now runs the suite on ubuntu-latest and macos-latest (matrix) and prints
+  `node --test` coverage on every run (no threshold gate yet).
+- Open-source contribution gating: CODEOWNERS, dependabot, contributor docs.
+- Release tags + GitHub Releases published (v0.13.0–v1.0.0 backfilled), and
+  required for future releases.
 
 ## [1.0.0] — 2026-07-20
 
