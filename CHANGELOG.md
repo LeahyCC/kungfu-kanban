@@ -7,6 +7,8 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+- site: humanizer pass
+
 ## [1.0.0] — 2026-07-20
 
 Kungfu Kanban hits 1.0: the board now runs its whole intended loop. 0.13.0
