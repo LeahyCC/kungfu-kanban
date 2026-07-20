@@ -9,6 +9,7 @@ compares your clone against `origin/main` and offers a one-click update.
 
 - CI now runs the suite on ubuntu-latest and macos-latest (matrix) and prints
   `node --test` coverage on every run (no threshold gate yet).
+- Open-source contribution gating: CODEOWNERS, dependabot, contributor docs.
 
 ## [1.0.0] — 2026-07-20
 
