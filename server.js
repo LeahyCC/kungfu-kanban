@@ -15,6 +15,7 @@ const models = require('./lib/models');
 const depsLib = require('./lib/deps');
 const errlog = require('./lib/errlog');
 const bus = require('./lib/bus');
+const prflow = require('./lib/prflow');
 
 const PORT = process.env.PORT || 4747;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -352,28 +353,24 @@ app.post('/api/tasks/:id/pr', (req, res) => {
   if (!task || !task.prUrl) return res.status(404).json({ error: 'no PR on this card' });
   const action = (req.body || {}).action;
   if (!['merge', 'close'].includes(action)) return res.status(400).json({ error: 'action must be merge|close' });
-  const args = action === 'merge' ? ['pr', 'merge', task.prUrl, '--merge'] : ['pr', 'close', task.prUrl];
-  execFile('gh', args, { timeout: 60_000, cwd: task.cwd }, (err, stdout, stderr) => {
+  if (action === 'merge') {
+    return prflow.mergePr(task).then((result) => {
+      if (!result.ok) return res.status(500).json({ error: result.error });
+      res.json({ ok: true });
+    });
+  }
+  execFile('gh', ['pr', 'close', task.prUrl], { timeout: 60_000, cwd: task.cwd }, (err, stdout, stderr) => {
     const note = (kind, text) => {
       require('./lib/store').appendTranscript(task.id, { kind, text });
       broadcast({ type: 'output', taskId: task.id, entry: { kind, text } });
     };
     if (err) {
       const msg = (stderr || err.message || '').trim().slice(0, 300);
-      note('error', `PR ${action} failed — ${msg}`);
+      note('error', `PR close failed — ${msg}`);
       return res.status(500).json({ error: msg });
     }
-    if (action === 'merge') {
-      task.status = 'done';
-      task.managerVerdict = 'PR merged';
-      task.prMergedAt = new Date().toISOString();
-      note('pr', 'PR merged from the board');
-      require('./lib/notify').notify('Kungfu Kanban — PR merged', task.title, task.prUrl);
-      runner.pumpQueue(); // the merge may free dependent cards
-    } else {
-      task.prClosedNoted = true;
-      note('pr', 'PR closed from the board (not merged)');
-    }
+    task.prClosedNoted = true;
+    note('pr', 'PR closed from the board (not merged)');
     save();
     broadcast({ type: 'task', task });
     res.json({ ok: true });
