@@ -7,6 +7,12 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Added
+- `test/server.integration.test.js` boots the real server as a child process
+  to cover route-level regressions unit tests miss: validation coercions,
+  the auth gate, and status-code contracts. `parseSchedule`/`scheduleDue`
+  moved to `lib/schedule.js` so they're directly unit-testable.
+
 ## [1.0.0] — 2026-07-20
 
 Kungfu Kanban hits 1.0: the board now runs its whole intended loop. 0.13.0

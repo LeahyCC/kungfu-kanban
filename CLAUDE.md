@@ -31,3 +31,4 @@ Conventions for coding sessions in this repo:
   gitignored legacies/workspaces.
 - Keep `main` pushed: agent worktrees base on the default branch; a stale
   origin causes avoidable PR conflicts.
+- Every bug fix ships with the regression test that would have caught it.
