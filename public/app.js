@@ -576,12 +576,14 @@ function openModal(task) {
   chipify(auto);
   picker.appendChild(auto);
   const selected = new Set(task ? task.skills || [] : []);
-  // New cards pre-select ponytail (the repo-shipped lazy-senior-dev skill).
+  // New cards pre-select ponytail and humanizer (the repo-shipped skills).
   // First match only — skills are sorted, so the user-skill copy wins over a
   // plugin copy (ponytail:ponytail) and we never double-select.
   if (!task) {
-    const p = config.skills.find((s) => s.name === 'ponytail' || s.name.endsWith(':ponytail'));
-    if (p) selected.add(p.name);
+    for (const name of ['ponytail', 'humanizer']) {
+      const s = config.skills.find((x) => x.name === name || x.name.endsWith(':' + name));
+      if (s) selected.add(s.name);
+    }
   }
   for (const s of config.skills) {
     const chip = document.createElement('span');
