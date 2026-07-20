@@ -8,6 +8,10 @@ compares your clone against `origin/main` and offers a one-click update.
 ## [Unreleased]
 
 ### Added
+- The Sensei now pulls the actual PR diff (`gh pr diff`, capped and truncated)
+  into its review context for cards under review, instead of judging only
+  the agent's self-report — the two serious flaws a human caught in the
+  0.13.0 batch were invisible in the self-report and obvious in the diff.
 - Import frontmatter now takes `queue: true` (alias `autoqueue`) to auto-launch
   every card in the file on import, instead of dropping them in Backlog where
   nothing picks them up. Chained cards (`after:`/`sequential:`) park in Queued
