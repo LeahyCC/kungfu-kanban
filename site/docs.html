@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Docs — Kungfu Kanban</title>
+  <meta name="description"
+    content="Reference docs for Kungfu Kanban: the markdown import format, the Sensei's actions and autonomy levels, dependency/merge-gate semantics, and groups &amp; lanes.">
+  <link rel="canonical" href="https://kungfu-kanban.com/docs">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="/icons/favicon-16x16.png" type="image/png" sizes="16x16">
+  <link rel="apple-touch-icon" href="/icons/apple-icon-180x180.png">
+  <meta name="theme-color" content="#141210">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Kungfu Kanban">
+  <meta property="og:url" content="https://kungfu-kanban.com/docs">
+  <meta property="og:title" content="Kungfu Kanban docs">
+  <meta property="og:description"
+    content="The markdown import format, the Sensei's actions and autonomy levels, dependency/merge-gate semantics, and groups &amp; lanes — as their own reference sections.">
+  <meta property="og:image" content="https://kungfu-kanban.com/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt"
+    content="The Kungfu Kanban cardboard robot beside the words: kanban board for Claude Code agents">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Kungfu Kanban docs">
+  <meta name="twitter:description"
+    content="The markdown import format, the Sensei's actions and autonomy levels, dependency/merge-gate semantics, and groups &amp; lanes.">
+  <meta name="twitter:image" content="https://kungfu-kanban.com/og.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Kungfu Kanban", "item": "https://kungfu-kanban.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://kungfu-kanban.com/docs" }
+        ]
+      }
+    ]
+  }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <script>try { if (localStorage.getItem('kk-theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) { }</script>
+  <script>
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording capture_pageview debug getPageViewId captureTraceFeedback captureTraceMetric".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    posthog.init('phc_rC3SRDUYj2yHaEM8RCEby3PcXvdZGcRAhiZrjdj7GpBd', {
+      api_host: 'https://us.i.posthog.com',
+      ui_host: 'https://us.posthog.com',
+      defaults: '2025-05-24',
+      person_profiles: 'identified_only'
+    });
+  </script>
+</head>
+
+<body>
+  <div class="mkt">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="masthead">
+      <div class="mkt-inner">
+        <a href="/#main" class="wordmark">Kungfu Kanban <span class="antenna" aria-hidden="true"></span></a>
+        <nav aria-label="Site">
+          <a href="/#forms">The four forms</a>
+          <a href="/#manual">The manual</a>
+          <a href="/docs" aria-current="page">Docs</a>
+          <a href="/compare">Compare</a>
+          <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer">GitHub</a>
+          <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to day dojo"
+            aria-pressed="false" title="Day / night dojo">☀</button>
+          <a href="/#manual" class="btn ink">Build the dojo</a>
+        </nav>
+      </div>
+      <div class="scroll-progress" aria-hidden="true"><i id="scroll-progress-bar"></i></div>
+    </header>
+
+    <main id="main">
+      <section class="manual-section section-pad" id="docs">
+        <div class="mkt-inner">
+          <h2 class="section-title">Docs.</h2>
+          <p class="manual-sub">
+            Four reference sections, each linkable on its own. For full setup — requirements, install,
+            phone access, troubleshooting — see <a href="/#manual">the manual</a>.
+          </p>
+
+          <div class="manual-grid">
+            <nav class="manual-toc" aria-label="Docs sections">
+              <a href="#import-format"><b>01</b>Import format</a>
+              <a href="#sensei"><b>02</b>The Sensei</a>
+              <a href="#dependencies"><b>03</b>Dependencies &amp; merge gates</a>
+              <a href="#groups"><b>04</b>Groups &amp; lanes</a>
+            </nav>
+            <div class="manual-body">
+
+              <div class="chapter" id="import-format">
+                <span class="kicker">§ 01</span>
+                <h3>Import format reference</h3>
+                <p>Two formats, auto-detected, from a paste, a picked file, or anything dropped into
+                  <code>data/inbox/</code>.</p>
+                <h4>Sections</h4>
+                <p>Every <code>## Heading</code> becomes a card: the heading is the title, leading
+                  <code>key: value</code> lines set fields, an <code>### Acceptance</code> subsection becomes
+                  the acceptance criteria, everything else is the prompt. Optional frontmatter sets file-wide
+                  defaults:</p>
+                <pre><code>---
+cwd: /Users/you/project
+model: sonnet
+worktree: true
+openPr: true
+group: auth-refactor
+queue: true
+---
+
+## Fix the flaky login test
+model: opus
+priority: 2
+The test in auth.spec.ts fails intermittently because…
+
+### Acceptance
+- passes 10x in a row
+
+## Update the README badges
+after: Fix the flaky login test</code></pre>
+                <p>Recognized keys (case/space-insensitive): <code>cwd</code> (<code>dir</code>/<code>repo</code>),
+                  <code>model</code>, <code>effort</code>, <code>permissions</code>, <code>priority</code> (0–3),
+                  <code>worktree</code>, <code>openPr</code> (<code>pr</code>), <code>agent</code>,
+                  <code>skills</code>, <code>acceptance</code>, <code>group</code> (<code>batch</code>),
+                  <code>base</code> (<code>prBaseBranch</code> — for repos whose branch guards reject PRs
+                  straight into main), <code>after</code> (<code>deps</code>/<code>needs</code> — the exact
+                  title of an earlier card; repeat the line for several), <code>sequential</code> (chain every
+                  card in the file to the one above it), and <code>queue</code> (<code>autoqueue</code> —
+                  launch every card on import instead of leaving them in Backlog; chained cards park in Queued
+                  and cascade as prerequisites ship). A card with no body uses its title as the prompt.</p>
+                <h4>Checklist</h4>
+                <p>A file with no <code>##</code> headings: every unchecked <code>- [ ] item</code> becomes a
+                  card (checked items are skipped).</p>
+                <p>Imported cards land in <strong>Backlog</strong> tagged <code>import</code>, and the Sensei
+                  gets one triage ping per batch.</p>
+              </div>
+
+              <div class="chapter" id="sensei">
+                <span class="kicker">§ 02</span>
+                <h3>The Sensei: actions &amp; autonomy levels</h3>
+                <p>The Sensei is an LLM manager — itself a <code>claude -p</code> structured-output call on
+                  your subscription — that triages new cards (model/effort/skills/priority routing),
+                  dispatches queued work, reviews finished cards against their acceptance criteria and their
+                  actual PR diff, chains multi-card plans with dependencies, and answers you in chat.</p>
+                <h4>Review &amp; fix actions</h4>
+                <p>A review card carries its real PR diff into the Sensei&rsquo;s context, not just the
+                  agent&rsquo;s self-report — the diff is what catches ordering, logic, and safety issues a
+                  self-report misses. From there:</p>
+                <ul>
+                  <li><strong>followup_task</strong> resumes the same agent session with a precise, named fix
+                    instead of burning a full retry — reserved for small, specific flaws;
+                    <strong>reject_task</strong> still handles approach-level failures that need a fresh
+                    attempt.</li>
+                  <li><strong>merge_pr</strong> ships the card&rsquo;s PR itself once every CI check on it is
+                    green and the base branch is correct, instead of approving and leaving a &ldquo;done&rdquo;
+                    card still blocking its dependents. It skips with a note when checks are red, pending, or
+                    haven&rsquo;t reported yet.</li>
+                  <li>It resolves entries in the <strong>error tracker</strong> (permission stops, wrong-base
+                    PRs, failed launches) by fixing the operation, not the code, then marking the entry
+                    handled.</li>
+                </ul>
+                <p>Repeated or stale actions are no-ops rather than errors — running a card that&rsquo;s
+                  already running, approving one already done — so a Sensei decision made against a snapshot
+                  that&rsquo;s since changed underneath it can&rsquo;t double-fire a run.</p>
+                <h4>Autonomy ladder</h4>
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th>Level</th>
+                      <th>Can do without you</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>suggest</code> <em>(default)</em></td>
+                      <td>nothing — every action waits for your ✓</td>
+                    </tr>
+                    <tr>
+                      <td><code>semi</code></td>
+                      <td>create / route / run cards; approve-reject verdicts still wait</td>
+                    </tr>
+                    <tr>
+                      <td><code>auto</code></td>
+                      <td>everything, within guardrails</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p>Deleting cards is never available to the manager, at any level. Guardrails
+                  (max launches/hour, max retries/task, a permission ceiling it can&rsquo;t assign beyond) sit
+                  on top of the ladder; a guardrail-blocked action becomes a suggestion instead of executing.</p>
+                <p><strong>Management style</strong>: freeform standing instructions (&ldquo;prefer haiku for
+                  docs tasks&rdquo;, &ldquo;never auto-approve migrations&rdquo;) — no code changes needed.</p>
+              </div>
+
+              <div class="chapter" id="dependencies">
+                <span class="kicker">§ 03</span>
+                <h3>Dependencies &amp; merge-gate semantics</h3>
+                <p>Give a card <strong>Runs after</strong> prerequisites (or <code>after</code> /
+                  <code>sequential</code> when importing) and it waits in <strong>Queued</strong> until every
+                  one of them is <em>actually</em> done.</p>
+                <p>&ldquo;Actually done&rdquo; is stricter than the column a card sits in. A dependency
+                  isn&rsquo;t satisfied by a card just reaching Done — if that card opened a PR that&rsquo;s
+                  still open and unmerged, the dependent keeps waiting; a merged PR, or a card that never
+                  opened one, releases it. That's the merge gate: a card can look finished on the board while
+                  still blocking everything queued behind it, until the PR itself lands.</p>
+                <p>The Sensei's <strong>merge_pr</strong> action (see <a href="#sensei">§ 02</a>) exists
+                  partly to close this gate on its own — merging a green PR itself rather than leaving a
+                  &ldquo;done&rdquo; card sitting on top of blocked dependents. The Sensei also chains
+                  multi-card plans itself, and imported cards chain the same way via
+                  <code>after:</code>/<code>sequential:</code> (<a href="#import-format">§ 01</a>).</p>
+              </div>
+
+              <div class="chapter" id="groups">
+                <span class="kicker">§ 04</span>
+                <h3>Groups &amp; lanes</h3>
+                <p>Cards sharing a <strong>Group</strong> field cluster under one collapsible header on the
+                  board instead of appearing as separate cards in every column. Three rules govern how a group
+                  behaves:</p>
+                <ul>
+                  <li>Only <strong>one card per group is ever in progress</strong> — a group is a single lane,
+                    not a parallel batch, so related work runs in a defined order rather than all at once.</li>
+                  <li>A <strong>▶</strong> button on the group header queues the whole batch in one action,
+                    instead of launching each card by hand.</li>
+                  <li>Finishing a group fires <strong>one notification</strong> for the whole batch, not one
+                    per card — useful when a plan imports as a dozen small cards and you only want one ping.</li>
+                </ul>
+                <p>Imported markdown sets the group with the <code>group</code> (or <code>batch</code>) key
+                  in frontmatter or a card's leading fields (<a href="#import-format">§ 01</a>); groups and
+                  dependencies compose — a grouped card can also carry <code>after:</code> prerequisites, and
+                  both constraints apply together.</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="colophon">
+        <div class="mkt-inner">
+          <div class="colophon-grid">
+            <div>
+              <b>The dojo</b>
+              <a href="/#forms">The four forms</a>
+              <a href="/#features">The discipline</a>
+              <a href="/#manual">The manual</a>
+              <a href="/docs">Docs</a>
+              <a href="/compare">Compare</a>
+            </div>
+            <div>
+              <b>Source</b>
+              <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer">GitHub</a>
+              <a href="https://github.com/LeahyCC/kungfu-kanban#readme" target="_blank" rel="noreferrer">README</a>
+              <a href="https://github.com/LeahyCC/kungfu-kanban/issues" target="_blank" rel="noreferrer">Issues</a>
+            </div>
+            <div>
+              <b>Colophon</b>
+              <span style="color: var(--ink-400)">© 2026 Kungfu Kanban</span>
+            </div>
+          </div>
+          <div class="colophon-bow">
+            <img src="/icons/android-icon-48x48.png" alt="" width="48" height="48">
+            <p>
+              Set in Bricolage Grotesque, Instrument Sans &amp; IBM Plex Mono.
+              Ink, paper, and one cardboard master. No stock photos. No accounts. No billing.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var btn = document.getElementById('theme-toggle');
+      var themeMeta = document.querySelector('meta[name="theme-color"]');
+      function render() {
+        var light = document.documentElement.dataset.theme === 'light';
+        btn.textContent = light ? '☾' : '☀';
+        btn.title = light ? 'Night dojo' : 'Day dojo';
+        btn.setAttribute('aria-label', light ? 'Switch to night dojo' : 'Switch to day dojo');
+        btn.setAttribute('aria-pressed', String(light));
+        if (themeMeta) themeMeta.content = light ? '#F6F2E9' : '#141210';
+      }
+      btn.addEventListener('click', function () {
+        var next = !(document.documentElement.dataset.theme === 'light');
+        if (next) document.documentElement.dataset.theme = 'light';
+        else delete document.documentElement.dataset.theme;
+        try { localStorage.setItem('kk-theme', next ? 'light' : 'dark'); } catch (e) { }
+        render();
+      });
+      render();
+    })();
+
+    (function () {
+      var bar = document.getElementById('scroll-progress-bar');
+      if (!bar) return;
+      var ticking = false;
+      function update() {
+        ticking = false;
+        var doc = document.documentElement;
+        var max = doc.scrollHeight - window.innerHeight;
+        bar.style.transform = 'scaleX(' + (max > 0 ? Math.min(1, window.scrollY / max) : 0) + ')';
+      }
+      window.addEventListener('scroll', function () {
+        if (!ticking) { ticking = true; requestAnimationFrame(update); }
+      }, { passive: true });
+      window.addEventListener('resize', update);
+      update();
+    })();
+
+    (function () {
+      var links = Array.prototype.slice.call(document.querySelectorAll('.manual-toc a[href^="#"]'));
+      var chapters = links
+        .map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); })
+        .filter(Boolean);
+      if (!chapters.length) return;
+      var byId = {};
+      links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+      function activate(id) {
+        links.forEach(function (a) {
+          var on = a === byId[id];
+          a.classList.toggle('active', on);
+          if (on) a.setAttribute('aria-current', 'true');
+          else a.removeAttribute('aria-current');
+        });
+      }
+      var section = document.getElementById('docs');
+      function spy() {
+        spyTicking = false;
+        var line = window.innerHeight / 3;
+        var r = section.getBoundingClientRect();
+        if (r.top > line || r.bottom < 0) { activate(null); return; }
+        var current = chapters[0];
+        for (var i = 0; i < chapters.length; i++) {
+          if (chapters[i].getBoundingClientRect().top <= line) current = chapters[i];
+        }
+        activate(current.id);
+      }
+      var spyTicking = false;
+      window.addEventListener('scroll', function () {
+        if (!spyTicking) { spyTicking = true; requestAnimationFrame(spy); }
+      }, { passive: true });
+      window.addEventListener('resize', spy);
+      spy();
+    })();
+  </script>
+</body>
+
+</html>

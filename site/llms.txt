@@ -43,6 +43,12 @@ Key facts:
 - [The manual](https://kungfu-kanban.com/#manual): complete setup and feature
   reference — requirements, install, PR flow, the Manager, phone access,
   limits, security.
+- [Docs](https://kungfu-kanban.com/docs): linkable reference sections — the
+  markdown import format, the Sensei's actions and autonomy levels,
+  dependency/merge-gate semantics, and groups & lanes.
+- [Compare](https://kungfu-kanban.com/compare): an honest comparison against
+  Vibe Kanban, Conductor, and Crystal/Nimbalyst — the other tools people
+  evaluate for running coding agents.
 - [README](https://github.com/LeahyCC/kungfu-kanban#readme): the same manual
   on GitHub.
 
