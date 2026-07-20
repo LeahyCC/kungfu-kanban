@@ -29,6 +29,10 @@ compares your clone against `origin/main` and offers a one-click update.
 - site: accuracy pass on the manual/FAQ/llms.txt — dependency chains, group
   batching, and the Sensei's diff review/merge/follow-up/error-tracker
   powers were live since 0.12–0.14 but undocumented on kungfu-kanban.com.
+- site: added `/compare` (honest comparison vs Vibe Kanban, Conductor, and
+  Crystal/Nimbalyst) and `/docs` (linkable reference sections — import
+  format, the Sensei's actions/autonomy, dependency/merge-gate semantics,
+  groups & lanes), wired into nav, sitemap, and structured data.
 
 ## [1.0.0] — 2026-07-20
 
