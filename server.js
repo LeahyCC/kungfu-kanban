@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const path = require('path');
 const { execFile } = require('child_process');
-const { discoverSkills, discoverAgents, discoverRepos } = require('./lib/discovery');
+const { discoverSkills, discoverAgents, discoverRepos, defaultReposDir } = require('./lib/discovery');
 const os = require('os');
 const { state, save, flush, getTask, readTranscript, clearTranscript, sweepArchive } = require('./lib/store');
 const runner = require('./lib/runner');
@@ -76,7 +76,9 @@ const EFFORTS = ['default', 'low', 'medium', 'high', 'xhigh', 'max'];
 const PERMISSION_MODES = ['acceptEdits', 'auto', 'plan', 'dontAsk', 'bypassPermissions'];
 
 function reposDir() {
-  return state.settings.reposDir || path.join(os.homedir(), 'Documents', 'Code', 'Git');
+  // Never hardcode one person's folder layout — auto-scan common dev locations
+  // when the user hasn't configured a directory (they set it in ⚙ Settings).
+  return state.settings.reposDir || defaultReposDir();
 }
 
 app.get('/api/config', (req, res) => {
