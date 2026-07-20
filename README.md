@@ -456,7 +456,7 @@ to restart it.
 | File | Contents |
 |---|---|
 | `tasks.json` | all cards |
-| `settings.json` | parallel cap, default cwd, ntfy topic, notification toggle, archive-after-days, manager config |
+| `settings.json` | parallel cap, default cwd, ntfy topic, notification toggle, archive-after-days, manager config, `maxRunMinutes` (per-run watchdog, default 120, 0 disables) |
 | `manager.json` | pending suggestions, chat history, launch timestamps |
 | `manager-log.jsonl` | manager activity log |
 | `errors.json` | error tracker entries (see [Error tracker](#error-tracker)) |
