@@ -211,7 +211,7 @@ app.post('/api/import/issues', (req, res) => {
             `## ${i.title}`,
             `issue: ${i.number}`,
             urgent ? 'priority: 2' : '',
-            (i.body || i.title).trim().slice(0, 3000),
+            (i.body || i.title).trim().slice(0, 3000).replace(/^#{1,2}(\s+\S)/gm, '###$1'),
             '',
           ].filter(Boolean).join('\n');
         }),
