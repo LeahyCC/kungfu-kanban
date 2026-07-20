@@ -7,6 +7,20 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-07-20
+
+### Added
+- Grouped cards now run one lane at a time: at most one card per group is
+  in progress at once, an in-progress group drains before a fresh one
+  starts, and a manual run still bypasses the lane when you need it now.
+- A queue-group button on group headers launches every backlog card in
+  that group with one click, instead of queuing them one by one.
+
+### Changed
+- A group now sends a single notification when it completes instead of one
+  per card, and the Sensei prefers finishing an in-progress group over
+  starting a new one and reviews a completed group's cards as a batch.
+
 ## [0.14.0] — 2026-07-20
 
 ### Added
