@@ -7,6 +7,11 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Tests
+- Split the parser smoke test into per-module suites under `test/` with
+  decision-table coverage of the importer, deps, models, cooldown, prwatch,
+  runner, errlog, auth, and skill install/status logic.
+
 ## [1.0.0] — 2026-07-20
 
 Kungfu Kanban hits 1.0: the board now runs its whole intended loop. 0.13.0
