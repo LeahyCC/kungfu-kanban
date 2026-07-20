@@ -54,6 +54,7 @@ runner.setOnFinish((task) => {
   // of minutes, so fast failures (branch guards fail in seconds) badge the
   // card long before the next interval sweep.
   if (task.prUrl && !task.error) setTimeout(() => prwatch.sweep(), 120_000);
+  manager.pruneSuggestions();
   if (manager.config().triggers.onFinish) {
     manager.invoke(`task finished and awaits review: "${task.title}" (id ${task.id})`);
   }
