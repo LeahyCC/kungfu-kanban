@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { parseMarkdown } = require('../lib/importer');
+const { parseMarkdown, labelFromFilename } = require('../lib/importer');
 const { detect, parseReset } = require('../lib/cooldown');
 const { summarizeChecks } = require('../lib/prwatch');
 const { newer } = require('../lib/version');
@@ -45,6 +45,24 @@ test('parseMarkdown: fenced "### Acceptance" heading inside a card body is not t
   const cards = parseMarkdown('## Title\n```\n### Acceptance\nnot real\n```\nprompt text');
   assert.equal(cards[0].acceptanceCriteria, undefined);
   assert.match(cards[0].prompt, /not real/);
+});
+
+test('parseMarkdown: group/batch fields set the group, per-card overrides the frontmatter default', () => {
+  const cards = parseMarkdown('---\ngroup: Batch A\n---\n## One\nbody\n## Two\nbatch: Batch B\nbody');
+  assert.equal(cards[0].group, 'Batch A');
+  assert.equal(cards[1].group, 'Batch B');
+});
+
+test('parseMarkdown: defaultGroup fills in only when no explicit group was set', () => {
+  const withDefault = parseMarkdown('## One\nbody', 'Inbox label');
+  assert.equal(withDefault[0].group, 'Inbox label');
+  const explicit = parseMarkdown('---\ngroup: Explicit\n---\n## One\nbody', 'Inbox label');
+  assert.equal(explicit[0].group, 'Explicit');
+});
+
+test('labelFromFilename strips extension and a trailing date-time stamp', () => {
+  assert.equal(labelFromFilename('app-quality-audit-20260719-2057.md'), 'App quality audit');
+  assert.equal(labelFromFilename('quick-fixes.md'), 'Quick fixes');
 });
 
 // --- cooldown.detect / parseReset -------------------------------------------
