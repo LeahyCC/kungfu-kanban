@@ -160,6 +160,18 @@ stays in **Backlog** carrying a `⏱` badge and never moves columns on its own;
 drag it elsewhere and it stops firing until it's back in Backlog. Clear the
 Repeat field to turn scheduling off.
 
+### Dependencies
+
+Give a card a `deps` list — other card ids it must wait for — and it stays in
+**Backlog** until every dependency is Done (approved or its PR merged); the
+runner then launches it automatically. Columns lay chains out in run order and
+dependency badges show unmet-prerequisite depth. The Sensei can chain a
+multi-card plan itself: `create_task`/`update_task` accept exact card titles
+and ordinals (including cards created earlier in the same batch), not just
+ids, reusing the importer's title resolver — unresolvable entries surface as
+`⛓ unresolved dep` instead of silently dropping the chain. Import markdown sets
+the same thing with the `after` key (see [Importing cards](#importing-cards-from-markdown)).
+
 ---
 
 ## Importing cards from Markdown
@@ -199,8 +211,11 @@ The test in auth.spec.ts fails intermittently because…
 
 Recognized keys (case/space-insensitive): `cwd` (`dir`/`repo`), `model`, `effort`,
 `permissions`, `priority` (0–3), `worktree`, `openPr` (`pr`), `agent`,
-`skills` (comma-separated), `acceptance`. Unknown or invalid values are ignored;
-a card with no body uses its title as the prompt.
+`skills` (comma-separated), `acceptance`, `issue` (GitHub issue number),
+`base` (`prBase`/`baseBranch`, the PR's target branch), `after` (`deps`/`dependsOn`/
+`needs`, a prerequisite card title — repeat the line for several), `sequential`
+(frontmatter-only: chain every card in the file to the one above it). Unknown or
+invalid values are ignored; a card with no body uses its title as the prompt.
 
 **Checklist** — a file with no `##` headings: every unchecked `- [ ] item`
 becomes a card (checked items are skipped).
@@ -299,6 +314,22 @@ Because the topic is public-by-obscurity, keep card titles free of secrets.
 **🔔 Test notification** (in ⚙ Settings) fires both channels on demand — use it to
 verify the phone hookup. You can also watch the topic live at
 `https://ntfy.sh/<your-topic>` in any browser.
+
+### Error tracker
+
+The board keeps a persistent log (`data/errors.json`) of every operational
+error or block as it happens — permission stops, PRs opened against the wrong
+base branch, PR-flow commit/push/create failures, PR conflicts past auto-fix,
+launch failures, Sensei action errors, and subscription-limit cooldowns.
+Repeats bump a counter instead of piling up rows, and entries auto-resolve
+when the thing they describe later succeeds. A red ⚠ chip in the header counts
+open entries; clicking it opens the tracker with per-entry ✓ resolve, links to
+the card/PR, and an **"Ask the Sensei to fix these"** button. The Sensei sees
+open entries every run and can `resolve_error` (mark one handled) or
+`retarget_pr` (move a PR onto the right base branch via `gh pr edit --base`) —
+it only fixes the operation (permissions, bases, re-runs), never the code.
+API: `GET /api/errors`, `POST /api/errors/:id/resolve`,
+`POST /api/errors/resolve-all`; a live `errors` SSE event keeps the chip honest.
 
 ---
 
@@ -428,8 +459,10 @@ to restart it.
 | `settings.json` | parallel cap, default cwd, ntfy topic, notification toggle, archive-after-days, manager config |
 | `manager.json` | pending suggestions, chat history, launch timestamps |
 | `manager-log.jsonl` | manager activity log |
+| `errors.json` | error tracker entries (see [Error tracker](#error-tracker)) |
 | `transcripts/<task-id>.jsonl` | per-card transcript |
 | `archive.jsonl` | Done cards swept out after `archiveDays` (append-only) |
+| `inbox/` | watch folder for markdown imports; imported files move to `inbox/imported/` |
 | `auth-token` | access token (create to enable the gate) |
 
 Back up `data/` to keep your board; delete it to factory-reset. Individual sessions
