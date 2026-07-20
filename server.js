@@ -14,6 +14,7 @@ const cooldown = require('./lib/cooldown');
 const models = require('./lib/models');
 const depsLib = require('./lib/deps');
 const errlog = require('./lib/errlog');
+const bus = require('./lib/bus');
 
 const PORT = process.env.PORT || 4747;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -43,14 +44,8 @@ function broadcast(msg) {
   const data = `data: ${JSON.stringify(msg)}\n\n`;
   for (const res of sseClients) res.write(data);
 }
-runner.setBroadcaster(broadcast);
-manager.setBroadcaster(broadcast);
-importer.setBroadcaster(broadcast);
-prwatch.setBroadcaster(broadcast);
+bus.subscribe(broadcast);
 prwatch.applyInterval();
-cooldown.setBroadcaster(broadcast);
-models.setBroadcaster(broadcast);
-errlog.setBroadcaster(broadcast);
 setTimeout(() => prwatch.sweep(), 30_000); // first pass shortly after boot
 runner.setOnFinish((task) => {
   // A card that just opened/updated a PR: sweep once after CI has had a couple
