@@ -12,11 +12,19 @@ Key facts:
 - Uses the Claude Code CLI with your subscription login; the runner strips
   `ANTHROPIC_API_KEY` from the environment so it can never bill per token.
 - An LLM manager (the "Sensei") triages cards — model, effort, priority,
-  skills — dispatches runs, and reviews results against acceptance criteria,
-  with three autonomy levels (suggest / semi / auto).
+  skills — dispatches runs, and reviews results against acceptance criteria
+  and the actual PR diff, with three autonomy levels (suggest / semi / auto).
+  It can merge a card's PR itself once CI is green, send precise same-session
+  follow-up fixes instead of always restarting, and chain multi-card plans
+  with dependencies.
 - Repo cards run in isolated git worktrees and open pull requests via the
-  GitHub CLI; merged PRs file themselves into Done; conflicted PRs spawn
-  self-healing fix agents.
+  GitHub CLI, gated by CI; merged PRs file themselves into Done; conflicted
+  PRs spawn self-healing fix agents.
+- Cards can depend on each other ("runs after"): a dependent waits until its
+  prerequisite is actually done — an open, unmerged PR still counts as
+  blocking. Cards can also share a group, which clusters them under one
+  header, runs one card per group at a time, and sends a single
+  group-complete notification.
 - Subscription rate limits are absorbed: cards requeue, a countdown shows, and
   everything resumes when the window resets. Model-specific caps step launches
   down the fable → opus → sonnet → haiku ladder automatically.

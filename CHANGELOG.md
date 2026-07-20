@@ -7,6 +7,11 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Tests
+- Split the parser smoke test into per-module suites under `test/` with
+  decision-table coverage of the importer, deps, models, cooldown, prwatch,
+  runner, errlog, auth, and skill install/status logic.
+
 - README: badge row (CI, latest release, MIT license), hero image slot, and a
   tighter positioning paragraph up top for people landing cold.
 - The humanizer skill (MIT, vendored at `skills/humanizer/SKILL.md`) now ships
@@ -21,6 +26,9 @@ compares your clone against `origin/main` and offers a one-click update.
 - docs: humanizer audit — already clean (README.md, CONTRIBUTING.md, SECURITY.md, lib/skill.js template strings)
 - Release tags + GitHub Releases published (v0.13.0–v1.0.0 backfilled), and
   required for future releases.
+- site: accuracy pass on the manual/FAQ/llms.txt — dependency chains, group
+  batching, and the Sensei's diff review/merge/follow-up/error-tracker
+  powers were live since 0.12–0.14 but undocumented on kungfu-kanban.com.
 
 ## [1.0.0] — 2026-07-20
 
