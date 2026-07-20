@@ -39,6 +39,7 @@
       <button id="tabManager" class="app-tab" role="tab" aria-selected="false" tabindex="-1">Sensei <span id="suggCount" class="pill hidden"></span></button>
     </nav>
     <div class="app-status" aria-label="Board summary">
+      <button id="attnChip" class="cooldown-chip attn-chip hidden" title="Sensei suggestions waiting on your ✓, plus cards stopped on a permission block. Click to review, approve, or reject.">🔔 <span id="attnChipText">0</span></button>
       <button id="errChip" class="cooldown-chip err-chip hidden" title="Open operational errors & blocks — permission stops, wrong-base PRs, failed launches. Click to review or have the Sensei fix them.">⚠ <span id="errChipText">0</span></button>
       <span id="usageChip" class="cooldown-chip usage-chip hidden" title="All Claude Code output tokens on this Mac in the rolling 5-hour limit window (board + terminal). Set a budget in ⚙ Settings for a % meter.">⛽ <span id="usageChipText"></span></span>
       <span id="cooldownChip" class="cooldown-chip hidden" title="Subscription limits hit — auto flow paused; queued cards launch when it resets">⏳ <span id="cooldownTimer">--:--</span></span>
@@ -315,6 +316,20 @@ The prompt: self-contained instructions for the executing agent.
         <button type="button" id="errAskSenseiBtn" class="primary" title="One Sensei run on your subscription: it walks the open entries — raises permissions, retargets wrong-base PRs, re-runs what stalled — and marks what it handled resolved">🥋 Ask the Sensei to fix these</button>
         <button type="button" id="errResolveAllBtn" class="ghost" title="Mark every open entry resolved without fixing anything">✓ Resolve all</button>
         <button type="button" id="errCloseBtn" class="ghost">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attention modal -->
+  <div id="attnBackdrop" class="backdrop hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="attnTitle">
+      <h2 id="attnTitle">Needs your attention</h2>
+      <p class="hint">Sensei suggestions waiting on your ✓, plus cards stopped on a permission block. Approve, reject, or open a card to raise its permissions.</p>
+      <div id="attnList" class="err-list slab"></div>
+      <div class="modal-actions">
+        <button type="button" id="attnApproveAllBtn" class="primary" title="Approve every pending Sensei suggestion below">✓ Approve all</button>
+        <button type="button" id="attnRejectAllBtn" class="ghost" title="Reject every pending Sensei suggestion below">✗ Reject all</button>
+        <button type="button" id="attnCloseBtn" class="ghost">Close</button>
       </div>
     </div>
   </div>
