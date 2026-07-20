@@ -280,7 +280,26 @@ function groupEl(name, colGroupTasks) {
   head.tabIndex = 0;
   head.setAttribute('role', 'button');
   head.setAttribute('aria-expanded', String(!collapsed));
-  head.innerHTML = `<span class="card-group-chevron">▾</span><span class="card-group-name">${esc(name)}</span><span class="card-group-count">${done}/${total} done</span>`;
+  const backlogMembers = colGroupTasks.filter((t) => t.status === 'backlog');
+  const queueBtn = backlogMembers.length
+    ? `<button class="card-run card-group-queue" data-act="queue-group" title="${esc(`Queue ${backlogMembers.length} cards`)}" aria-label="${esc(`Queue ${backlogMembers.length} cards`)}">▶</button>`
+    : '';
+  head.innerHTML = `<span class="card-group-chevron">▾</span><span class="card-group-name">${esc(name)}</span><span class="card-group-count">${done}/${total} done</span>${queueBtn}`;
+  const qb = head.querySelector('.card-group-queue');
+  if (qb) qb.addEventListener('click', (e) => {
+    e.stopPropagation();
+    withBusy(qb, async () => {
+      const ordered = backlogMembers.slice().sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+      let queued = 0;
+      const waitingOn = [];
+      for (const t of ordered) {
+        const r = await api(`/api/tasks/${t.id}/run`, { method: 'POST' });
+        if (r.queued && r.waitingOn && r.waitingOn.length) waitingOn.push(t.title);
+        else queued++;
+      }
+      toast(`queued ${queued}${waitingOn.length ? ` — ${waitingOn.length} waiting on deps` : ''}`, 'status');
+    });
+  });
   const toggle = () => {
     const isCollapsed = wrap.classList.toggle('collapsed');
     head.setAttribute('aria-expanded', String(!isCollapsed));
