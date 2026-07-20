@@ -1223,19 +1223,24 @@ function entryEl(e) {
 
 // ---------- tiny markdown renderer (headings, bold/italic, inline code, fences, lists, links) ----------
 function mdInline(s) {
-  s = s.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
-  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  // code spans and links are stashed before emphasis regexes run, so a
+  // snake_case identifier or __-laden URL inside them doesn't get <em>-mangled
+  const spans = [];
+  const stash = (html) => `\x01${spans.push(html) - 1}\x01`;
+  s = s.replace(/`([^`]+)`/g, (_, c) => stash(`<code>${c}</code>`));
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, text, href) => stash(`<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`));
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
   s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
   s = s.replace(/_([^_]+)_/g, '<em>$1</em>');
+  s = s.replace(/\x01(\d+)\x01/g, (_, i) => spans[Number(i)]);
   return s;
 }
 
 function mdToHtml(raw) {
   const blocks = [];
   const text = esc(raw).replace(/```([\s\S]*?)```/g, (_, code) => {
-    blocks.push(`<pre><code>${code.replace(/^\n/, '')}</code></pre>`);
+    blocks.push(`<pre><code>${code.replace(/^[ \t]*[A-Za-z0-9_+-]*\n/, '')}</code></pre>`);
     return `\x00BLOCK${blocks.length - 1}\x00`;
   });
 
