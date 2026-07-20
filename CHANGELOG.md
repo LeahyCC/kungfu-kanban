@@ -12,6 +12,8 @@ compares your clone against `origin/main` and offers a one-click update.
   decision-table coverage of the importer, deps, models, cooldown, prwatch,
   runner, errlog, auth, and skill install/status logic.
 
+- README: badge row (CI, latest release, MIT license), hero image slot, and a
+  tighter positioning paragraph up top for people landing cold.
 - The humanizer skill (MIT, vendored at `skills/humanizer/SKILL.md`) now ships
   with the board alongside ponytail: installs to `~/.claude/skills` at boot,
   pre-selects on new cards, and the kungfu-todo template tells agents to apply
