@@ -798,8 +798,21 @@ $('#importForm').addEventListener('submit', (e) => {
 
 // ---------- settings modal ----------
 let settingsReturnFocus = null;
+let settingsSnapshot = '';
 
-function closeSettings() {
+function settingsFormSnapshot() {
+  const f = $('#settingsForm');
+  return JSON.stringify([
+    f.defaultCwd.value, f.defaultPermissionMode.value, f.reposDir.value, f.ntfyTopic.value,
+    f.notifyMac.checked, f.keepAwake.checked, f.archiveDays.value, f.prWatchMin.value,
+    f.prWatchAutoFix.checked, f.usageBudgetM.value,
+  ]);
+}
+
+async function closeSettings(force = false) {
+  if (!force && settingsFormSnapshot() !== settingsSnapshot) {
+    if (!(await confirmDlg('Discard unsaved settings changes?', { confirmLabel: 'Discard', danger: true }))) return;
+  }
   $('#settingsBackdrop').classList.add('hidden');
   if (settingsReturnFocus) { try { settingsReturnFocus.focus(); } catch {} settingsReturnFocus = null; }
 }
@@ -824,6 +837,7 @@ function openSettings() {
     if (v && v.version) $('#settingsVersion').textContent = `v${v.version}`;
   });
   $('#settingsBackdrop').classList.remove('hidden');
+  settingsSnapshot = settingsFormSnapshot();
 }
 async function renderSkillStatus() {
   const r = await api('/api/skill');
@@ -893,7 +907,7 @@ $('#settingsForm').addEventListener('submit', async (e) => {
   const c = await api('/api/config'); // re-scan repos for the picker
   if (!c || c.error) return;
   config = c;
-  closeSettings();
+  closeSettings(true);
 });
 
 // ---------- subscription cooldown + model fallback chips ----------
@@ -976,6 +990,7 @@ async function openDrawer(id) {
   lastDrawerActionsStatus = null; // force rebuild — opening a card is not a status change
   renderDrawerActions(t);
   const entries = await api(`/api/tasks/${id}/transcript`);
+  if (drawerId !== id) return;
   const box = $('#transcript');
   box.innerHTML = '';
   for (const e of entries) box.appendChild(entryEl(e));
@@ -1017,7 +1032,6 @@ $('#followForm').addEventListener('submit', async (e) => {
   const btn = e.target.querySelector('button[type="submit"]');
   const msg = input.value.trim();
   if (!msg || !drawerId || (btn && btn.disabled)) return;
-  input.value = '';
   if (btn) btn.disabled = true;
   const r = await api(`/api/tasks/${drawerId}/followup`, { method: 'POST', body: { message: msg }, quiet: true });
   if (btn) btn.disabled = false;
@@ -1026,6 +1040,8 @@ $('#followForm').addEventListener('submit', async (e) => {
     const pinned = nearBottom(box);
     box.appendChild(entryEl({ kind: 'error', text: r.error }));
     if (pinned) box.scrollTop = box.scrollHeight;
+  } else {
+    input.value = '';
   }
 });
 
@@ -1289,7 +1305,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (e.key !== 'Tab') return;
-  const overlay = document.querySelector('.backdrop:not(.hidden) .modal') || (!$('#drawer').classList.contains('hidden') ? $('#drawer') : null);
+  const overlay = document.querySelector('.backdrop:not(.hidden) .modal');
   if (!overlay) return;
   const foci = [...overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
     .filter((el) => !el.disabled && el.offsetParent !== null);
@@ -1690,6 +1706,7 @@ es.onmessage = (msg) => {
   } else if (evt.type === 'deleted') {
     tasks = tasks.filter((t) => t.id !== evt.taskId);
     render();
+    if (drawerId === evt.taskId) closeDrawer(true);
   } else if (evt.type === 'output' && drawerId === evt.taskId) {
     const box = $('#transcript');
     const pinned = nearBottom(box); // don't yank the reader back down mid-scrollback
