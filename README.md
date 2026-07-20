@@ -2,6 +2,8 @@
 
 [![CI](https://img.shields.io/github/actions/workflow/status/LeahyCC/kungfu-kanban/test.yml?branch=main&label=CI)](https://github.com/LeahyCC/kungfu-kanban/actions/workflows/test.yml)
 [![Release](https://img.shields.io/github/v/release/LeahyCC/kungfu-kanban)](https://github.com/LeahyCC/kungfu-kanban/releases)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](package.json)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![License: MIT](https://img.shields.io/github/license/LeahyCC/kungfu-kanban)](LICENSE)
 
 ![Kungfu Kanban board](docs/board.png)
@@ -24,6 +26,54 @@ database to do it.
 card's transcript over server-sent events. An LLM "Manager" (also a `claude -p` call)
 triages, dispatches, and reviews cards. Everything persists as JSON files in `data/`.
 
+[Manual](https://kungfu-kanban.com) · [Compare](https://kungfu-kanban.com/compare) ·
+[Docs](https://kungfu-kanban.com/docs) ·
+[Releases](https://github.com/LeahyCC/kungfu-kanban/releases) ·
+[Issues](https://github.com/LeahyCC/kungfu-kanban/issues)
+
+---
+
+## Contents
+
+- [Quick start](#quick-start)
+- [Requirements](#requirements)
+- [Architecture at a glance](#architecture-at-a-glance)
+- [The board](#the-board)
+- [Importing cards from Markdown](#importing-cards-from-markdown)
+- [Repo cards, real PRs](#repo-cards-real-prs)
+- [Notifications](#notifications)
+- [Use it from your phone (Tailscale)](#use-it-from-your-phone-tailscale)
+- [The Manager (the Sensei)](#the-manager-the-sensei)
+- [Run at login (optional)](#run-at-login-optional)
+- [Configuration reference](#configuration-reference)
+- [Troubleshooting](#troubleshooting)
+- [Security notes](#security-notes)
+- [Status & contributions](#status--contributions)
+- [Contributing](#contributing)
+- [Credits](#credits)
+- [License](#license)
+
+---
+
+## Quick start
+
+```bash
+git clone https://github.com/LeahyCC/kungfu-kanban.git && cd kungfu-kanban
+npm install
+npm start          # → http://localhost:4747
+```
+
+That's it for local use. The server binds `127.0.0.1` only by default. Using it
+from your phone over Tailscale needs one more command,
+`openssl rand -hex 16 > data/auth-token`, to turn on the token gate — full
+walkthrough in [Use it from your phone](#use-it-from-your-phone-tailscale).
+
+**Updating**: the status line shows your board version and checks `origin/main`
+(every 30 min); when your clone is behind, a **⬆ update available** button pulls
+fast-forward, runs `npm ci` if needed, and restarts the server (instant under
+launchd; under plain `npm start`, start it again). Blocked while cards are
+running. See [CHANGELOG.md](CHANGELOG.md) for what changed.
+
 ---
 
 ## Requirements
@@ -37,21 +87,27 @@ triages, dispatches, and reviews cards. Everything persists as JSON files in `da
 | **macOS** | desktop notifications (`osascript`); the rest works anywhere | — |
 | **Tailscale** (optional) | use the board from your phone | `tailscale status` |
 
-## Quick start
+---
 
-```bash
-git clone https://github.com/LeahyCC/kungfu-kanban.git && cd kungfu-kanban
-npm install
-npm start          # → http://localhost:4747
+## Architecture at a glance
+
+```mermaid
+flowchart LR
+    UI[Board UI] <--> Server[Express server]
+    Server -->|spawns| CLI[claude CLI per card]
+    CLI --> WT[Git worktree]
+    WT --> PR[GitHub PR]
+    PR --> CI[CI]
+    PR --> Watch[PR-watch sweep]
+    Watch -->|merged| Merge[Merge]
+    Sensei[Sensei] -->|reviews diff| PR
+    Sensei -->|merges, within autonomy| Merge
+    Merge --> Deps[Gated dependents release]
 ```
 
-That's it for local use. The server binds `127.0.0.1` only by default.
-
-**Updating**: the status line shows your board version and checks `origin/main`
-(every 30 min); when your clone is behind, a **⬆ update available** button pulls
-fast-forward, runs `npm ci` if needed, and restarts the server (instant under
-launchd; under plain `npm start`, start it again). Blocked while cards are
-running. See [CHANGELOG.md](CHANGELOG.md) for what changed.
+The Sensei is an LLM manager (its own `claude -p` call) that reviews a card's
+actual diff and merges the ones that pass, up to whatever autonomy level you've
+set it — see [The Manager](#the-manager-the-sensei).
 
 ---
 
@@ -106,7 +162,7 @@ re-enters the original worktree, so a follow-up push updates the existing PR.
 Follow-ups respect the parallel cap and queue like any run; the follow-up text is
 appended to the card's prompt so Sensei reviews and retries see it.
 
-### Subscription limits — automatic cooldown
+### Subscription limits, automatic cooldown
 
 When a run dies on a usage/rate limit, the board:
 
@@ -256,12 +312,12 @@ Imported cards land in **Backlog** tagged `import`, and the Sensei gets one
 triage ping per batch (if the new-card trigger is on) — so you can paste a plan,
 and routing/prioritization happens for you.
 
-The board also ships the [ponytail](https://github.com/DietrichGebert/ponytail)
-(MIT) lazy-senior-dev discipline and the humanizer skill (strips AI writing
-tells from PR titles, descriptions, and result summaries) — both auto-install
-to `~/.claude/skills` and pre-select on new cards.
+The board also ships the ponytail lazy-senior-dev discipline and the humanizer
+skill (strips AI writing tells from PR titles, descriptions, and result
+summaries) — both auto-install to `~/.claude/skills` and pre-select on new
+cards. See [Credits](#credits) for attribution.
 
-## Repo cards → real PRs
+## Repo cards, real PRs
 
 Give a card a working directory that's a git repo with an `origin` remote, check
 **Git worktree** + **Open PR when done**, and run it. After the agent succeeds:
@@ -282,7 +338,7 @@ still in the worktree, nothing is lost.
 
 **One-time setup:** `gh auth login` (with push scope to the repos you'll use).
 
-### PR watch — merged PRs ship, conflicted PRs self-heal
+### PR watch: merged PRs ship, conflicted PRs self-heal
 
 Every N minutes (⚙ Settings, default 10, 0 = off) the board checks each Review
 card's PR via `gh`:
@@ -541,6 +597,16 @@ closed with a polite bow — that version existed and was deleted on purpose.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the fork-and-PR workflow, and
 [SECURITY.md](SECURITY.md) if you've found a vulnerability — report it privately
 through GitHub, not as a public issue.
+
+## Credits
+
+The board auto-installs two third-party Claude Code skills onto new cards:
+
+- [ponytail](https://github.com/DietrichGebert/ponytail) (MIT) — the
+  lazy-senior-dev discipline that keeps agent diffs minimal.
+- [humanizer](https://github.com/blader/humanizer) (MIT) — strips AI writing
+  tells from PR titles, descriptions, and result summaries; patterns sourced
+  from Wikipedia's WikiProject AI Cleanup.
 
 ## License
 
