@@ -9,8 +9,8 @@
 Kungfu Kanban is a local kanban board where Claude Code agents work the cards on your
 own subscription login, no API keys, no per-token billing. Cards can chain into
 dependencies gated by merge, an AI "Manager" reads the actual diff on every finished
-card and merges the green ones itself, and the whole stack leans on one runtime
-dependency (the `claude` CLI) with CI checking every push. It's for a single developer
+card and merges the green ones itself, and the whole stack leans on a single npm dependency (`express`) — agents run through
+the `claude` CLI you already have — with CI checking every push. It's for a single developer
 who wants a fleet of agents chewing through a backlog without standing up a SaaS or a
 database to do it.
 
