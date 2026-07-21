@@ -7,6 +7,12 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Added
+- CI now fails a release PR whose changelog under-reports what shipped: a
+  version bump must cite every non-dependabot PR merged since the previous
+  tag (`scripts/check-release.js`). 1.1.0 first went out missing five PRs;
+  this stops that recurring.
+
 ## [1.1.0] — 2026-07-20
 
 ### Added
