@@ -556,6 +556,9 @@ app.put('/api/manager/config', (req, res) => {
   res.json(c);
 });
 
+// Escape hatch for a misclicked trigger: kill the in-flight Sensei run.
+app.post('/api/manager/stop', (req, res) => res.json(manager.stopCurrent()));
+
 app.post('/api/manager/chat', (req, res) => {
   const msg = (req.body && req.body.message || '').trim();
   if (!msg) return res.status(400).json({ error: 'empty message' });

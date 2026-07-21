@@ -2,7 +2,13 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const store = require('../lib/store');
-const { executeAction, suggestionLive } = require('../lib/manager');
+const { executeAction, suggestionLive, stopCurrent } = require('../lib/manager');
+
+// --- stopCurrent -------------------------------------------------------
+
+test('stopCurrent: errors cleanly when no Sensei run is in flight', () => {
+  assert.deepEqual(stopCurrent(), { error: 'the Sensei is not running' });
+});
 
 // --- executeAction merge_pr gates --------------------------------------
 
