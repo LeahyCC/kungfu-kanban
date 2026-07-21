@@ -44,6 +44,7 @@
       <span id="usageChip" class="cooldown-chip usage-chip hidden" title="All Claude Code output tokens on this Mac in the rolling 5-hour limit window (board + terminal). Set a budget in ⚙ Settings for a % meter.">⛽ <span id="usageChipText"></span></span>
       <span id="cooldownChip" class="cooldown-chip hidden" title="Subscription limits hit — auto flow paused; queued cards launch when it resets">⏳ <span id="cooldownTimer">--:--</span></span>
       <span id="modelChip" class="cooldown-chip model-chip hidden" title="Model capped or unavailable — launches use the next model down until it resets">⬇ <span id="modelChipText"></span></span>
+      <span id="netChip" class="cooldown-chip net-chip hidden" role="status" title="No internet connection — cards that die on it requeue automatically and relaunch when it's back">📡 offline</span>
       <span id="sseChip" class="cooldown-chip hidden" role="status" title="Live connection to the server lost — reconnecting; the board may be stale until it's back">⚡ reconnecting…</span>
       <span class="status-chip" title="Backlog + Queued"><span class="belt-dot belt-todo"></span><span id="countBacklog" class="status-count">0</span><span class="sr-only">cards in Backlog or Queued</span></span>
       <span class="status-chip" title="Running"><span class="belt-dot belt-doing"></span><span id="countRunning" class="status-count">0</span><span class="sr-only">cards Running</span></span>
@@ -327,8 +328,8 @@ The prompt: self-contained instructions for the executing agent.
       <p class="hint">Sensei suggestions waiting on your ✓, plus cards stopped on a permission block. Approve, reject, or open a card to raise its permissions.</p>
       <div id="attnList" class="err-list slab"></div>
       <div class="modal-actions">
-        <button type="button" id="attnApproveAllBtn" class="primary" title="Approve every pending Sensei suggestion below">✓ Approve all</button>
-        <button type="button" id="attnRejectAllBtn" class="ghost" title="Reject every pending Sensei suggestion below">✗ Reject all</button>
+        <button type="button" id="attnApproveAllBtn" class="primary" title="Approve every Sensei suggestion below, and (after one confirm) bypass & re-run every permission-blocked card">✓ Approve all</button>
+        <button type="button" id="attnRejectAllBtn" class="ghost" title="Reject every Sensei suggestion below and dismiss the permission-blocked cards">✗ Reject all</button>
         <button type="button" id="attnCloseBtn" class="ghost">Close</button>
       </div>
     </div>
