@@ -17,8 +17,19 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node --test --experimental-test-coverage
+  release-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0      # full history + tags — the release audit walks them
+          fetch-tags: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: node scripts/check-release.js
   test:
-    needs: [suite]
+    needs: [suite, release-check]
     runs-on: ubuntu-latest
     steps:
       - run: exit 0
