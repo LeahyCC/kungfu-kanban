@@ -8,6 +8,26 @@ compares your clone against `origin/main` and offers a one-click update.
 ## [Unreleased]
 
 ### Added
+- Lost-internet handling: a card that dies on a connectivity error is
+  requeued instead of failed (confirmed by a live DNS probe so a card whose
+  own tests hit ECONNREFUSED still fails normally), auto flow pauses, and a
+  📡 offline header chip shows until a 30s probe loop finds the connection
+  back — then queued cards relaunch. The chip also reflects the browser's
+  own offline state, and API toasts say "offline — check your connection"
+  instead of a raw fetch error.
+
+### Fixed
+- The attention popup's Approve all / Reject all now cover permission-blocked
+  cards, not just Sensei suggestions — a popup of only blocked cards used to
+  make both buttons silent no-ops. Approve all bypass-&-re-runs the blocked
+  cards after one batch confirm; Reject all acknowledges and dismisses them
+  (new acknowledge-only `permissionBlocked: null` PATCH).
+- Cards running at bypassPermissions no longer land in Review as
+  "Blocked on permission" when a command merely matched an explicit deny
+  rule in `.claude/settings.json` — at bypass there is no mode left to
+  raise, so the old advice (and its Bypass & re-run button) looped forever.
+  Deny-rule denials are now a transcript note; the blocked message at lower
+  modes also explains that deny rules win at every mode.
 - CI now fails a release PR whose changelog under-reports what shipped: a
   version bump must cite every non-dependabot PR merged since the previous
   tag (`scripts/check-release.js`). 1.1.0 first went out missing five PRs;
