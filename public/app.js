@@ -1465,6 +1465,7 @@ $('#mgrForm').addEventListener('input', () => { mgrFormDirty = true; });
 
 function setMgrBusy(busy) {
   $('#mgrBusy').classList.toggle('hidden', !busy);
+  $('#mgrStopBtn').classList.toggle('hidden', !busy);
   const form = $('#mgrChatForm');
   form.message.disabled = !!busy;
   form.querySelector('button[type="submit"]').disabled = !!busy;
@@ -1867,6 +1868,11 @@ function closeAttn() {
   attnDismissed = true;
   if (attnReturnFocus) { try { attnReturnFocus.focus(); } catch {} attnReturnFocus = null; }
 }
+
+$('#mgrStopBtn').addEventListener('click', (e) => withBusy(e.target, async () => {
+  const r = await api('/api/manager/stop', { method: 'POST' });
+  if (!r.error) toast('Sensei run stopped — nothing was applied.', 'status');
+}));
 
 $('#attnChip').addEventListener('click', openAttn);
 $('#attnCloseBtn').addEventListener('click', closeAttn);
