@@ -11,6 +11,7 @@ const auth = require('./lib/auth');
 const importer = require('./lib/importer');
 const prwatch = require('./lib/prwatch');
 const cooldown = require('./lib/cooldown');
+const offline = require('./lib/offline');
 const models = require('./lib/models');
 const depsLib = require('./lib/deps');
 const errlog = require('./lib/errlog');
@@ -91,6 +92,7 @@ app.get('/api/config', (req, res) => {
     repos: discoverRepos(reposDir()),
     settings: { ...state.settings, reposDir: reposDir() },
     cooldownUntil: cooldown.active() ? state.settings.cooldownUntil : 0,
+    offline: offline.active(),
     modelBlocks: models.blocks(),
     authGate: !!auth.getToken(), // the UI shows Sign out only when a gate exists
   });
@@ -396,6 +398,7 @@ const TASK_FIELDS = [
   'skills', 'skillsAuto', 'agent', 'worktree', 'openPr', 'prBaseBranch', 'status', 'priority', 'acceptanceCriteria',
   'schedule', 'issueNumber', 'group',
   'prUrl', // repair hatch: lets a manually-created PR be attached to its card
+  'permissionBlocked', // acknowledge-only: the UI may clear a block (null), never set one
 ];
 const STATUSES = ['backlog', 'queued', 'running', 'stopping', 'review', 'done'];
 
@@ -470,6 +473,13 @@ app.patch('/api/tasks/:id', (req, res) => {
     else if (f === 'priority') task.priority = Number.isInteger(req.body.priority) ? req.body.priority : 0;
     else if (f === 'skills') task.skills = Array.isArray(req.body.skills) ? req.body.skills : [];
     else if (f === 'group') task.group = typeof req.body.group === 'string' && req.body.group.trim() ? req.body.group.trim().slice(0, 60) : null;
+    else if (f === 'permissionBlocked') {
+      if (!req.body.permissionBlocked) {
+        task.permissionBlocked = null;
+        if (/^Blocked on permission/.test(task.error || '')) task.error = null;
+        require('./lib/errlog').resolveTask(task.id, ['permission']);
+      }
+    }
     else task[f] = req.body[f];
   }
   if ('schedule' in req.body) task.schedule = parseSchedule(req.body.schedule);

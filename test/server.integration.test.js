@@ -228,6 +228,16 @@ describe('HTTP contract (no auth gate)', () => {
     assert.equal(task.title.length, 200);
   });
 
+  test('PATCH /api/tasks/:id — permissionBlocked is acknowledge-only: null clears, a value cannot set it', async () => {
+    const created = await (await postJson(base, '/api/tasks', { title: 'blocked target' })).json();
+    // attempting to SET a block from the outside is ignored
+    const set = await (await patchJson(base, `/api/tasks/${created.id}`, { permissionBlocked: ['Bash rm -rf /'] })).json();
+    assert.ok(!set.permissionBlocked);
+    // clearing (the attention popup's Reject-all dismiss) succeeds
+    const cleared = await (await patchJson(base, `/api/tasks/${created.id}`, { permissionBlocked: null })).json();
+    assert.equal(cleared.permissionBlocked, null);
+  });
+
   test('GET /api/tasks/:id/transcript — a traversal-shaped id is 404', async () => {
     const res = await fetch(`${base}/api/tasks/${encodeURIComponent('../../etc/passwd')}/transcript`);
     assert.equal(res.status, 404);

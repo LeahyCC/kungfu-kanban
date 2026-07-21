@@ -43,7 +43,7 @@ const api = async (url, opts = {}) => {
       body: opts.body ? JSON.stringify(opts.body) : undefined,
     });
   } catch (e) {
-    const error = `network error — ${e.message || e}`;
+    const error = navigator.onLine ? `network error — ${e.message || e}` : 'offline — check your connection';
     if (!opts.quiet) toast(`✕ ${error}`);
     return { error };
   }
@@ -1873,16 +1873,46 @@ $('#attnCloseBtn').addEventListener('click', closeAttn);
 $('#attnBackdrop').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closeAttn();
 });
+// Approve/Reject all cover EVERYTHING in the popup, not just Sensei
+// suggestions — a popup of only permission-blocked cards used to make both
+// buttons silent no-ops. Approve = bypass & re-run the blocked cards (one
+// confirm for the batch, since bypass is a deliberate risk choice); Reject =
+// acknowledge and dismiss them.
 $('#attnApproveAllBtn').addEventListener('click', (e) => withBusy(e.target, async () => {
   const sugg = (mgrState && mgrState.suggestions) || [];
+  const blocked = attnBlocked();
   await Promise.all(sugg.map((s) => api(`/api/manager/suggestions/${s.id}`, { method: 'POST', body: { approve: true } })));
+  if (blocked.length && await confirmDlg(
+    `Re-run ${blocked.length} permission-blocked card${blocked.length > 1 ? 's' : ''} with bypassPermissions? It skips every permission prompt for ${blocked.length > 1 ? 'them' : 'it'}.`,
+    { confirmLabel: '⚡ Bypass & re-run', danger: true },
+  )) {
+    for (const t of blocked) {
+      const r = await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { permissionMode: 'bypassPermissions' } });
+      if (!r.error) await api(`/api/tasks/${t.id}/run`, { method: 'POST' });
+    }
+  }
   await Promise.all([loadManager(), loadTasks()]);
 }));
 $('#attnRejectAllBtn').addEventListener('click', (e) => withBusy(e.target, async () => {
   const sugg = (mgrState && mgrState.suggestions) || [];
+  const blocked = attnBlocked();
   await Promise.all(sugg.map((s) => api(`/api/manager/suggestions/${s.id}`, { method: 'POST', body: { approve: false } })));
-  await loadManager();
+  await Promise.all(blocked.map((t) => api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { permissionBlocked: null } })));
+  await Promise.all([loadManager(), loadTasks()]);
 }));
+
+// ---------- offline awareness ----------
+// Chip shows when either this browser has no network or the server reports
+// the internet down (a card died on a connectivity error).
+let serverOffline = false;
+function renderNetChip() {
+  $('#netChip').classList.toggle('hidden', navigator.onLine && !serverOffline);
+}
+window.addEventListener('offline', renderNetChip);
+window.addEventListener('online', () => {
+  renderNetChip();
+  loadTasks(); // close the gap the outage left
+});
 
 // ---------- live updates ----------
 const es = new EventSource('/api/events');
@@ -1911,6 +1941,11 @@ es.onmessage = (msg) => {
   const evt = JSON.parse(msg.data);
   if (evt.type === 'cooldown') {
     applyCooldown(evt.until);
+    return;
+  }
+  if (evt.type === 'offline') {
+    serverOffline = !!evt.offline;
+    renderNetChip();
     return;
   }
   if (evt.type === 'modelblocks') {
@@ -2151,6 +2186,8 @@ function bootError(msg) {
   $('#board').classList.remove('is-empty');
   $('#maxConcurrent').value = config.settings.maxConcurrent || 2;
   applyCooldown(config.cooldownUntil || 0);
+  serverOffline = !!config.offline;
+  renderNetChip();
   applyModelBlocks(config.modelBlocks || {});
   if (!(await loadTasks())) { bootError('loaded config, but the task list failed — retry?'); return; }
   renderHealth();

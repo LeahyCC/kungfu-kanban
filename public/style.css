@@ -530,6 +530,7 @@ input.tiny { width: 60px; }
   padding: 2px 8px;
 }
 .cooldown-chip.model-chip { color: var(--info); border-color: var(--info); }
+.cooldown-chip.net-chip { color: var(--warning); border-color: var(--warning); }
 /* error-tracker chip: a real button, but dressed like its chip siblings */
 .err-chip {
   color: var(--error);
