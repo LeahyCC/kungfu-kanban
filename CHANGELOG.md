@@ -7,6 +7,44 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-07-20
+
+### Added
+- A header 🔔 chip counts Sensei suggestions awaiting your verdict plus cards
+  stopped on a permission block, and opens a "Needs your attention" popup
+  with per-item and batch Approve/Reject and an Open-card shortcut. It
+  auto-opens once on the 0→N transition and never nags after that. (#83)
+- Blocked cards get a one-click "⚡ Bypass & re-run": it re-runs the card
+  with `bypassPermissions` instead of making you raise the permission mode
+  and re-launch by hand. This is a deliberate human override, so it isn't
+  clamped by the manager's permission ceiling the way auto-picked modes are. (#87)
+- When suggestions are being held by the hourly launch cap, the attention
+  popup shows a notice with an "Approve-all now" path and a "Raise cap"
+  control, instead of leaving them silently stuck. (#88)
+
+### Changed
+- The repos directory now auto-scans the common dev-folder conventions
+  (`code`, `src`, `projects`, `Documents/Code`, …) and picks whichever holds
+  the most git repos, falling back to `$HOME` — instead of defaulting to one
+  person's `~/Documents/Code/Git`. It's configured by whoever runs the board,
+  never baked in. (#82)
+- Upgraded the one runtime dependency from Express 4 to Express 5. (#59)
+- The README now opens with a dark-mode board screenshot that adapts to the
+  reader's GitHub theme. (#80)
+
+### Fixed
+- Stale Sensei suggestions are now auto-pruned instead of piling up.
+  Takes effect after the next board restart on servers already running;
+  fresh installs get it immediately. (#81)
+
+### Security
+- Transient browser-verification screenshots and `.playwright-mcp/` output are
+  gitignored, so a board screenshot — which can contain private card content —
+  can never ride along in a PR. (#84)
+
+### Chore
+- CI: bumped `actions/checkout` to v7. (#58)
+
 ## [1.0.1] — 2026-07-20
 
 ### Added
