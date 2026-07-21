@@ -7,6 +7,26 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-07-20
+
+### Added
+- A header 🔔 chip counts Sensei suggestions awaiting your verdict plus cards
+  stopped on a permission block, and opens a "Needs your attention" popup
+  with per-item and batch Approve/Reject and an Open-card shortcut. It
+  auto-opens once on the 0→N transition and never nags after that.
+- Blocked cards get a one-click "⚡ Bypass & re-run": it re-runs the card
+  with `bypassPermissions` instead of making you raise the permission mode
+  and re-launch by hand. This is a deliberate human override, so it isn't
+  clamped by the manager's permission ceiling the way auto-picked modes are.
+- When suggestions are being held by the hourly launch cap, the attention
+  popup shows a notice with an "Approve-all now" path and a "Raise cap"
+  control, instead of leaving them silently stuck.
+
+### Fixed
+- Stale Sensei suggestions are now auto-pruned instead of piling up.
+  Takes effect after the next board restart on servers already running;
+  fresh installs get it immediately.
+
 ## [1.0.1] — 2026-07-20
 
 ### Added
