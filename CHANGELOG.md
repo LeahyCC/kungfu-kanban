@@ -8,6 +8,11 @@ compares your clone against `origin/main` and offers a one-click update.
 ## [Unreleased]
 
 ### Added
+- A ⏹ stop button next to the Sensei's "thinking…" pill kills the in-flight
+  run (`POST /api/manager/stop`) — the escape hatch for a misclicked trigger.
+  The cancelled run's output is discarded, any coalesced follow-up invocation
+  is dropped, and the chat notes the stop. Tokens already spent are gone;
+  the point is that no half-baked decision gets applied.
 - Lost-internet handling: a card that dies on a connectivity error is
   requeued instead of failed (confirmed by a live DNS probe so a card whose
   own tests hit ECONNREFUSED still fails normally), auto flow pauses, and a
