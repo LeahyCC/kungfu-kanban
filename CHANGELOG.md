@@ -38,6 +38,15 @@ compares your clone against `origin/main` and offers a one-click update.
   instead of a raw fetch error.
 
 ### Fixed
+- The `release-check` CI guard no longer fails every single PR. It demanded a
+  `## [X.Y.Z]` section matching `package.json` for any untagged version, which
+  contradicts the repo convention of bumping the version on every change and
+  accumulating entries under `## [Unreleased]` until the release card renames
+  the section — so 100% of PRs went red on it and needed a human. Naming the
+  section for the version is now what marks a release (and still triggers the
+  full merged-PR reconciliation); an in-flight bump only has to describe
+  itself under `## [Unreleased]`, with a clear failure when that section is
+  empty or missing.
 - A push to an existing PR now clears the stored check rollup instead of
   leaving results that never saw the new code — a follow-up or conflict fix
   could otherwise be merged on stale green checks, or rejected for failures
