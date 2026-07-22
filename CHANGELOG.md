@@ -12,9 +12,10 @@ compares your clone against `origin/main` and offers a one-click update.
   human in the loop. Failing checks on a clean PR now get an automatic fix
   before any verdict — the watcher resumes the card's own session with the
   failing-check names and instructions to pull the logs (`gh pr checks`,
-  `gh run view --log-failed`), fix, and push (max 2 attempts per PR, reset
-  when checks recover; no Sensei retry burned; explicitly told to stand down
-  when the failure is CI infrastructure like billing/runner errors). While
+  `gh run view --log-failed`), fix, and push (max 2 attempts per PR, refilled
+  only by a new push so a flapping check can't hand out unlimited launches;
+  no Sensei retry burned; explicitly told to stand down when the failure is
+  CI infrastructure like billing/runner errors). While
   any PR's checks are still running the watcher re-polls every 60s instead
   of waiting out the full sweep interval, so a green PR merges about a
   minute after CI finishes rather than up to ten. Repos with no CI at all

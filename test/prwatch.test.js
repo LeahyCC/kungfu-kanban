@@ -229,20 +229,22 @@ test('trackChecks: no noCi stamp while GitHub has not computed mergeability', ()
   assert.equal(t.prChecks.noCi, false);
 });
 
-test('trackChecks: recovery to green resets the auto CI fix budget', () => {
+// The budget resets on a PUSH (see prflow), never on checks merely going
+// green — otherwise a check that flaps red/green on one commit would hand out
+// unlimited auto-fix launches.
+test('trackChecks: a flapping check does NOT refill the auto CI fix budget', () => {
   const t = fakeTask({ ciFixes: 2, ciFixGaveUp: true });
   try {
     trackChecks(t, {
       baseRefName: 'main',
-      statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'COMPLETED', conclusion: 'FAILURE' }],
+      statusCheckRollup: [{ __typename: 'CheckRun', name: 'flaky', status: 'COMPLETED', conclusion: 'FAILURE' }],
     });
-    assert.equal(t.ciFixes, 2); // still red — budget spent
     trackChecks(t, {
       baseRefName: 'main',
-      statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      statusCheckRollup: [{ __typename: 'CheckRun', name: 'flaky', status: 'COMPLETED', conclusion: 'SUCCESS' }],
     });
-    assert.equal(t.ciFixes, 0); // green again — a future red earns fresh attempts
-    assert.equal(t.ciFixGaveUp, undefined);
+    assert.equal(t.ciFixes, 2);
+    assert.equal(t.ciFixGaveUp, true);
   } finally {
     errlog.resolveTask(t.id);
   }
