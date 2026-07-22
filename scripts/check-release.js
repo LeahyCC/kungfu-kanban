@@ -1,11 +1,17 @@
 'use strict';
-// CI guard: a release PR — one that bumps package.json to a version not yet
-// tagged — must have a CHANGELOG section that accounts for every non-dependabot
-// PR merged since the previous release tag. Stops a release going out that
-// under-reports what shipped (1.1.0 first went out missing five merged PRs).
+// CI guard: a RELEASE must have a CHANGELOG section that accounts for every
+// non-dependabot PR merged since the previous release tag. Stops a release
+// going out that under-reports what shipped (1.1.0 first went out missing
+// five merged PRs).
 //
-// A no-op on ordinary PRs: when package.json's version is already tagged, the
-// only requirement is that its changelog section exists.
+// What makes a PR a release is the changelog naming the version — "## [1.4.0]
+// — date", which the release card writes. An untagged version whose entries
+// are still under "## [Unreleased]" is the ordinary in-flight state CLAUDE.md
+// prescribes (every change bumps the version, entries accumulate under
+// Unreleased, the release card renames the section). Requiring "## [X.Y.Z]"
+// for any untagged version contradicted that convention and failed every
+// single PR, so the ordinary case only asks that Unreleased isn't empty:
+// you bumped the version, so say what changed.
 const fs = require('fs');
 const { execFileSync } = require('child_process');
 
@@ -46,13 +52,25 @@ function mergedPRNumbers(mergeLog) {
   return [...new Set(out)];
 }
 
-// { ok, code, message }. code: no-section | not-release | first-release | incomplete | ok
+// { ok, code, message }. code: no-section | unreleased | empty-unreleased | not-release | first-release | incomplete | ok
 function auditRelease({ version, changelog, tags, mergeLogSince }) {
   const body = sectionBody(changelog, version);
+  const tagged = tags.includes('v' + version);
   if (body === null) {
-    return { ok: false, code: 'no-section', message: `package.json is ${version} but CHANGELOG.md has no "## [${version}]" section.` };
+    if (tagged) {
+      return { ok: false, code: 'no-section', message: `package.json is ${version} but CHANGELOG.md has no "## [${version}]" section.` };
+    }
+    // In flight: the version is bumped, the section hasn't been renamed yet.
+    const unreleased = sectionBody(changelog, 'Unreleased');
+    if (unreleased === null) {
+      return { ok: false, code: 'no-section', message: `package.json is ${version} but CHANGELOG.md has neither a "## [${version}]" nor a "## [Unreleased]" section.` };
+    }
+    if (!unreleased.replace(/^#+ .*$/gm, '').trim()) {
+      return { ok: false, code: 'empty-unreleased', message: `package.json is ${version} but the "## [Unreleased]" section is empty — describe the change there (or name the section "## [${version}] — <date>" to release it).` };
+    }
+    return { ok: true, code: 'unreleased', message: `${version} is in flight — changes are described under "## [Unreleased]"; the release card renames that section.` };
   }
-  if (tags.includes('v' + version)) {
+  if (tagged) {
     return { ok: true, code: 'not-release', message: `v${version} already tagged — not a new release; section present.` };
   }
   const prior = priorReleaseTag(tags, version);

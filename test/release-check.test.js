@@ -56,10 +56,48 @@ test('auditRelease PASSES a release that cites every non-dependabot PR', () => {
   assert.equal(r.ok, true, r.message);
 });
 
-test('auditRelease FAILS a version bump with no changelog section', () => {
+// The repo convention (CLAUDE.md): every change bumps package.json and adds a
+// line under [Unreleased]; only the release card renames that section to
+// "## [X.Y.Z] — date". Demanding a version-named section for any untagged
+// version contradicted that and failed 100% of PRs.
+test('auditRelease PASSES an in-flight bump whose entries are under [Unreleased]', () => {
+  const cl = '# Changelog\n\n## [Unreleased]\n### Added\n- a new thing\n\n## [1.1.0] — x\n- old\n';
+  const r = auditRelease({ version: '1.2.0', changelog: cl, tags: ['v1.1.0'], mergeLogSince: () => 'Merge pull request #90 from a/b' });
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.code, 'unreleased');
+});
+
+test('auditRelease FAILS a version bump whose [Unreleased] section is empty', () => {
   const r = auditRelease({ version: '9.9.9', changelog: CL, tags: ['v1.1.0'], mergeLogSince: () => '' });
+  assert.equal(r.code, 'empty-unreleased');
+  assert.equal(r.ok, false);
+});
+
+test('auditRelease FAILS a version bump with no [Unreleased] section at all', () => {
+  const cl = '# Changelog\n\n## [1.1.0] — x\n- old\n';
+  const r = auditRelease({ version: '1.2.0', changelog: cl, tags: ['v1.1.0'], mergeLogSince: () => '' });
   assert.equal(r.code, 'no-section');
   assert.equal(r.ok, false);
+});
+
+test('auditRelease FAILS a tagged version whose section was deleted', () => {
+  const cl = '# Changelog\n\n## [Unreleased]\n- something\n';
+  const r = auditRelease({ version: '1.1.0', changelog: cl, tags: ['v1.1.0'], mergeLogSince: () => '' });
+  assert.equal(r.code, 'no-section');
+  assert.equal(r.ok, false);
+});
+
+// Naming the section for the version is what declares "this is the release" —
+// and that is exactly when the merged-PR reconciliation must still bite.
+test('auditRelease still reconciles merged PRs once the section is named for the version', () => {
+  const cl = '# Changelog\n\n## [Unreleased]\n\n## [1.2.0] — x\n- one thing (#90)\n\n## [1.1.0] — y\n- old\n';
+  const r = auditRelease({
+    version: '1.2.0', changelog: cl, tags: ['v1.1.0'],
+    mergeLogSince: () => 'Merge pull request #90 from a/b\nMerge pull request #93 from a/d',
+  });
+  assert.equal(r.ok, false);
+  assert.equal(r.code, 'incomplete');
+  assert.match(r.message, /#93/);
 });
 
 test('auditRelease is a no-op on an already-tagged (non-release) version', () => {
