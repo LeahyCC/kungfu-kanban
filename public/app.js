@@ -390,6 +390,7 @@ function cardEl(t) {
     else if (c.wrongBase) meta.push(`<span class="badge err" title="PR targets ${esc(c.base || '?')} but the card wants ${esc(t.prBaseBranch || '?')}">CI wrong base</span>`);
     else if (c.pending) meta.push(`<span class="badge" title="CI still running (${c.pending} pending)">CI … ${c.pending}</span>`);
     else if (c.passing) meta.push(`<span class="badge dep-met" title="All ${c.passing} checks green">CI ✓</span>`);
+    else if (c.noCi) meta.push('<span class="badge" title="No checks reported — this repo has no CI; review judges the diff alone">no CI</span>');
   }
   if (t.error && t.status !== 'done') meta.push(`<span class="failword">${t.error === 'Stopped by user' ? 'stopped' : 'failed'}</span>`);
   if (isRunning) {
@@ -1178,7 +1179,7 @@ function renderDrawerMeta(t) {
   const bits = [`cwd: ${t.cwd}`];
   if (t.prChecks) {
     const c = t.prChecks;
-    bits.push(`CI: ${c.failing ? `✕ ${c.failing} failing — ${(c.failed || []).join(' · ')}` : c.pending ? `… ${c.pending} running` : `✓ ${c.passing} green`}${c.base ? ` · base ${c.base}` : ''}${c.wrongBase ? ` (card wants ${t.prBaseBranch})` : ''}`);
+    bits.push(`CI: ${c.failing ? `✕ ${c.failing} failing — ${(c.failed || []).join(' · ')}` : c.pending ? `… ${c.pending} running` : c.noCi ? 'none on this repo' : c.passing ? `✓ ${c.passing} green` : '… waiting for checks'}${c.base ? ` · base ${c.base}` : ''}${c.wrongBase ? ` (card wants ${t.prBaseBranch})` : ''}`);
     if (c.conflicting) bits.push(`⚔ merge conflicts with ${c.base || 'the base branch'}`);
   }
   const unmetD = depsUnmet(t);

@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { summarizeChecks, trackChecks } = require('../lib/prwatch');
+const { summarizeChecks, trackChecks, maybeFixCi } = require('../lib/prwatch');
 const errlog = require('../lib/errlog');
 
 // --- summarizeChecks ----------------------------------------------------
@@ -206,6 +206,61 @@ test('trackChecks: a settled red flipping straight to green (re-run, no pending 
   } finally {
     errlog.resolveTask(t.id);
   }
+});
+
+test('trackChecks: a repo with no CI is stamped noCi (and ready) only after the grace window', () => {
+  const t = fakeTask();
+  // Fresh watch, nothing reported, mergeability known — grace still open.
+  assert.equal(trackChecks(t, { baseRefName: 'main', mergeable: 'MERGEABLE', statusCheckRollup: [] }), false);
+  assert.equal(t.prChecks.noCi, false);
+  // Backdate the watch start past the grace window: next sweep flips noCi and is decision-ready.
+  t.prChecks.firstSeenAt = new Date(Date.now() - 11 * 60_000).toISOString();
+  assert.equal(trackChecks(t, { baseRefName: 'main', mergeable: 'MERGEABLE', statusCheckRollup: [] }), true);
+  assert.equal(t.prChecks.noCi, true);
+  // And it fires only once — the next identical sweep is a no-op.
+  assert.equal(trackChecks(t, { baseRefName: 'main', mergeable: 'MERGEABLE', statusCheckRollup: [] }), false);
+});
+
+test('trackChecks: no noCi stamp while GitHub has not computed mergeability', () => {
+  const t = fakeTask();
+  trackChecks(t, { baseRefName: 'main', mergeable: 'UNKNOWN', statusCheckRollup: [] });
+  t.prChecks.firstSeenAt = new Date(Date.now() - 11 * 60_000).toISOString();
+  assert.equal(trackChecks(t, { baseRefName: 'main', mergeable: 'UNKNOWN', statusCheckRollup: [] }), false);
+  assert.equal(t.prChecks.noCi, false);
+});
+
+test('trackChecks: recovery to green resets the auto CI fix budget', () => {
+  const t = fakeTask({ ciFixes: 2, ciFixGaveUp: true });
+  try {
+    trackChecks(t, {
+      baseRefName: 'main',
+      statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'COMPLETED', conclusion: 'FAILURE' }],
+    });
+    assert.equal(t.ciFixes, 2); // still red — budget spent
+    trackChecks(t, {
+      baseRefName: 'main',
+      statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'COMPLETED', conclusion: 'SUCCESS' }],
+    });
+    assert.equal(t.ciFixes, 0); // green again — a future red earns fresh attempts
+    assert.equal(t.ciFixGaveUp, undefined);
+  } finally {
+    errlog.resolveTask(t.id);
+  }
+});
+
+// The cap is what stops an auto-fix loop burning the subscription on a CI
+// failure no code change can fix (billing, dead runners).
+test('maybeFixCi: gives up after 2 attempts and never fixes again', async () => {
+  const t = fakeTask({ cwd: '/nonexistent-repo', ciFixes: 2 });
+  assert.equal(await maybeFixCi(t, { failed: ['build'] }), false);
+  assert.equal(t.ciFixGaveUp, true);
+});
+
+test('maybeFixCi: a card with no resumable session is handed off, not fixed', async () => {
+  // No worktree at this cwd → the fixer bails rather than launching blind.
+  const t = fakeTask({ cwd: '/nonexistent-repo' });
+  assert.equal(await maybeFixCi(t, { failed: ['build'] }), false);
+  assert.equal(t.ciFixes, undefined, 'a bail must not spend an attempt');
 });
 
 test('trackChecks: repeated identical failures do not multiply store state — key stays stable across sweeps', () => {

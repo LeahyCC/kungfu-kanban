@@ -8,6 +8,21 @@ compares your clone against `origin/main` and offers a one-click update.
 ## [Unreleased]
 
 ### Added
+- Hands-off PR pipeline: the goal is card → PR → green → merged with no
+  human in the loop. Failing checks on a clean PR now get an automatic fix
+  before any verdict — the watcher resumes the card's own session with the
+  failing-check names and instructions to pull the logs (`gh pr checks`,
+  `gh run view --log-failed`), fix, and push (max 2 attempts per PR, reset
+  when checks recover; no Sensei retry burned; explicitly told to stand down
+  when the failure is CI infrastructure like billing/runner errors). While
+  any PR's checks are still running the watcher re-polls every 60s instead
+  of waiting out the full sweep interval, so a green PR merges about a
+  minute after CI finishes rather than up to ten. Repos with no CI at all
+  are stamped `noCi` after a 10-minute grace window — the Sensei may then
+  merge on diff review alone instead of waiting forever for checks that
+  will never report ("no CI" badge on the card). The Sensei is never
+  invoked while a fixer is active in the card's worktree, so two agents
+  can't collide on one branch.
 - A ⏹ stop button next to the Sensei's "thinking…" pill kills the in-flight
   run (`POST /api/manager/stop`) — the escape hatch for a misclicked trigger.
   The cancelled run's output is discarded, any coalesced follow-up invocation
@@ -22,6 +37,11 @@ compares your clone against `origin/main` and offers a one-click update.
   instead of a raw fetch error.
 
 ### Fixed
+- A push to an existing PR now clears the stored check rollup instead of
+  leaving results that never saw the new code — a follow-up or conflict fix
+  could otherwise be merged on stale green checks, or rejected for failures
+  it had just fixed. The card reads as "waiting for checks" until CI
+  re-reports.
 - Opened PRs are now actually reviewed for conflicts and CI: the PR watcher
   re-invokes the Sensei once a review card's checks settle (the finish-time
   review runs before CI has reported anything, and nothing ever handed the

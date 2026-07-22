@@ -45,6 +45,25 @@ test('merge_pr: an unknown taskId errors without touching state', () => {
   assert.ok(res.error);
 });
 
+test('merge_pr: a no-CI repo past the grace window IS mergeable on diff review alone', async () => {
+  const prflow = require('../lib/prflow');
+  const realMerge = prflow.mergePr;
+  let merged = null;
+  prflow.mergePr = async (t) => { merged = t.id; return { ok: true }; };
+  const task = { id: 'no-ci-ok', status: 'review', prUrl: 'https://x', prChecks: { base: 'main', passing: 0, failing: 0, pending: 0, noCi: true } };
+  store.state.tasks.push(task);
+  try {
+    const res = executeAction({ type: 'merge_pr', taskId: task.id, reasoning: 'diff satisfies criteria' });
+    assert.equal(res.error, undefined);
+    assert.equal(res.note, undefined, 'must actually merge, not hold');
+    await new Promise((r) => setImmediate(r)); // mergePr resolves async
+    assert.equal(merged, task.id);
+  } finally {
+    prflow.mergePr = realMerge;
+    store.state.tasks.length = store.state.tasks.length - 1;
+  }
+});
+
 // --- suggestionLive: a suggestion dies once its target card has moved past
 // the state where approving it would actually do anything ---------------
 
