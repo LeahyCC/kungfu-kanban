@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { summarizeChecks, trackChecks } = require('../lib/prwatch');
+const { summarizeChecks, trackChecks, maybeFixCi } = require('../lib/prwatch');
 const errlog = require('../lib/errlog');
 
 // --- summarizeChecks ----------------------------------------------------
@@ -153,6 +153,116 @@ test('trackChecks: recovering from failing to all-green (no pending) resolves th
   } finally {
     errlog.resolveTask(t.id);
   }
+});
+
+test('trackChecks: stores conflicting from mergeable and keys on its transitions', () => {
+  const t = fakeTask();
+  const rollup = [{ __typename: 'CheckRun', name: 'a', status: 'COMPLETED', conclusion: 'SUCCESS' }];
+  trackChecks(t, { baseRefName: 'main', mergeable: 'MERGEABLE', statusCheckRollup: rollup });
+  assert.equal(t.prChecks.conflicting, false);
+  const key1 = t.prChecks.key;
+  // Same rollup, but the PR now conflicts — must not be swallowed as "identical sweep".
+  trackChecks(t, { baseRefName: 'main', mergeable: 'CONFLICTING', statusCheckRollup: rollup });
+  assert.equal(t.prChecks.conflicting, true);
+  assert.notEqual(t.prChecks.key, key1);
+});
+
+// The return value is what re-invokes the Sensei — the regression here was an
+// open loop: the finish-time review ran before CI reported, and nothing ever
+// handed the card back once checks settled.
+test('trackChecks: returns true exactly when the PR becomes decision-ready', () => {
+  const t = fakeTask();
+  const green = (name) => ({ __typename: 'CheckRun', name, status: 'COMPLETED', conclusion: 'SUCCESS' });
+  // CI still running — not ready.
+  assert.equal(trackChecks(t, { baseRefName: 'main', statusCheckRollup: [{ __typename: 'CheckRun', name: 'a', status: 'IN_PROGRESS' }] }), false);
+  // Checks settle — ready: this is the moment the Sensei gets the card back.
+  assert.equal(trackChecks(t, { baseRefName: 'main', statusCheckRollup: [green('a')] }), true);
+  // Identical sweep — no-op.
+  assert.equal(trackChecks(t, { baseRefName: 'main', statusCheckRollup: [green('a')] }), false);
+  // An extra green check lands while already settled — still green, no re-review.
+  assert.equal(trackChecks(t, { baseRefName: 'main', statusCheckRollup: [green('a'), green('b')] }), false);
+});
+
+test('trackChecks: first sweep that already sees settled checks is ready (fast CI beat the sweep)', () => {
+  const t = fakeTask();
+  const ready = trackChecks(t, {
+    baseRefName: 'main',
+    statusCheckRollup: [{ __typename: 'CheckRun', name: 'a', status: 'COMPLETED', conclusion: 'SUCCESS' }],
+  });
+  assert.equal(ready, true);
+});
+
+test('trackChecks: a settled red flipping straight to green (re-run, no pending seen) is ready again', () => {
+  const t = fakeTask();
+  try {
+    assert.equal(trackChecks(t, {
+      baseRefName: 'main',
+      statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'COMPLETED', conclusion: 'FAILURE' }],
+    }), true);
+    assert.equal(trackChecks(t, {
+      baseRefName: 'main',
+      statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'COMPLETED', conclusion: 'SUCCESS' }],
+    }), true);
+  } finally {
+    errlog.resolveTask(t.id);
+  }
+});
+
+test('trackChecks: a repo with no CI is stamped noCi (and ready) only after the grace window', () => {
+  const t = fakeTask();
+  // Fresh watch, nothing reported, mergeability known — grace still open.
+  assert.equal(trackChecks(t, { baseRefName: 'main', mergeable: 'MERGEABLE', statusCheckRollup: [] }), false);
+  assert.equal(t.prChecks.noCi, false);
+  // Backdate the watch start past the grace window: next sweep flips noCi and is decision-ready.
+  t.prChecks.firstSeenAt = new Date(Date.now() - 11 * 60_000).toISOString();
+  assert.equal(trackChecks(t, { baseRefName: 'main', mergeable: 'MERGEABLE', statusCheckRollup: [] }), true);
+  assert.equal(t.prChecks.noCi, true);
+  // And it fires only once — the next identical sweep is a no-op.
+  assert.equal(trackChecks(t, { baseRefName: 'main', mergeable: 'MERGEABLE', statusCheckRollup: [] }), false);
+});
+
+test('trackChecks: no noCi stamp while GitHub has not computed mergeability', () => {
+  const t = fakeTask();
+  trackChecks(t, { baseRefName: 'main', mergeable: 'UNKNOWN', statusCheckRollup: [] });
+  t.prChecks.firstSeenAt = new Date(Date.now() - 11 * 60_000).toISOString();
+  assert.equal(trackChecks(t, { baseRefName: 'main', mergeable: 'UNKNOWN', statusCheckRollup: [] }), false);
+  assert.equal(t.prChecks.noCi, false);
+});
+
+// The budget resets on a PUSH (see prflow), never on checks merely going
+// green — otherwise a check that flaps red/green on one commit would hand out
+// unlimited auto-fix launches.
+test('trackChecks: a flapping check does NOT refill the auto CI fix budget', () => {
+  const t = fakeTask({ ciFixes: 2, ciFixGaveUp: true });
+  try {
+    trackChecks(t, {
+      baseRefName: 'main',
+      statusCheckRollup: [{ __typename: 'CheckRun', name: 'flaky', status: 'COMPLETED', conclusion: 'FAILURE' }],
+    });
+    trackChecks(t, {
+      baseRefName: 'main',
+      statusCheckRollup: [{ __typename: 'CheckRun', name: 'flaky', status: 'COMPLETED', conclusion: 'SUCCESS' }],
+    });
+    assert.equal(t.ciFixes, 2);
+    assert.equal(t.ciFixGaveUp, true);
+  } finally {
+    errlog.resolveTask(t.id);
+  }
+});
+
+// The cap is what stops an auto-fix loop burning the subscription on a CI
+// failure no code change can fix (billing, dead runners).
+test('maybeFixCi: gives up after 2 attempts and never fixes again', async () => {
+  const t = fakeTask({ cwd: '/nonexistent-repo', ciFixes: 2 });
+  assert.equal(await maybeFixCi(t, { failed: ['build'] }), false);
+  assert.equal(t.ciFixGaveUp, true);
+});
+
+test('maybeFixCi: a card with no resumable session is handed off, not fixed', async () => {
+  // No worktree at this cwd → the fixer bails rather than launching blind.
+  const t = fakeTask({ cwd: '/nonexistent-repo' });
+  assert.equal(await maybeFixCi(t, { failed: ['build'] }), false);
+  assert.equal(t.ciFixes, undefined, 'a bail must not spend an attempt');
 });
 
 test('trackChecks: repeated identical failures do not multiply store state — key stays stable across sweeps', () => {

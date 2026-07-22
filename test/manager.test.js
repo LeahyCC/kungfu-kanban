@@ -21,6 +21,8 @@ test('merge_pr holds on every unready state and never merges', () => {
     [{ id: 'wrong-base', status: 'review', prUrl: 'https://x', prChecks: { base: 'main', failing: 0, pending: 0, wrongBase: true } }, false, false],
     [{ id: 'base-mismatch', status: 'review', prUrl: 'https://x', prBaseBranch: 'staging', prChecks: { base: 'main', failing: 0, pending: 0 } }, false, false],
     [{ id: 'failing', status: 'review', prUrl: 'https://x', prChecks: { base: 'main', failing: 1, pending: 0 } }, false, false],
+    [{ id: 'conflicting', status: 'review', prUrl: 'https://x', prChecks: { base: 'main', passing: 1, failing: 0, pending: 0, conflicting: true } }, false, false], // green CI but merge conflicts
+
     [{ id: 'pending', status: 'review', prUrl: 'https://x', prChecks: { base: 'main', failing: 0, pending: 1 } }, false, false],
     [{ id: 'already-done', status: 'done' }, false, false], // idempotent — success no-op, not an error
     [{ id: 'backlog', status: 'backlog' }, true, false],    // not in review at all
@@ -41,6 +43,25 @@ test('merge_pr holds on every unready state and never merges', () => {
 test('merge_pr: an unknown taskId errors without touching state', () => {
   const res = executeAction({ type: 'merge_pr', taskId: 'does-not-exist', reasoning: 'test' });
   assert.ok(res.error);
+});
+
+test('merge_pr: a no-CI repo past the grace window IS mergeable on diff review alone', async () => {
+  const prflow = require('../lib/prflow');
+  const realMerge = prflow.mergePr;
+  let merged = null;
+  prflow.mergePr = async (t) => { merged = t.id; return { ok: true }; };
+  const task = { id: 'no-ci-ok', status: 'review', prUrl: 'https://x', prChecks: { base: 'main', passing: 0, failing: 0, pending: 0, noCi: true } };
+  store.state.tasks.push(task);
+  try {
+    const res = executeAction({ type: 'merge_pr', taskId: task.id, reasoning: 'diff satisfies criteria' });
+    assert.equal(res.error, undefined);
+    assert.equal(res.note, undefined, 'must actually merge, not hold');
+    await new Promise((r) => setImmediate(r)); // mergePr resolves async
+    assert.equal(merged, task.id);
+  } finally {
+    prflow.mergePr = realMerge;
+    store.state.tasks.length = store.state.tasks.length - 1;
+  }
 });
 
 // --- suggestionLive: a suggestion dies once its target card has moved past

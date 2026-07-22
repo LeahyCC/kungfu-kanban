@@ -8,6 +8,22 @@ compares your clone against `origin/main` and offers a one-click update.
 ## [Unreleased]
 
 ### Added
+- Hands-off PR pipeline: the goal is card → PR → green → merged with no
+  human in the loop. Failing checks on a clean PR now get an automatic fix
+  before any verdict — the watcher resumes the card's own session with the
+  failing-check names and instructions to pull the logs (`gh pr checks`,
+  `gh run view --log-failed`), fix, and push (max 2 attempts per PR, refilled
+  only by a new push so a flapping check can't hand out unlimited launches;
+  no Sensei retry burned; explicitly told to stand down when the failure is
+  CI infrastructure like billing/runner errors). While
+  any PR's checks are still running the watcher re-polls every 60s instead
+  of waiting out the full sweep interval, so a green PR merges about a
+  minute after CI finishes rather than up to ten. Repos with no CI at all
+  are stamped `noCi` after a 10-minute grace window — the Sensei may then
+  merge on diff review alone instead of waiting forever for checks that
+  will never report ("no CI" badge on the card). The Sensei is never
+  invoked while a fixer is active in the card's worktree, so two agents
+  can't collide on one branch.
 - A ⏹ stop button next to the Sensei's "thinking…" pill kills the in-flight
   run (`POST /api/manager/stop`) — the escape hatch for a misclicked trigger.
   The cancelled run's output is discarded, any coalesced follow-up invocation
@@ -22,6 +38,28 @@ compares your clone against `origin/main` and offers a one-click update.
   instead of a raw fetch error.
 
 ### Fixed
+- The `release-check` CI guard no longer fails every single PR. It demanded a
+  `## [X.Y.Z]` section matching `package.json` for any untagged version, which
+  contradicts the repo convention of bumping the version on every change and
+  accumulating entries under `## [Unreleased]` until the release card renames
+  the section — so 100% of PRs went red on it and needed a human. Naming the
+  section for the version is now what marks a release (and still triggers the
+  full merged-PR reconciliation); an in-flight bump only has to describe
+  itself under `## [Unreleased]`, with a clear failure when that section is
+  empty or missing.
+- A push to an existing PR now clears the stored check rollup instead of
+  leaving results that never saw the new code — a follow-up or conflict fix
+  could otherwise be merged on stale green checks, or rejected for failures
+  it had just fixed. The card reads as "waiting for checks" until CI
+  re-reports.
+- Opened PRs are now actually reviewed for conflicts and CI: the PR watcher
+  re-invokes the Sensei once a review card's checks settle (the finish-time
+  review runs before CI has reported anything, and nothing ever handed the
+  card back — green PRs sat unmerged until a human looked). Merge-conflict
+  state is now tracked on the card too (`prChecks.conflicting`): the board
+  badges ⚔ conflicts, the transcript notes it once (with a notification when
+  auto-fix is off), and the Sensei sees it and refuses to merge a conflicting
+  PR even when CI is green.
 - The attention popup's Approve all / Reject all now cover permission-blocked
   cards, not just Sensei suggestions — a popup of only blocked cards used to
   make both buttons silent no-ops. Approve all bypass-&-re-runs the blocked
