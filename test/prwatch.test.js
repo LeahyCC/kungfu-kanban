@@ -155,6 +155,59 @@ test('trackChecks: recovering from failing to all-green (no pending) resolves th
   }
 });
 
+test('trackChecks: stores conflicting from mergeable and keys on its transitions', () => {
+  const t = fakeTask();
+  const rollup = [{ __typename: 'CheckRun', name: 'a', status: 'COMPLETED', conclusion: 'SUCCESS' }];
+  trackChecks(t, { baseRefName: 'main', mergeable: 'MERGEABLE', statusCheckRollup: rollup });
+  assert.equal(t.prChecks.conflicting, false);
+  const key1 = t.prChecks.key;
+  // Same rollup, but the PR now conflicts — must not be swallowed as "identical sweep".
+  trackChecks(t, { baseRefName: 'main', mergeable: 'CONFLICTING', statusCheckRollup: rollup });
+  assert.equal(t.prChecks.conflicting, true);
+  assert.notEqual(t.prChecks.key, key1);
+});
+
+// The return value is what re-invokes the Sensei — the regression here was an
+// open loop: the finish-time review ran before CI reported, and nothing ever
+// handed the card back once checks settled.
+test('trackChecks: returns true exactly when the PR becomes decision-ready', () => {
+  const t = fakeTask();
+  const green = (name) => ({ __typename: 'CheckRun', name, status: 'COMPLETED', conclusion: 'SUCCESS' });
+  // CI still running — not ready.
+  assert.equal(trackChecks(t, { baseRefName: 'main', statusCheckRollup: [{ __typename: 'CheckRun', name: 'a', status: 'IN_PROGRESS' }] }), false);
+  // Checks settle — ready: this is the moment the Sensei gets the card back.
+  assert.equal(trackChecks(t, { baseRefName: 'main', statusCheckRollup: [green('a')] }), true);
+  // Identical sweep — no-op.
+  assert.equal(trackChecks(t, { baseRefName: 'main', statusCheckRollup: [green('a')] }), false);
+  // An extra green check lands while already settled — still green, no re-review.
+  assert.equal(trackChecks(t, { baseRefName: 'main', statusCheckRollup: [green('a'), green('b')] }), false);
+});
+
+test('trackChecks: first sweep that already sees settled checks is ready (fast CI beat the sweep)', () => {
+  const t = fakeTask();
+  const ready = trackChecks(t, {
+    baseRefName: 'main',
+    statusCheckRollup: [{ __typename: 'CheckRun', name: 'a', status: 'COMPLETED', conclusion: 'SUCCESS' }],
+  });
+  assert.equal(ready, true);
+});
+
+test('trackChecks: a settled red flipping straight to green (re-run, no pending seen) is ready again', () => {
+  const t = fakeTask();
+  try {
+    assert.equal(trackChecks(t, {
+      baseRefName: 'main',
+      statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'COMPLETED', conclusion: 'FAILURE' }],
+    }), true);
+    assert.equal(trackChecks(t, {
+      baseRefName: 'main',
+      statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'COMPLETED', conclusion: 'SUCCESS' }],
+    }), true);
+  } finally {
+    errlog.resolveTask(t.id);
+  }
+});
+
 test('trackChecks: repeated identical failures do not multiply store state — key stays stable across sweeps', () => {
   const t = fakeTask();
   try {

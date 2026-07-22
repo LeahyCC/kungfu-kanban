@@ -21,6 +21,8 @@ test('merge_pr holds on every unready state and never merges', () => {
     [{ id: 'wrong-base', status: 'review', prUrl: 'https://x', prChecks: { base: 'main', failing: 0, pending: 0, wrongBase: true } }, false, false],
     [{ id: 'base-mismatch', status: 'review', prUrl: 'https://x', prBaseBranch: 'staging', prChecks: { base: 'main', failing: 0, pending: 0 } }, false, false],
     [{ id: 'failing', status: 'review', prUrl: 'https://x', prChecks: { base: 'main', failing: 1, pending: 0 } }, false, false],
+    [{ id: 'conflicting', status: 'review', prUrl: 'https://x', prChecks: { base: 'main', passing: 1, failing: 0, pending: 0, conflicting: true } }, false, false], // green CI but merge conflicts
+
     [{ id: 'pending', status: 'review', prUrl: 'https://x', prChecks: { base: 'main', failing: 0, pending: 1 } }, false, false],
     [{ id: 'already-done', status: 'done' }, false, false], // idempotent — success no-op, not an error
     [{ id: 'backlog', status: 'backlog' }, true, false],    // not in review at all

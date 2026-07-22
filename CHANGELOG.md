@@ -22,6 +22,14 @@ compares your clone against `origin/main` and offers a one-click update.
   instead of a raw fetch error.
 
 ### Fixed
+- Opened PRs are now actually reviewed for conflicts and CI: the PR watcher
+  re-invokes the Sensei once a review card's checks settle (the finish-time
+  review runs before CI has reported anything, and nothing ever handed the
+  card back — green PRs sat unmerged until a human looked). Merge-conflict
+  state is now tracked on the card too (`prChecks.conflicting`): the board
+  badges ⚔ conflicts, the transcript notes it once (with a notification when
+  auto-fix is off), and the Sensei sees it and refuses to merge a conflicting
+  PR even when CI is green.
 - The attention popup's Approve all / Reject all now cover permission-blocked
   cards, not just Sensei suggestions — a popup of only blocked cards used to
   make both buttons silent no-ops. Approve all bypass-&-re-runs the blocked
