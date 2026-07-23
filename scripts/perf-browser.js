@@ -283,6 +283,162 @@ async function soak() {
   ws.close();
 }
 
+// Synthesize a full HTML5 drag of a card across columns (backlog<->review,
+// avoiding done's confirm dialog and queued's /run side effect), measuring
+// wall time + longtasks until the card re-renders in the target column.
+async function drag() {
+  const { ws, evaluate } = await connect();
+  await evaluate(`window.__perf || (${JSON.stringify(INSTALL)})`);
+  const trials = Number(opt('trials', 5));
+  const r = await evaluate(`(async () => {
+    const P = window.__perf;
+    const trials = [];
+    for (let i = 0; i < ${trials}; i++) {
+      const fromStatus = i % 2 === 0 ? 'backlog' : 'review';
+      const toStatus = i % 2 === 0 ? 'review' : 'backlog';
+      const col = document.querySelector('.column[data-status="' + fromStatus + '"]');
+      const target = document.querySelector('.column[data-status="' + toStatus + '"]');
+      const card = col && col.querySelector('.card');
+      if (!card || !target) { trials.push({ error: 'no card/column for ' + fromStatus + '->' + toStatus }); continue; }
+      const id = card.dataset.id;
+      const dt = new DataTransfer();
+      const m = P.mark();
+      const t0 = performance.now();
+      const fire = (el, type) => el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt }));
+      fire(card, 'dragstart');
+      fire(target.querySelector('.col-body'), 'dragover');
+      fire(target.querySelector('.col-body'), 'drop');
+      fire(card, 'dragend');
+      let ok = false;
+      while (performance.now() - t0 < 10000) {
+        await new Promise((r) => setTimeout(r, 50));
+        // re-query: render() rebuilds board.innerHTML, so the pre-drop
+        // column element is detached after the first re-render
+        if (document.querySelector('.column[data-status="' + toStatus + '"] .card[data-id="' + id + '"]')) { ok = true; break; }
+      }
+      const s = P.since(m);
+      trials.push({ from: fromStatus, to: toStatus, ok, ...s });
+      // let the board settle between trials
+      await new Promise((r) => setTimeout(r, 800));
+    }
+    return trials;
+  })()`);
+  const okTrials = (r || []).filter((t) => t.ok);
+  const walls = okTrials.map((t) => t.wallMs).sort((a, b) => a - b);
+  const median = walls.length ? walls[Math.floor(walls.length / 2)] : null;
+  const out = {
+    trials: r,
+    okCount: okTrials.length,
+    medianWallMs: median,
+    medianLongtaskMs: okTrials.length ? okTrials.map((t) => t.longtaskMs).sort((a, b) => a - b)[Math.floor(okTrials.length / 2)] : null,
+    maxWallMs: walls.length ? walls[walls.length - 1] : null,
+  };
+  console.log(JSON.stringify(out, null, 2));
+  writeOut('browser-drag.json', out);
+  ws.close();
+}
+
+// Per-SSE-event render() cost: the frozen worktree's board.js has render()
+// wrapped with performance.now() deltas pushed to window.__renderMs. Run a
+// 30s 3-lane churn window (SSE-counted server-side) and harvest the deltas.
+async function renderCost() {
+  const { ws, send, evaluate } = await connect();
+  // reload so the page definitely runs the instrumented board.js, then reset
+  await send('Page.enable');
+  await send('Page.navigate', { url: APP_URL });
+  await new Promise((r) => setTimeout(r, 2000));
+  await evaluate(INSTALL);
+  const cards = await waitForBoard(evaluate);
+  await evaluate(`window.__renderMs = [], window.__perf.reset(), 'reset'`);
+  execSync(
+    `node "${path.join(ROOT, 'scripts', 'perf-measure.js')}" sse --port ${APP_PORT} --duration ${DURATION} --out "${path.join(OUT_DIR, 'rendercost-sse.json')}"`,
+    { stdio: 'inherit' }
+  );
+  // small drain: let the last SSE-triggered renders land
+  await new Promise((r) => setTimeout(r, 1500));
+  const arr = await evaluate(`window.__renderMs || []`);
+  const sse = JSON.parse(fs.readFileSync(path.join(OUT_DIR, 'rendercost-sse.json'), 'utf8')).sse;
+  const s = [...arr].sort((a, b) => a - b);
+  const pct = (p) => (s.length ? +s[Math.min(s.length - 1, Math.ceil((p / 100) * s.length) - 1)].toFixed(2) : null);
+  const out = {
+    windowS: DURATION,
+    cardsOnBoard: cards,
+    sseEvents: sse.sseEvents,
+    taskEvents: sse.taskEvents,
+    mutations: sse.mutations,
+    renderCalls: arr.length,
+    p50ms: pct(50),
+    p95ms: pct(95),
+    maxMs: s.length ? +s[s.length - 1].toFixed(2) : null,
+    totalMs: +arr.reduce((a, b) => a + b, 0).toFixed(1),
+    renderMsPerSseEvent: sse.sseEvents ? +(arr.reduce((a, b) => a + b, 0) / sse.sseEvents).toFixed(2) : null,
+    note: 'includes early-return (fingerprint-skip) calls; renderCalls may differ from sseEvents (initial load, non-task events, coalescing)',
+  };
+  console.log(JSON.stringify(out, null, 2));
+  writeOut('browser-rendercost.json', out);
+  ws.close();
+}
+
+// Warm-reload page-load timing: 3 cache-warm navigations, median of
+// domContentLoaded / load / LCP from PerformanceNavigationTiming.
+async function warmLoad() {
+  const { ws, send, evaluate } = await connect();
+  await send('Page.enable');
+  const runs = [];
+  for (let i = 0; i < 3; i++) {
+    await send('Page.navigate', { url: APP_URL });
+    // wait for load event to complete
+    for (let k = 0; k < 100; k++) {
+      await new Promise((r) => setTimeout(r, 200));
+      const done = await evaluate(`performance.timing && performance.timing.loadEventEnd > 0`).catch(() => false);
+      if (done) break;
+    }
+    await waitForBoard(evaluate);
+    // let LCP settle (board render happens after the initial fetch)
+    await new Promise((r) => setTimeout(r, 1500));
+    const m = await evaluate(`(async () => {
+      const n = performance.getEntriesByType('navigation')[0];
+      if (!n) return null;
+      const lcpMs = await new Promise((res) => {
+        let v = null;
+        try {
+          new PerformanceObserver((list) => {
+            const e = list.getEntries();
+            if (e.length) v = +e[e.length - 1].startTime.toFixed(1);
+          }).observe({ type: 'largest-contentful-paint', buffered: true });
+        } catch (e) {}
+        setTimeout(() => res(v), 1000);
+      });
+      return {
+        ttfbMs: +(n.responseStart - n.startTime).toFixed(1),
+        responseEndMs: +(n.responseEnd - n.startTime).toFixed(1),
+        domContentLoadedMs: +(n.domContentLoadedEventEnd - n.startTime).toFixed(1),
+        loadMs: +(n.loadEventEnd - n.startTime).toFixed(1),
+        lcpMs,
+      };
+    })()`);
+    runs.push(m);
+  }
+  const med = (key) => {
+    const v = runs.map((r) => r && r[key]).filter((x) => x != null).sort((a, b) => a - b);
+    return v.length ? v[Math.floor(v.length / 2)] : null;
+  };
+  const out = {
+    runs,
+    median: {
+      ttfbMs: med('ttfbMs'),
+      responseEndMs: med('responseEndMs'),
+      domContentLoadedMs: med('domContentLoadedMs'),
+      loadMs: med('loadMs'),
+      lcpMs: med('lcpMs'),
+    },
+    note: 'cache-warm reloads (same profile, revalidated static assets); headless Chrome',
+  };
+  console.log(JSON.stringify(out, null, 2));
+  writeOut('browser-warmload.json', out);
+  ws.close();
+}
+
 async function kill() {
   try {
     const list = await (await fetch(`http://127.0.0.1:${CDP_PORT}/json/list`)).json();
@@ -297,6 +453,9 @@ async function kill() {
   else if (CMD === 'churn-window') await churnWindow();
   else if (CMD === 'drawer') await drawer(args[1]);
   else if (CMD === 'filter') await filterCost();
+  else if (CMD === 'drag') await drag();
+  else if (CMD === 'rendercost') await renderCost();
+  else if (CMD === 'warmload') await warmLoad();
   else if (CMD === 'soak') await soak();
   else if (CMD === 'kill') await kill();
   else throw new Error('unknown command ' + CMD);
