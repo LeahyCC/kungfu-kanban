@@ -144,7 +144,11 @@ export async function renderUsage() {
   cap.textContent = 'all Claude Code on this Mac · rolling 5-hour window';
   bd.appendChild(cap);
 }
-setInterval(renderUsage, 5 * 60_000);
+// don't burn refetches in background tabs; refresh on return instead
+setInterval(() => { if (document.visibilityState === 'visible') renderUsage(); }, 5 * 60_000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') { renderUsage(); renderHealth(); }
+});
 
 // ---------- system status (claude CLI + gh health) ----------
 export async function renderHealth() {
@@ -204,4 +208,5 @@ export async function renderHealth() {
   });
 }
 // the tooltip promises "checked every few minutes" — keep that promise
-setInterval(renderHealth, 5 * 60_000);
+// (visible tabs only; the visibilitychange handler above catches the return)
+setInterval(() => { if (document.visibilityState === 'visible') renderHealth(); }, 5 * 60_000);

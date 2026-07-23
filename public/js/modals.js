@@ -433,6 +433,7 @@ export function openSettings() {
     if (v && v.version) $('#settingsVersion').textContent = `v${v.version}`;
   });
   $('#settingsBackdrop').classList.remove('hidden');
+  f.usageBudgetM.focus(); // first input — same convention as the card modal's f.title.focus()
   settingsSnapshot = settingsFormSnapshot();
 }
 async function renderSkillStatus() {
