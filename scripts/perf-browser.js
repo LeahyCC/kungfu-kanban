@@ -33,6 +33,7 @@ function opt(name, dflt) {
 const APP_PORT = Number(opt('port', 4848));
 const CDP_PORT = Number(opt('cdp', 9223));
 const DURATION = Number(opt('duration', 60));
+const PREFIX = opt('prefix', ''); // e.g. --prefix final- keeps baseline artifacts intact
 const APP_URL = `http://localhost:${APP_PORT}/`;
 const PROFILE = path.join(ROOT, 'scratch', 'perf', 'chrome-profile');
 const OUT_DIR = path.join(ROOT, 'scratch', 'perf');
@@ -135,7 +136,7 @@ async function waitForBoard(evaluate) {
 
 function writeOut(name, obj) {
   fs.mkdirSync(OUT_DIR, { recursive: true });
-  const f = path.join(OUT_DIR, name);
+  const f = path.join(OUT_DIR, PREFIX + name);
   fs.writeFileSync(f, JSON.stringify({ at: new Date().toISOString(), ...obj }, null, 2));
   console.log(`wrote ${f}`);
 }
@@ -164,18 +165,20 @@ async function launch() {
 
 async function churnWindow() {
   const { ws, evaluate } = await connect();
-  await evaluate(`window.__perf ? (window.__perf.reset(), 'reset') : (${JSON.stringify(INSTALL)})`);
+  await evaluate(INSTALL); // idempotent; SW-triggered reloads wipe window.__perf
+  await evaluate(`window.__perf.reset(), 'reset'`);
   const m0 = await evaluate(`window.__perf.mark()`);
   const mem0 = await evaluate(`performance.memory ? performance.memory.usedJSHeapSize : null`);
   // drive 3-lane churn + count SSE events server-side, same window
+  const sseFile = path.join(OUT_DIR, PREFIX + 'browser-sse.json');
   execSync(
-    `node "${path.join(ROOT, 'scripts', 'perf-measure.js')}" sse --port ${APP_PORT} --duration ${DURATION} --out "${path.join(OUT_DIR, 'browser-sse.json')}"`,
+    `node "${path.join(ROOT, 'scripts', 'perf-measure.js')}" sse --port ${APP_PORT} --duration ${DURATION} --out "${sseFile}"`,
     { stdio: 'inherit' }
   );
   const stats = await evaluate(`window.__perf.since(${JSON.stringify(m0)})`);
   const fps = await evaluate(`+(window.__perf.frames / ((performance.now() - window.__perf.frameStart) / 1000)).toFixed(1)`);
   const mem1 = await evaluate(`performance.memory ? performance.memory.usedJSHeapSize : null`);
-  const sse = JSON.parse(fs.readFileSync(path.join(OUT_DIR, 'browser-sse.json'), 'utf8')).sse;
+  const sse = JSON.parse(fs.readFileSync(sseFile, 'utf8')).sse;
   const out = {
     windowS: DURATION,
     sseEvents: sse.sseEvents,
@@ -192,7 +195,7 @@ async function churnWindow() {
 
 async function drawer(taskId) {
   const { ws, evaluate } = await connect();
-  await evaluate(`window.__perf || (${JSON.stringify(INSTALL)})`);
+  await evaluate(INSTALL); // idempotent; SW-triggered reloads wipe window.__perf
   // click the card, then wait until: drawer open + transcript rendered +
   // 600ms with no new longtask (layout settled)
   const r = await evaluate(`(async () => {
@@ -228,7 +231,7 @@ async function drawer(taskId) {
 
 async function filterCost() {
   const { ws, evaluate } = await connect();
-  await evaluate(`window.__perf || (${JSON.stringify(INSTALL)})`);
+  await evaluate(INSTALL); // idempotent; SW-triggered reloads wipe window.__perf
   const r = await evaluate(`(async () => {
     const P = window.__perf;
     const inp = document.getElementById('filterInput');
@@ -259,7 +262,7 @@ async function filterCost() {
 
 async function soak() {
   const { ws, evaluate } = await connect();
-  await evaluate(`window.__perf || (${JSON.stringify(INSTALL)})`);
+  await evaluate(INSTALL); // idempotent; SW-triggered reloads wipe window.__perf
   await evaluate(`window.gc && window.gc(), 'gc'`);
   const h0 = await evaluate(`performance.memory.usedJSHeapSize`);
   // async spawn (not execSync): blocking the event loop for minutes starves
@@ -288,7 +291,7 @@ async function soak() {
 // wall time + longtasks until the card re-renders in the target column.
 async function drag() {
   const { ws, evaluate } = await connect();
-  await evaluate(`window.__perf || (${JSON.stringify(INSTALL)})`);
+  await evaluate(INSTALL); // idempotent; SW-triggered reloads wipe window.__perf
   const trials = Number(opt('trials', 5));
   const r = await evaluate(`(async () => {
     const P = window.__perf;
@@ -338,30 +341,41 @@ async function drag() {
   ws.close();
 }
 
-// Per-SSE-event render() cost: the frozen worktree's board.js has render()
-// wrapped with performance.now() deltas pushed to window.__renderMs. Run a
-// 30s 3-lane churn window (SSE-counted server-side) and harvest the deltas.
+// Per-SSE-event render() cost. v1.6.0+ exposes window.__kkPerf.renders
+// ({t, ms, cards}, cap 500) natively — recorded only for render passes that
+// actually do work (fingerprint-skip returns early, unrecorded). Falls back
+// to window.__renderMs (worktree source instrumentation) on the old code.
 async function renderCost() {
   const { ws, send, evaluate } = await connect();
-  // reload so the page definitely runs the instrumented board.js, then reset
+  // reload so the page definitely runs the current board.js, then reset
   await send('Page.enable');
   await send('Page.navigate', { url: APP_URL });
   await new Promise((r) => setTimeout(r, 2000));
   await evaluate(INSTALL);
   const cards = await waitForBoard(evaluate);
-  await evaluate(`window.__renderMs = [], window.__perf.reset(), 'reset'`);
+  const source = await evaluate(`window.__kkPerf && window.__kkPerf.renders ? '__kkPerf' : (window.__renderMs ? '__renderMs' : 'none')`);
+  if (source === 'none') throw new Error('no render instrumentation found (expected window.__kkPerf.renders)');
+  await evaluate(
+    source === '__kkPerf'
+      ? `(window.__kkPerf.renders.length = 0), window.__perf.reset(), 'reset'`
+      : `window.__renderMs = [], window.__perf.reset(), 'reset'`
+  );
+  const sseFile = path.join(OUT_DIR, PREFIX + 'rendercost-sse.json');
   execSync(
-    `node "${path.join(ROOT, 'scripts', 'perf-measure.js')}" sse --port ${APP_PORT} --duration ${DURATION} --out "${path.join(OUT_DIR, 'rendercost-sse.json')}"`,
+    `node "${path.join(ROOT, 'scripts', 'perf-measure.js')}" sse --port ${APP_PORT} --duration ${DURATION} --out "${sseFile}"`,
     { stdio: 'inherit' }
   );
   // small drain: let the last SSE-triggered renders land
   await new Promise((r) => setTimeout(r, 1500));
-  const arr = await evaluate(`window.__renderMs || []`);
-  const sse = JSON.parse(fs.readFileSync(path.join(OUT_DIR, 'rendercost-sse.json'), 'utf8')).sse;
+  const arr = await evaluate(
+    source === '__kkPerf' ? `(window.__kkPerf.renders || []).map((r) => r.ms)` : `window.__renderMs || []`
+  );
+  const sse = JSON.parse(fs.readFileSync(sseFile, 'utf8')).sse;
   const s = [...arr].sort((a, b) => a - b);
   const pct = (p) => (s.length ? +s[Math.min(s.length - 1, Math.ceil((p / 100) * s.length) - 1)].toFixed(2) : null);
   const out = {
     windowS: DURATION,
+    instrumentedBy: source,
     cardsOnBoard: cards,
     sseEvents: sse.sseEvents,
     taskEvents: sse.taskEvents,
@@ -372,7 +386,9 @@ async function renderCost() {
     maxMs: s.length ? +s[s.length - 1].toFixed(2) : null,
     totalMs: +arr.reduce((a, b) => a + b, 0).toFixed(1),
     renderMsPerSseEvent: sse.sseEvents ? +(arr.reduce((a, b) => a + b, 0) / sse.sseEvents).toFixed(2) : null,
-    note: 'includes early-return (fingerprint-skip) calls; renderCalls may differ from sseEvents (initial load, non-task events, coalescing)',
+    note: source === '__kkPerf'
+      ? 'native __kkPerf.renders: only real render passes recorded (fingerprint-skips excluded); SSE frames are 250ms per-id coalesced'
+      : 'includes early-return (fingerprint-skip) calls; renderCalls may differ from sseEvents (initial load, non-task events, coalescing)',
   };
   console.log(JSON.stringify(out, null, 2));
   writeOut('browser-rendercost.json', out);
