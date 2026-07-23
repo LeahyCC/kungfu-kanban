@@ -10,7 +10,7 @@
  * order of the single file. Module scripts are deferred, so the DOM is ready. */
 
 import { state } from './js/state.js';
-import { $ } from './js/util.js';
+import { $, debounce } from './js/util.js';
 import { api } from './js/api.js';
 import { render, loadTasks, setFilter } from './js/board.js';
 import { closeDrawer } from './js/drawer.js';
@@ -32,7 +32,11 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (e.key !== 'Tab') return;
-  const overlay = document.querySelector('.backdrop:not(.hidden) .modal');
+  // the drawer is a sibling of the backdrops — without it here, Tab escaped
+  // into the board behind the open drawer. A backdrop modal (if any) sits on
+  // top and traps first.
+  const overlay = document.querySelector('.backdrop:not(.hidden) .modal')
+    || document.querySelector('.drawer:not(.hidden)');
   if (!overlay) return;
   const foci = [...overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
     .filter((el) => !el.disabled && el.offsetParent !== null);
@@ -47,15 +51,19 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ---------- board filter ----------
-$('#filterInput').addEventListener('input', (e) => {
-  setFilter(e.target.value.trim().toLowerCase());
+// one render per pause in typing, not one full board pass per keystroke; the
+// haystack itself is cached per task object inside board.js
+const applyFilter = debounce((v) => {
+  setFilter(v);
   render();
-});
+}, 120);
+$('#filterInput').addEventListener('input', (e) => applyFilter(e.target.value.trim().toLowerCase()));
 
 // ---------- inline settings ----------
 $('#maxConcurrent').addEventListener('change', async (e) => {
+  const prev = state.config.settings.maxConcurrent || 2;
   const r = await api('/api/settings', { method: 'PUT', body: { maxConcurrent: parseInt(e.target.value, 10) } });
-  if (!r || r.error) return;
+  if (!r || r.error) { e.target.value = prev; return; } // don't leave the input out of sync with state
   state.config.settings = r;
 });
 

@@ -38,7 +38,10 @@
   --info: #6FA3D4;
   --shadow-hard: rgba(0, 0, 0, 0.85);
   --grain-opacity: 0.02;
-  --grain-blend: screen;
+  /* no mix-blend (it forces a full-viewport re-blend on every repaint):
+     brighten the noise tile instead so it reads as lighten on the night dojo */
+  --grain-filter: brightness(1.75);
+  --scroll-shadow: rgba(0, 0, 0, 0.35);
 
   --font-display: 'Bricolage Grotesque', sans-serif;
   --font-body: 'Instrument Sans', -apple-system, sans-serif;
@@ -74,7 +77,9 @@
   --info: #2E5E8C;
   --shadow-hard: rgba(26, 23, 20, 0.92);
   --grain-opacity: 0.025;
-  --grain-blend: multiply;
+  /* darkened noise reads as multiply on rice paper */
+  --grain-filter: brightness(0.5);
+  --scroll-shadow: rgba(26, 23, 20, 0.18);
   color-scheme: light;
 }
 
@@ -104,7 +109,9 @@ body::before {
   z-index: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='1'/%3E%3C/svg%3E");
   opacity: var(--grain-opacity);
-  mix-blend-mode: var(--grain-blend);
+  /* plain alpha + per-theme tint: no blend mode → no full-viewport re-blend
+     on every repaint (hover, transcript append, scroll) */
+  filter: var(--grain-filter);
 }
 
 a { color: inherit; text-decoration: none; }
@@ -246,6 +253,7 @@ dialog.kk-dialog p { margin-bottom: 6px; white-space: pre-wrap; word-break: brea
 /* belt dots */
 .belt-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
 .belt-dot.belt-todo { background: var(--belt-todo); }
+.belt-dot.belt-queued { background: var(--belt-queued); } /* decorative 6px dot — non-text, AA n/a */
 .belt-dot.belt-doing { background: var(--belt-doing); }
 .belt-dot.belt-review { background: var(--belt-review); }
 .belt-dot.belt-done { background: var(--belt-done); }
@@ -407,19 +415,28 @@ input.tiny { width: 60px; }
   z-index: 1;
 }
 
-/* running brush: a breathing ink stroke along the bottom edge */
-.brush {
-  background-image: linear-gradient(90deg, transparent, var(--accent) 40%, var(--accent) 60%, transparent);
-  background-size: 200% 2px;
-  background-position: 0 100%;
-  background-repeat: no-repeat;
+/* running brush: a breathing ink stroke along the bottom edge — composited.
+   The 200%-wide ::after bar sweeps on transform only (no background-position
+   repaint loop per running card); overflow clips it to the card. (.card-seal
+   never co-occurs: seals are done-only, brush is running-only.) */
+.brush { position: relative; overflow: hidden; }
+.brush::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 200%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent) 40%, var(--accent) 60%, transparent);
   animation: brush 2.2s linear infinite;
+  pointer-events: none;
 }
 @keyframes brush {
-  from { background-position: 200% 100%; }
-  to { background-position: -200% 100%; }
+  from { transform: translateX(-50%); }
+  to { transform: translateX(50%); }
 }
 @media (prefers-reduced-motion: reduce) {
+  .brush::after { content: none; }
   .brush { animation: none; border-bottom: 2px solid var(--accent); }
 }
 
@@ -601,6 +618,8 @@ input.tiny { width: 60px; }
   min-width: 230px;
   display: flex;
   flex-direction: column;
+  /* layout+style containment: card churn in one column can't dirty its siblings */
+  contain: layout style;
   max-height: calc(100vh - 150px);
   max-height: calc(100dvh - 150px); /* stable under mobile Safari's dynamic chrome */
 }
@@ -610,6 +629,17 @@ input.tiny { width: 60px; }
 .column[data-status='review'] { --belt: var(--belt-review); }
 .column[data-status='done'] { --belt: var(--belt-done); }
 .column.drag-over { outline: 2px dashed var(--rule-strong); outline-offset: -6px; }
+
+/* skeleton columns: static placeholders shipped in index.html so first paint
+   isn't a blank void — board.js's reconciler plain-removes non-target children
+   of #board on first render. Height matches a populated column's max-height
+   (100dvh - 150px) so the skeleton → board swap doesn't shift layout (CLS). */
+.column.skel { min-height: calc(100dvh - 150px); opacity: 0.45; border-top-color: var(--rule); }
+@media (max-width: 700px) { .column.skel { min-height: 30vh; } }
+@keyframes skel-breathe { 50% { opacity: 0.22; } }
+@media (prefers-reduced-motion: no-preference) {
+  .column.skel { animation: skel-breathe 1.8s ease-in-out infinite; }
+}
 
 .col-head {
   display: flex;
@@ -693,10 +723,18 @@ input.tiny { width: 60px; }
   box-shadow: 0 1px 0 rgba(26, 23, 20, 0.1);
   transition: transform 120ms var(--ease), box-shadow 120ms var(--ease);
   position: relative;
+  /* skip rendering off-screen cards in long columns; 92px ≈ a 2-line card */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 92px;
 }
 .card:hover, .card.dragging {
   transform: translate(-2px, -2px);
   box-shadow: 3px 3px 0 var(--rule-strong);
+}
+/* the blanket reduced-motion gate kills the transition but not the instant
+   transform pop — neutralize the transform itself */
+@media (prefers-reduced-motion: reduce) {
+  .card:hover, .card.dragging { transform: none; }
 }
 .card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 7px; }
 .card .title {
@@ -754,8 +792,8 @@ input.tiny { width: 60px; }
   color: var(--error);
 }
 @media (hover: none) {
-  .card-run { opacity: 1; width: 36px; height: 36px; font-size: 13px; }
-  .theme-toggle, .icon-btn { width: 38px; height: 38px; }
+  .card-run { opacity: 1; width: 44px; height: 44px; font-size: 14px; }
+  .theme-toggle, .icon-btn { width: 44px; height: 44px; }
 }
 .card .title .antenna { margin-right: 6px; vertical-align: 1px; }
 .card .meta {
@@ -771,7 +809,11 @@ input.tiny { width: 60px; }
   font-size: 11px;
   color: var(--accent-ink);
 }
-.card.done-card .title, .card.done-card .meta { opacity: 0.6; }
+.card.done-card .title { opacity: 0.6; }
+/* meta stays readable: badges blend ink-600 over the card bg — 0.6 would drop
+   small badge text under AA (3.89:1); 0.8 keeps ~5.5:1 in both themes while
+   done cards still recede */
+.card.done-card .meta { opacity: 0.8; }
 .card .card-seal {
   position: absolute;
   top: -6px;
@@ -1160,6 +1202,9 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
   color: var(--ink-600);
   border-left: 2px solid var(--rule);
   word-break: break-word;
+  /* long activity logs: skip off-screen entries */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 40px;
 }
 .log-entry:nth-child(even) { background: var(--paper-2); }
 .log-entry.action { border-left-color: var(--success); color: var(--ink-900); }
@@ -1306,7 +1351,12 @@ a.err-card:hover { text-decoration: underline; }
   gap: 8px;
   white-space: normal;
 }
-.t-entry { white-space: pre-wrap; }
+.t-entry {
+  white-space: pre-wrap;
+  /* 3000-entry transcripts: skip off-screen entries (cheap drawer opens) */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 40px;
+}
 .t-entry.init { color: #978F80; font-size: 11.5px; }
 .t-entry.tool { color: #978F80; }
 .t-entry.tool::before { content: '⚙ '; }
@@ -1322,6 +1372,22 @@ a.err-card:hover { text-decoration: underline; }
 .t-entry.error::before { content: '✕ '; }
 .t-entry.blocked { color: #E0A33A; }
 .t-entry.blocked::before { content: '⛔ '; }
+
+/* .t-omitted — hook for the rendering rework (Frontend_Render_Engineer): a
+   sticky 'earlier output omitted' row pinned to the top of the transcript slab
+   while older entries are capped. #978F80 on --slab-bg #1A1714 = 5.57:1 (same
+   ink as .t-entry.init, already AA-verified on the slab) */
+.t-omitted {
+  position: sticky;
+  top: -12px; /* cancel the .slab's top padding so it pins flush */
+  z-index: 2;
+  padding: 4px 8px;
+  text-align: center;
+  font-size: 11.5px;
+  color: #978F80;
+  background: var(--slab-bg);
+  border-bottom: 1px solid var(--slab-rule);
+}
 
 /* markdown-rendered assistant/result entries */
 .t-entry.md { white-space: normal; }
@@ -1379,3 +1445,44 @@ a.err-card:hover { text-decoration: underline; }
   .app-status { gap: 4px; }
   .status-chip { gap: 3px; }
 }
+
+/* board fade-edge scroll shadows — pure-CSS affordance for the 701–1234px
+   band where the 5 columns overflow horizontally: the `local` covers ride
+   with the content and hide the `scroll` shadows at whichever end is reached */
+@media (min-width: 701px) and (max-width: 1234px) {
+  .board {
+    background:
+      linear-gradient(to right, var(--paper-0) 30%, transparent),
+      linear-gradient(to left, var(--paper-0) 30%, transparent),
+      radial-gradient(farthest-side at 0 50%, var(--scroll-shadow), transparent),
+      radial-gradient(farthest-side at 100% 50%, var(--scroll-shadow), transparent);
+    background-repeat: no-repeat;
+    background-attachment: local, local, scroll, scroll;
+    background-size: 48px 100%, 48px 100%, 12px 100%, 12px 100%;
+    background-position: 0 0, 100% 0, 0 0, 100% 0;
+  }
+}
+/* short landscape phones: a ≤500px-tall viewport crams columns into
+   calc(100dvh - 150px) — drop the cap and let the page scroll */
+@media (max-height: 500px) {
+  .column { max-height: none; }
+  .col-body { overflow-y: visible; }
+}
+/* touch: tabs reach the 44px tap target — placed after the ≤560px/≤360px
+   padding overrides so they can't shrink it back down */
+@media (hover: none) {
+  .app-tab { padding-top: 11px; padding-bottom: 11px; }
+}
+
+/* ---------- hooks for the rendering rework (Frontend_Render_Engineer) ----------
+   board.js currently FLIP-animates via inline el.style (gated on
+   prefers-reduced-motion itself); these transform/opacity-only classes are the
+   agreed CSS-side hooks for the remaining drawer/manager/app work — confirm or
+   drop at integration. */
+@media (prefers-reduced-motion: no-preference) {
+  .flip-move { transition: transform 180ms var(--ease); }
+  .flip-enter { animation: flip-in 180ms var(--ease) both; }
+  .flip-leave { animation: flip-out 160ms var(--ease) both; }
+}
+@keyframes flip-in { from { opacity: 0; transform: translateY(6px) scale(0.98); } }
+@keyframes flip-out { to { opacity: 0; transform: translateY(-4px) scale(0.98); } }

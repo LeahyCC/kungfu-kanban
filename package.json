@@ -1,6 +1,6 @@
 {
   "name": "kungfu-kanban",
-  "version": "1.5.1",
+  "version": "1.6.1",
   "private": true,
   "description": "Local kanban board that runs tasks through the Claude Code CLI on your subscription",
   "license": "MIT",

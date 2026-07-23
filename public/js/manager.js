@@ -3,7 +3,7 @@
  * "Ask Sensei" → showTab, both → openDrawer). */
 
 import { state } from './state.js';
-import { $, nearBottom, fmtLogTs, fillSelect } from './util.js';
+import { $, nearBottom, fmtLogTs, fillSelect, announce } from './util.js';
 import { api, confirmDlg, withBusy, toast } from './api.js';
 import { openDrawer, bypassAndRerun } from './drawer.js';
 import { loadTasks } from './board.js';
@@ -36,6 +36,32 @@ export async function loadManager() {
   state.mgrState = await api('/api/manager');
   renderManager();
 }
+
+// Board-tab badge freshness without a full render: SSE events arrive far more
+// often than the badge needs to change, so calls collapse into one fetch per
+// >=5s (trailing). Updates mgrState, the #suggCount pill, and the attention
+// chip only — never the hidden manager DOM.
+let badgeTimer = null;
+export function refreshMgrBadgeSoon() {
+  if (badgeTimer) return;
+  badgeTimer = setTimeout(async () => {
+    badgeTimer = null;
+    if (!$('#managerView').classList.contains('hidden')) return; // visible tab fetches directly
+    const r = await api('/api/manager', { quiet: true });
+    if (!r || r.error || !Array.isArray(r.suggestions)) return;
+    state.mgrState = r;
+    const pill = $('#suggCount');
+    pill.textContent = r.suggestions.length;
+    pill.classList.toggle('hidden', !r.suggestions.length);
+    renderAttn();
+  }, 5000);
+}
+
+// count changes announced through the chips' own text (polite, atomic)
+$('#suggCount').setAttribute('aria-live', 'polite');
+$('#suggCount').setAttribute('aria-atomic', 'true');
+$('#attnChipText').setAttribute('aria-live', 'polite');
+$('#attnChipText').setAttribute('aria-atomic', 'true');
 
 // SSE refreshes rewrite the settings form from server state — but never while
 // the user has unsaved edits mid-form (that silently threw their input away).
@@ -402,6 +428,23 @@ export function renderAttn() {
   $('#attnChipText').textContent = count;
   $('#attnChip').classList.toggle('hidden', !count);
 
+  // The list DOM is rebuilt only while the popup is open — task events arrive
+  // every ~2s per running card and used to rebuild it even when hidden.
+  if (!$('#attnBackdrop').classList.contains('hidden')) renderAttnList(sugg, blocked, count);
+
+  if (count > 0 && attnPrevCount === 0 && !attnDismissed) {
+    // never steal focus out of a text field (e.g. mid-typing in the filter) —
+    // announce through the live region instead of opening
+    const ae = document.activeElement;
+    const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable);
+    if (typing) announce(`${count} item${count > 1 ? 's' : ''} need your attention`);
+    else openAttn();
+  }
+  if (count === 0) attnDismissed = false;
+  attnPrevCount = count;
+}
+
+function renderAttnList(sugg, blocked, count) {
   const box = $('#attnList');
   box.innerHTML = '';
   if (!count) box.innerHTML = '<div class="empty-col">nothing needs you — the dojo is at peace 🧘</div>';
@@ -410,15 +453,17 @@ export function renderAttn() {
     for (const s of sugg) box.appendChild(suggestionCard(s));
     for (const t of blocked) box.appendChild(blockedCard(t));
   }
-
-  if (count > 0 && attnPrevCount === 0 && !attnDismissed) openAttn();
-  if (count === 0) attnDismissed = false;
-  attnPrevCount = count;
 }
 
 function openAttn() {
   attnReturnFocus = document.activeElement;
+  const sugg = (state.mgrState && state.mgrState.suggestions) || [];
+  const blocked = attnBlocked();
+  renderAttnList(sugg, blocked, sugg.length + blocked.length);
   $('#attnBackdrop').classList.remove('hidden');
+  // move focus into the popup (auto-open used to appear silently behind it)
+  const first = $('#attnList').querySelector('button') || $('#attnCloseBtn');
+  if (first && first.focus) first.focus();
 }
 export function closeAttn() {
   $('#attnBackdrop').classList.add('hidden');

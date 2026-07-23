@@ -10,3 +10,6 @@ local/
 # board can contain private card content — never let them ride along in a PR).
 .playwright-mcp/
 /*.png
+
+# Perf harness scratch output (never commit)
+scratch/

@@ -4,7 +4,7 @@ const path = require('path');
 const { execFile } = require('child_process');
 const { discoverSkills, discoverAgents, discoverRepos, defaultReposDir } = require('./lib/discovery');
 const os = require('os');
-const { state, save, flush, getTask, readTranscript, clearTranscript, sweepArchive } = require('./lib/store');
+const { state, save, saveSettings, flush, getTask, readTranscript, clearTranscript, sweepArchive, nextRev } = require('./lib/store');
 const runner = require('./lib/runner');
 const manager = require('./lib/manager');
 const auth = require('./lib/auth');
@@ -23,10 +23,98 @@ const HOST = process.env.HOST || '127.0.0.1';
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 auth.install(app); // token gate (only active when a token is configured) — must precede static
-app.use(express.static(path.join(__dirname, 'public')));
+
+// --- gzip: stream-compress (never buffer) text-ish GET responses >= 1 KB
+// when the client accepts it. /api/events is excluded — SSE must never be
+// buffered or compressed. Content-Length is known for static/res.json, so
+// known-small responses stay identity but still get Vary.
+const zlib = require('zlib');
+const GZIP_TYPES = /^(text\/html|text\/css|application\/javascript|application\/json|image\/svg\+xml)\b/;
+app.use((req, res, next) => {
+  if (req.method !== 'GET' || req.path === '/api/events') return next();
+  if (!/\bgzip\b/i.test(req.headers['accept-encoding'] || '')) return next();
+  const write = res.write.bind(res);
+  const end = res.end.bind(res);
+  let gz = null;
+  let decided = false;
+  const decide = () => {
+    if (decided) return;
+    decided = true;
+    if (!GZIP_TYPES.test(String(res.getHeader('Content-Type') || ''))) return;
+    res.vary('Accept-Encoding'); // caches must never mix gzip/identity bodies
+    const len = Number(res.getHeader('Content-Length'));
+    if (len && len < 1024) return; // known-small: gzip overhead isn't worth it
+    gz = zlib.createGzip();
+    res.removeHeader('Content-Length');
+    res.setHeader('Content-Encoding', 'gzip');
+    gz.on('data', (chunk) => write(chunk));
+  };
+  res.write = (chunk, enc, cb) => {
+    decide();
+    if (!gz) return write(chunk, enc, cb);
+    gz.write(typeof chunk === 'string' ? Buffer.from(chunk, enc) : chunk, cb);
+    return true;
+  };
+  res.end = (chunk, enc, cb) => {
+    if (typeof chunk === 'function') { cb = chunk; chunk = null; enc = undefined; }
+    else if (typeof enc === 'function') { cb = enc; enc = undefined; }
+    decide();
+    if (!gz) return end(chunk, enc, cb);
+    // Wait for the gz readable side to fully drain ('end') — the writable
+    // finish callback can fire before buffered output is emitted, and ending
+    // the socket then would truncate the body.
+    gz.once('end', () => end(cb));
+    gz.end(typeof chunk === 'string' ? Buffer.from(chunk, enc) : chunk);
+  };
+  next();
+});
+
+app.use(
+  express.static(path.join(__dirname, 'public'), {
+    setHeaders(res, filePath) {
+      // Text assets: revalidate every load (dev serves fresh from disk; the
+      // ETag makes an unchanged file a cheap 304). Images/icons are
+      // content-stable, so let them cache for a day.
+      if (/\.(html|js|css|webmanifest)$/.test(filePath)) {
+        res.setHeader('Cache-Control', 'no-cache');
+      } else if (/\.(png|jpe?g|gif|webp|ico|svg|woff2?|ttf)$/.test(filePath)) {
+        res.setHeader('Cache-Control', 'max-age=86400, immutable');
+      }
+    },
+  })
+);
 
 // --- Server-sent events ---
 const sseClients = new Set();
+
+// Writes one framed message to one client. A slow client (write() -> false)
+// is marked congested: task frames buffer last-write-wins per task id (at
+// most one pending frame per id), non-task frames drop, and normal writes
+// resume on 'drain'. A client that never drains within ~30s is destroyed —
+// its EventSource auto-reconnects and refetches the board (that path already
+// exists client-side).
+function sseSend(res, data, taskId) {
+  if (res.destroyed) return void sseClients.delete(res);
+  if (res._congested) {
+    if (taskId) res._pending.set(taskId, data);
+    return;
+  }
+  if (res.write(data)) return;
+  res._congested = true;
+  res._pending = new Map();
+  res._drainTimer = setTimeout(() => {
+    sseClients.delete(res);
+    res.destroy();
+  }, 30_000);
+  res.socket.once('drain', () => {
+    clearTimeout(res._drainTimer);
+    const pending = [...res._pending];
+    res._pending.clear();
+    res._congested = false;
+    for (const [id, frame] of pending) sseSend(res, frame, id);
+  });
+}
+
 app.get('/api/events', (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -35,16 +123,55 @@ app.get('/api/events', (req, res) => {
   });
   res.write('\n');
   sseClients.add(res);
-  req.on('close', () => sseClients.delete(res));
+  req.on('close', () => {
+    clearTimeout(res._drainTimer);
+    sseClients.delete(res);
+  });
 });
 
 setInterval(() => {
-  for (const res of sseClients) res.write(': ping\n\n');
+  for (const res of sseClients) sseSend(res, ': ping\n\n', null);
 }, 25_000);
 
-function broadcast(msg) {
+// Slim SSE task projection: the heavy text fields never ride the SSE channel.
+// Clients merge task frames shallowly by id; the drawer fetches the full task
+// on open (GET /api/tasks/:id). Create/PATCH HTTP responses stay full.
+// `v` is stamped here, BEFORE serialization — the single chokepoint every
+// broadcast mutation passes through (save-only paths use store.touch()).
+const SLIM_OMIT = ['prompt', 'resultText', 'acceptanceCriteria'];
+const COALESCE_MS = 250; // trailing-edge, last-write-wins per task id
+const coalesced = new Map(); // taskId -> msg
+let coalesceTimer = null;
+
+function emitSse(msg) {
   const data = `data: ${JSON.stringify(msg)}\n\n`;
-  for (const res of sseClients) res.write(data);
+  const taskId = msg && msg.type === 'task' && msg.task ? msg.task.id : null;
+  for (const res of sseClients) sseSend(res, data, taskId);
+}
+
+function flushCoalesced() {
+  coalesceTimer = null;
+  const frames = [...coalesced.values()];
+  coalesced.clear();
+  for (const msg of frames) emitSse(msg);
+}
+
+function broadcast(msg) {
+  if (msg && msg.type === 'task' && msg.task) {
+    const slim = { ...msg.task };
+    for (const f of SLIM_OMIT) delete slim[f];
+    slim.v = nextRev();
+    coalesced.set(slim.id, { ...msg, task: slim, full: false });
+    if (!coalesceTimer) coalesceTimer = setTimeout(flushCoalesced, COALESCE_MS);
+    return;
+  }
+  // A delete must never be followed by a stale task frame for the same id —
+  // flush whatever is pending for it first, then let the delete through.
+  if (msg && msg.type === 'deleted' && coalesced.has(msg.taskId)) {
+    emitSse(coalesced.get(msg.taskId));
+    coalesced.delete(msg.taskId);
+  }
+  emitSse(msg); // small/control frames pass through immediately
 }
 bus.subscribe(broadcast);
 prwatch.backfillMergedAt();
@@ -136,7 +263,7 @@ app.put('/api/settings', (req, res) => {
     // Drop any live timed assertion; per-agent ones die with their process.
     if (!keepAwake) require('./lib/awake').clear();
   }
-  save();
+  saveSettings();
   runner.pumpQueue();
   res.json(state.settings);
 });
@@ -436,7 +563,22 @@ function makeTask(b, createdBy = 'user') {
   };
 }
 
-app.get('/api/tasks', (req, res) => res.json(state.tasks));
+// Conditional refetch: a client already holding this board version gets a
+// cheap empty 304 instead of the full payload.
+app.get('/api/tasks', (req, res) => {
+  if (req.query.v !== undefined && Number(req.query.v) === state.seq) return res.status(304).end();
+  res.setHeader('X-Board-Version', String(state.seq));
+  res.json(state.tasks);
+});
+
+// Full single task — SSE task frames are slim projections (no prompt /
+// resultText / acceptanceCriteria), so the drawer fetches the full record
+// from here on open.
+app.get('/api/tasks/:id', (req, res) => {
+  const task = getTask(req.params.id);
+  if (!task) return res.status(404).json({ error: 'not found' });
+  res.json(task);
+});
 
 app.post('/api/tasks', (req, res) => {
   const task = makeTask(req.body || {});
@@ -551,7 +693,7 @@ app.put('/api/manager/config', (req, res) => {
   if ('maxRetries' in b && Number.isInteger(b.maxRetries)) c.maxRetries = Math.max(0, b.maxRetries);
   if ('permissionCeiling' in b && MANAGER_PERM_CEILINGS.includes(b.permissionCeiling)) c.permissionCeiling = b.permissionCeiling;
   if (b.triggers) c.triggers = { ...c.triggers, ...b.triggers };
-  save();
+  saveSettings();
   manager.applyInterval();
   res.json(c);
 });
