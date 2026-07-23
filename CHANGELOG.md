@@ -7,6 +7,16 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Changed
+- The frontend `public/app.js` (one ~2200-line script) is split into native ES
+  modules under `public/js/` — `state`, `util`, `api`, `deps`, `markdown`,
+  `board`, `drawer`, `modals`, `chips`, `manager`, `sse` — with `app.js` reduced
+  to a small entry point. No bundler and no build step: `index.html` loads it as
+  `<script type="module">` and Express serves the modules straight from disk, so
+  the "frontend serves fresh from disk" rule still holds. Pure structure — no
+  behavior change; shared mutable state (tasks/config/drawerId/mgrState) lives on
+  one exported `state` object.
+
 ## [1.5.0] — 2026-07-22
 
 ### Added
