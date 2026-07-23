@@ -7,6 +7,10 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [1.6.1] — 2026-07-23
 
+Release bookkeeping: the last *tagged* release is v1.1.0 (1.2–1.5.x were dated
+in this changelog but never tagged), so this section formally also accounts for
+#90 (release-integrity CI) — already described under [1.5.0] below.
+
 ### Fixed
 - The Sensei no longer fires scheduled interval runs on an idle board. When
   nothing is queued/running/in review and there are no open errors or pending
