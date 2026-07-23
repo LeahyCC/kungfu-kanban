@@ -7,6 +7,17 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Fixed
+- The Sensei no longer fires scheduled interval runs on an idle board. When
+  nothing is queued/running/in review and there are no open errors or pending
+  suggestions, the interval check is skipped silently (one explanatory log
+  line per idle transition) instead of a "nothing to do — standing by" chat
+  message — or a CLI error — every `intervalMin`. Event-driven triggers (new
+  card, card finished, PR checks settled, chat) always run.
+- `test/manager.test.js` now isolates `KFK_DATA_DIR` — it previously ran
+  against the checkout's real `data/`, appending fake `merged PR of
+  "undefined"` entries to `data/manager-log.jsonl` on every test run.
+
 ### Changed
 - Full-scope performance & UX overhaul (measured against a seeded 120-card
   board; before/after numbers in the PR):

@@ -1,3 +1,11 @@
+// Isolate persistence BEFORE requiring lib/* — this file previously ran
+// against the checkout's real data/, appending fake 'merged PR of "undefined"'
+// entries to data/manager-log.jsonl on every test run.
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+process.env.KFK_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'kfk-mgr-test-'));
+
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
