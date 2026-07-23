@@ -64,6 +64,27 @@ test('merge_pr: a no-CI repo past the grace window IS mergeable on diff review a
   }
 });
 
+test('requeue_task: running and stopping cards are successful no-ops', () => {
+  for (const status of ['running', 'stopping']) {
+    const task = { id: `requeue-${status}`, status, prompt: 'original prompt' };
+    store.state.tasks.push(task);
+    try {
+      const res = executeAction({
+        type: 'requeue_task',
+        taskId: task.id,
+        feedback: 'should not be appended',
+        reasoning: 'test',
+      });
+      assert.equal(res.error, undefined, status);
+      assert.equal(res.ok, true, status);
+      assert.equal(task.status, status);
+      assert.equal(task.prompt, 'original prompt');
+    } finally {
+      store.state.tasks.length = store.state.tasks.length - 1;
+    }
+  }
+});
+
 // --- suggestionLive: a suggestion dies once its target card has moved past
 // the state where approving it would actually do anything ---------------
 
