@@ -35,7 +35,10 @@ let followUps = [];
 
 before(() => {
   fs.mkdirSync(REPO);
-  const git = (...a) => execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...a], { cwd: REPO, stdio: 'ignore' });
+  // commit.gpgsign=false: the fixture repo has no reason to depend on the
+  // developer's local signing setup — an expired/missing GPG key would
+  // otherwise fail `commit` and take this whole suite down with it.
+  const git = (...a) => execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', '-c', 'commit.gpgsign=false', ...a], { cwd: REPO, stdio: 'ignore' });
   git('init', '-q', '-b', 'main');
   fs.writeFileSync(path.join(REPO, 'f'), 'x');
   git('add', '-A');

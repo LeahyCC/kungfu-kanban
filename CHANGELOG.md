@@ -38,6 +38,17 @@ compares your clone against `origin/main` and offers a one-click update.
   instead of a raw fetch error.
 
 ### Fixed
+- The PR-loop test suite (`test/prwatch.loop.test.js`) no longer inherits the
+  developer's global `commit.gpgsign` — its fixture repo forces
+  `commit.gpgsign=false`, so an expired or missing local GPG key can't fail
+  the setup `git commit` and take all six loop tests down with it (they were
+  environment-dependent, never a code fault).
+- `requeue_task` on a running or stopping card is now a success no-op
+  instead of an `error: not requeueable (running)` — the card was mid-flight
+  between the snapshot the Sensei acted on and this call, a stale-snapshot
+  race, not an operational failure. Brings requeue into line with its
+  siblings `run_task`, `approve_task`, and `merge_pr`, which already short-
+  circuit the two transient states the same way (#94).
 - The `release-check` CI guard no longer fails every single PR. It demanded a
   `## [X.Y.Z]` section matching `package.json` for any untagged version, which
   contradicts the repo convention of bumping the version on every change and
