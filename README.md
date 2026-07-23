@@ -590,10 +590,17 @@ carries — `bypassPermissions` means exactly that. Accordingly:
 
 ## Status & contributions
 
-This is a personal tool that happens to be public. Issues and PRs are welcome, but the
-scope is deliberately narrow: single-user, local-first, subscription-auth only. Feature
-requests for multi-tenancy, hosted deployment, API-key providers, or billing will be
-closed with a polite bow — that version existed and was deleted on purpose.
+This is a personal tool that happens to be public, and it's **open to
+contributions** — bug reports, fixes, focused features (issue-first), docs, and
+tests all land. The scope is deliberately narrow and that's the whole point:
+single-user, local-first, subscription-auth, one runtime dependency, code that
+runs on your own machine. Ideas that keep the board better *within* that identity
+are welcome; ideas that would make it a different tool — multi-tenancy, hosted
+deployment, API-key providers, a database, billing — are out of scope. That
+version existed and was deleted on purpose; for those, a fork is the honest path.
+
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for what's in and out of scope, the
+fork-and-PR workflow, and the security-sensitive surfaces to flag.
 
 ## Contributing
 

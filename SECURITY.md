@@ -12,8 +12,21 @@ not a bug. The security model:
   interpolation); API-supplied repo paths are validated against a scanned
   allowlist before use.
 - Agent output is HTML-escaped before markdown rendering.
-- There is no CI and no automation that runs code from external pull requests;
-  the PR auto-fix flow only ever operates on branches this board created.
+- CI on an external pull request runs **only after a maintainer approves it**
+  (GitHub holds fork-PR Actions until then), and even then it only runs
+  `node --test` in GitHub's throwaway sandbox — it never touches a maintainer's
+  machine, real `data/`, or any credential. The PR auto-fix flow only ever
+  operates on branches this board created for itself, never on a contributor's.
+
+## Contributing to security-sensitive code
+
+Because the board executes code on the machine it runs on, a subtle change to
+the wrong place is a real user-harm vector. If a pull request touches the
+loopback bind or token gate, the `ANTHROPIC_API_KEY` deletion in the runner,
+subprocess spawning (`execFile` arg arrays, no shell interpolation), repo-path
+validation, or the client-side escaping / HTML-escape-before-markdown render,
+**call it out in the PR description** so it gets the extra review it deserves.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full list.
 
 ## Reporting a vulnerability
 

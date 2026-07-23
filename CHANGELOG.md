@@ -7,7 +7,20 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-07-22
+
 ### Added
+- Opened the floor to contributors. The project moves from "open source, closed
+  contribution" to genuinely open: bug fixes, focused features (issue-first),
+  docs, and tests are all welcome, with a firm-but-warm in-scope / out-of-scope
+  line that keeps the board single-user, local-first, one-dependency, and
+  subscription-auth. `CONTRIBUTING.md`, the README's "Status & contributions"
+  section, and the PR template were rewritten; a `feature_request.md` issue
+  template and an `ISSUE_TEMPLATE/config.yml` (routing security reports to
+  private advisories) were added; and `SECURITY.md` now states the external-PR
+  CI reality accurately (fork-PR Actions run only after maintainer approval, in
+  GitHub's sandbox, never touching a machine or real `data/`) and names the
+  security-sensitive surfaces a PR must flag.
 - Hands-off PR pipeline: the goal is card → PR → green → merged with no
   human in the loop. Failing checks on a clean PR now get an automatic fix
   before any verdict — the watcher resumes the card's own session with the
@@ -85,7 +98,7 @@ compares your clone against `origin/main` and offers a one-click update.
 - CI now fails a release PR whose changelog under-reports what shipped: a
   version bump must cite every non-dependabot PR merged since the previous
   tag (`scripts/check-release.js`). 1.1.0 first went out missing five PRs;
-  this stops that recurring.
+  this stops that recurring (#90).
 
 ## [1.1.0] — 2026-07-20
 

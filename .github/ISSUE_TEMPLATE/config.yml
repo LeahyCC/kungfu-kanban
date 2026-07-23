@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 🔒 Report a security vulnerability
+    url: https://github.com/LeahyCC/kungfu-kanban/security/advisories/new
+    about: Please report vulnerabilities privately here, never as a public issue. See SECURITY.md.
+  - name: 📖 Contributing guide
+    url: https://github.com/LeahyCC/kungfu-kanban/blob/main/CONTRIBUTING.md
+    about: What's in and out of scope, the fork-and-PR workflow, and security-sensitive surfaces to flag.
