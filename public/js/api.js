@@ -8,6 +8,10 @@ export function toast(msg, kind = 'error', ms = 5000) {
   if (!holder) {
     holder = document.createElement('div');
     holder.id = 'toasts';
+    // live region: status/polite by default; error toasts carry role="alert"
+    // (assertive) on the child, so failures actually reach screen readers
+    holder.setAttribute('role', 'status');
+    holder.setAttribute('aria-live', 'polite');
     document.body.appendChild(holder);
   }
   const t = document.createElement('div');

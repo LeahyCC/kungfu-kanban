@@ -5,9 +5,61 @@ All notable changes to Kungfu Kanban. Format follows
 minor bumps for features, patch bumps for fixes. The board's status line
 compares your clone against `origin/main` and offers a one-click update.
 
-## [Unreleased]
+## [1.6.1] — 2026-07-23
+
+Release bookkeeping: the last *tagged* release is v1.1.0 (1.2–1.5.x were dated
+in this changelog but never tagged), so this section formally also accounts for
+#90 (release-integrity CI) — already described under [1.5.0] below.
+
+### Fixed
+- The Sensei no longer fires scheduled interval runs on an idle board. When
+  nothing is queued/running/in review and there are no open errors or pending
+  suggestions, the interval check is skipped silently (one explanatory log
+  line per idle transition) instead of a "nothing to do — standing by" chat
+  message — or a CLI error — every `intervalMin`. Event-driven triggers (new
+  card, card finished, PR checks settled, chat) always run.
+- `test/manager.test.js` now isolates `KFK_DATA_DIR` — it previously ran
+  against the checkout's real `data/`, appending fake `merged PR of
+  "undefined"` entries to `data/manager-log.jsonl` on every test run.
 
 ### Changed
+- Full-scope performance & UX overhaul (measured against a seeded 120-card
+  board; before/after numbers in the PR):
+  - Rendering: the board no longer rebuilds all DOM on every SSE event. A
+    keyed reconciler patches only changed cards (server-stamped per-task
+    revision `v`, field-compare fallback), columns/groups persist across
+    renders, and listeners are delegated. SSE task/deleted tails are
+    rAF-coalesced (N events/frame → one render) and manager/attention
+    refreshes are badge-only while their views are hidden.
+  - Network: SSE task frames drop heavy text fields (~2.4 KB → ~0.6 KB per
+    event) with 250 ms per-id coalescing and slow-client backpressure;
+    `GET /api/tasks?v=<seq>` answers 304 when nothing changed;
+    `GET /api/tasks/:id` returns one full task; text assets are gzip'd and
+    images get day-immutable cache headers.
+  - Server: task saves no longer rewrite settings.json (and vice versa),
+    tasks.json is compact with `.bak` only at shutdown, transcript appends
+    are batched, the auth token is mtime-cached, the manager activity log is
+    parse-cached, stream entries are capped at 20 KB, and PR sweeps poll
+    with bounded concurrency.
+  - Perceived performance: skeleton columns + inline critical CSS on first
+    paint, non-blocking webfonts, modulepreloaded module graph, optimistic
+    card moves/edits/deletes with rollback toasts, FLIP card motion
+    (prefers-reduced-motion aware), and a 120 ms-debounced filter with a
+    cached search haystack.
+  - CSS paint: full-viewport `mix-blend-mode` grain replaced by plain alpha,
+    the running-card ink stroke now animates `transform` instead of
+    `background-position`, and cards/transcript/log entries use
+    `content-visibility: auto`.
+  - Service worker: the app shell is one versioned, atomically-installed
+    cache unit (stale-while-revalidate) — a partial fetch can no longer mix
+    module versions; `/api/` stays live.
+- Accessibility: drawer is a true modal (focus trap + `aria-modal`), toasts
+  are live-announced, tabs/panels are wired, transcript and chat are
+  `role="log"`, columns/cards carry region/list semantics with arrow-key
+  navigation and roving tabindex, touch targets are 44 px, and the settings
+  modal takes initial focus.
+
+### Changed (structure)
 - The frontend `public/app.js` (one ~2200-line script) is split into native ES
   modules under `public/js/` — `state`, `util`, `api`, `deps`, `markdown`,
   `board`, `drawer`, `modals`, `chips`, `manager`, `sse` — with `app.js` reduced

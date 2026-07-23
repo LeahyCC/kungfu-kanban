@@ -67,3 +67,41 @@ export function fillSelect(sel, opts, value) {
   }
   sel.value = value || opts[0] || '';
 }
+
+// trailing-edge debounce (board filter input)
+export function debounce(fn, ms) {
+  let t = null;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
+
+// rAF coalescer: N calls within one frame collapse into a single flush. The
+// scheduler is injectable so tests can drive it without a real frame loop.
+export function createCoalescer(flush, schedule) {
+  const raf = schedule || ((cb) => requestAnimationFrame(cb));
+  let pending = false;
+  return () => {
+    if (pending) return;
+    pending = true;
+    raf(() => { pending = false; flush(); });
+  };
+}
+
+// One shared visually-hidden live region for dynamic announcements (attention
+// count changes, badge updates) — created lazily from JS so index.html stays
+// untouched. Uses the existing .sr-only class from style.css.
+let liveRegion = null;
+export function announce(msg) {
+  if (typeof document === 'undefined') return;
+  if (!liveRegion) {
+    liveRegion = document.createElement('div');
+    liveRegion.className = 'sr-only';
+    liveRegion.setAttribute('role', 'status');
+    liveRegion.setAttribute('aria-live', 'polite');
+    (document.body || document.documentElement).appendChild(liveRegion);
+  }
+  liveRegion.textContent = '';
+  liveRegion.textContent = msg; // clear-then-set so a repeated message re-announces
+}
