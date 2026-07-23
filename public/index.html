@@ -13,8 +13,36 @@
   <link rel="apple-touch-icon" href="/icons/apple-icon-180x180.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- non-render-blocking webfonts: fetch as print, promote on arrival -->
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" /></noscript>
+  <!-- critical first paint: themed shell + skeleton columns before style.css
+       arrives. Keep colors in sync with style.css tokens. -->
+  <style>
+    body { margin: 0; background: #141210; color: #ECE5D6; font-family: 'Instrument Sans', -apple-system, sans-serif; }
+    [data-theme='light'] body { background: #F6F2E9; color: #1A1714; }
+    .app-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; height: 56px; padding: 0 20px; border-bottom: 1px solid #ECE5D6; }
+    [data-theme='light'] .app-header { border-bottom-color: #1A1714; }
+    .app-brand { display: flex; align-items: center; gap: 10px; }
+    .board { display: grid; grid-template-columns: repeat(5, minmax(230px, 1fr)); gap: 16px; padding: 16px 20px; }
+    .column.skel { min-height: 40vh; background: #1C1916; border-radius: 4px; }
+    [data-theme='light'] .column.skel { background: #EDE7D9; }
+    .hidden { display: none !important; }
+  </style>
   <link rel="stylesheet" href="style.css" />
+  <!-- break the module discovery waterfall: fetch the whole graph in parallel -->
+  <link rel="modulepreload" href="app.js" />
+  <link rel="modulepreload" href="js/api.js" />
+  <link rel="modulepreload" href="js/board.js" />
+  <link rel="modulepreload" href="js/chips.js" />
+  <link rel="modulepreload" href="js/deps.js" />
+  <link rel="modulepreload" href="js/drawer.js" />
+  <link rel="modulepreload" href="js/manager.js" />
+  <link rel="modulepreload" href="js/markdown.js" />
+  <link rel="modulepreload" href="js/modals.js" />
+  <link rel="modulepreload" href="js/sse.js" />
+  <link rel="modulepreload" href="js/state.js" />
+  <link rel="modulepreload" href="js/util.js" />
   <script>
     // Saved choice wins; first visit follows the OS. Pre-paint, no flash.
     try {
@@ -35,8 +63,8 @@
       <span id="antenna" class="antenna" role="status" aria-label="No agents running"></span>
     </div>
     <nav class="app-tabs" role="tablist" aria-label="Application">
-      <button id="tabBoard" class="app-tab active" role="tab" aria-selected="true">Board</button>
-      <button id="tabManager" class="app-tab" role="tab" aria-selected="false" tabindex="-1">Sensei <span id="suggCount" class="pill hidden"></span></button>
+      <button id="tabBoard" class="app-tab active" role="tab" aria-selected="true" aria-controls="board">Board</button>
+      <button id="tabManager" class="app-tab" role="tab" aria-selected="false" aria-controls="managerView" tabindex="-1">Sensei <span id="suggCount" class="pill hidden"></span></button>
     </nav>
     <div class="app-status" aria-label="Board summary">
       <button id="attnChip" class="cooldown-chip attn-chip hidden" title="Sensei suggestions waiting on your ✓, plus cards stopped on a permission block. Click to review, approve, or reject.">🔔 <span id="attnChipText">0</span></button>
@@ -67,9 +95,17 @@
     </div>
   </div>
 
-  <main id="board" class="board" tabindex="-1"></main>
+  <main id="board" class="board" tabindex="-1" role="tabpanel" aria-labelledby="tabBoard">
+    <!-- skeleton columns: first-paint placeholders — board.js's reconciler
+         removes any non-target children of #board on first render -->
+    <div class="column skel" aria-hidden="true"></div>
+    <div class="column skel" aria-hidden="true"></div>
+    <div class="column skel" aria-hidden="true"></div>
+    <div class="column skel" aria-hidden="true"></div>
+    <div class="column skel" aria-hidden="true"></div>
+  </main>
 
-  <main id="managerView" class="manager-grid hidden">
+  <div id="managerView" class="manager-grid hidden" role="tabpanel" aria-labelledby="tabManager" tabindex="-1">
     <section class="mgr-col mgr-settings">
       <div class="sensei-chip">
         <span class="crate"><img src="/icons/android-icon-96x96.png" alt="" width="34" height="34" /></span>
@@ -135,7 +171,7 @@
       <h2>Activity log <button type="button" id="clearLogBtn" class="ghost mini" title="Clear the activity log for a fresh start">✕ clear</button></h2>
       <div id="mgrLog" class="mgr-log"></div>
     </section>
-  </main>
+  </div>
 
   <!-- Card editor modal -->
   <div id="modalBackdrop" class="backdrop hidden">
@@ -336,7 +372,7 @@ The prompt: self-contained instructions for the executing agent.
   </div>
 
   <!-- Detail drawer -->
-  <div id="drawer" class="drawer hidden" role="dialog" aria-labelledby="drawerTitle">
+  <div id="drawer" class="drawer hidden" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
     <div class="drawer-head">
       <h2 id="drawerTitle"></h2>
       <button id="drawerClose" class="ghost" aria-label="Close">✕</button>
