@@ -632,8 +632,10 @@ input.tiny { width: 60px; }
 
 /* skeleton columns: static placeholders shipped in index.html so first paint
    isn't a blank void — board.js's reconciler plain-removes non-target children
-   of #board on first render */
-.column.skel { min-height: 40vh; opacity: 0.45; border-top-color: var(--rule); }
+   of #board on first render. Height matches a populated column's max-height
+   (100dvh - 150px) so the skeleton → board swap doesn't shift layout (CLS). */
+.column.skel { min-height: calc(100dvh - 150px); opacity: 0.45; border-top-color: var(--rule); }
+@media (max-width: 700px) { .column.skel { min-height: 30vh; } }
 @keyframes skel-breathe { 50% { opacity: 0.22; } }
 @media (prefers-reduced-motion: no-preference) {
   .column.skel { animation: skel-breathe 1.8s ease-in-out infinite; }
@@ -807,7 +809,11 @@ input.tiny { width: 60px; }
   font-size: 11px;
   color: var(--accent-ink);
 }
-.card.done-card .title, .card.done-card .meta { opacity: 0.6; }
+.card.done-card .title { opacity: 0.6; }
+/* meta stays readable: badges blend ink-600 over the card bg — 0.6 would drop
+   small badge text under AA (3.89:1); 0.8 keeps ~5.5:1 in both themes while
+   done cards still recede */
+.card.done-card .meta { opacity: 0.8; }
 .card .card-seal {
   position: absolute;
   top: -6px;

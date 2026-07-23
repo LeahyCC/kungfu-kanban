@@ -201,6 +201,12 @@ class Document extends El {
   }
   createElement(tag) { return new El(tag); }
   createElementNS(_, tag) { return new El(tag); }
+  // Text nodes only need to exist as inert children for append/insertBefore.
+  createTextNode(text) {
+    const n = new El('#text');
+    n.textContent = String(text);
+    return n;
+  }
   // '#id' hits a registry (auto-created + body-attached so module-level
   // $(...) wiring in the app modules always finds a node); other unmatched
   // selectors get a detached stub (module-level wiring tolerates it);

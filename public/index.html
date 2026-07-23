@@ -25,7 +25,7 @@
     [data-theme='light'] .app-header { border-bottom-color: #1A1714; }
     .app-brand { display: flex; align-items: center; gap: 10px; }
     .board { display: grid; grid-template-columns: repeat(5, minmax(230px, 1fr)); gap: 16px; padding: 16px 20px; }
-    .column.skel { min-height: 40vh; background: #1C1916; border-radius: 4px; }
+    .column.skel { min-height: calc(100dvh - 150px); background: #1C1916; border-radius: 4px; }
     [data-theme='light'] .column.skel { background: #EDE7D9; }
     .hidden { display: none !important; }
   </style>
@@ -95,14 +95,18 @@
     </div>
   </div>
 
-  <main id="board" class="board" tabindex="-1" role="tabpanel" aria-labelledby="tabBoard">
-    <!-- skeleton columns: first-paint placeholders — board.js's reconciler
-         removes any non-target children of #board on first render -->
-    <div class="column skel" aria-hidden="true"></div>
-    <div class="column skel" aria-hidden="true"></div>
-    <div class="column skel" aria-hidden="true"></div>
-    <div class="column skel" aria-hidden="true"></div>
-    <div class="column skel" aria-hidden="true"></div>
+  <main id="boardMain">
+    <!-- #board is the tabpanel; the <main> wrapper keeps exactly one main
+         landmark (role=tabpanel would otherwise suppress it) -->
+    <div id="board" class="board" tabindex="-1" role="tabpanel" aria-labelledby="tabBoard">
+      <!-- skeleton columns: first-paint placeholders — board.js's reconciler
+           removes any non-target children of #board on first render -->
+      <div class="column skel" aria-hidden="true"></div>
+      <div class="column skel" aria-hidden="true"></div>
+      <div class="column skel" aria-hidden="true"></div>
+      <div class="column skel" aria-hidden="true"></div>
+      <div class="column skel" aria-hidden="true"></div>
+    </div>
   </main>
 
   <div id="managerView" class="manager-grid hidden" role="tabpanel" aria-labelledby="tabManager" tabindex="-1">
