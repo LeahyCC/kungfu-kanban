@@ -258,6 +258,7 @@ function columnEl(col) {
   el.append(head, body);
   const empty = document.createElement('div');
   empty.className = 'empty-col';
+  empty.setAttribute('role', 'listitem'); // col-body is role="list"
   empty.textContent = '—';
   rec = { el, head, body, countEl: count, emptyEl: empty, key: col.key, dragDepth: 0 };
   colNodes.set(col.key, rec);
@@ -425,15 +426,20 @@ function groupWrap(colKey, name, members, pass) {
     const head = document.createElement('div');
     head.className = 'card-group-head';
     head.tabIndex = 0;
-    // not role="button" — the head CONTAINS a real queue <button>
+    // disclosure button for the group; the nested queue <button> is a known
+    // trade-off (baseline shipped the same shape, and this Lighthouse/axe
+    // version does not flag it, but role=button is required for aria-expanded)
+    head.setAttribute('role', 'button');
     const chevron = document.createElement('span');
     chevron.className = 'card-group-chevron';
+    chevron.setAttribute('aria-hidden', 'true'); // decorative — keeps the
+    // accessible name aligned with the visible text (axe label-content-name)
     chevron.textContent = '▾';
     const nameEl = document.createElement('span');
     nameEl.className = 'card-group-name';
     const countEl = document.createElement('span');
     countEl.className = 'card-group-count';
-    head.append(chevron, nameEl, countEl);
+    head.append(chevron, nameEl, document.createTextNode(' '), countEl);
     const cardsBox = document.createElement('div');
     cardsBox.className = 'card-group-cards';
     cardsBox.setAttribute('role', 'list');
@@ -449,15 +455,21 @@ function groupWrap(colKey, name, members, pass) {
   const collapsed = collapsedGroups.has(name);
   rec.wrap.classList.toggle('collapsed', collapsed);
   rec.head.setAttribute('aria-expanded', String(!collapsed));
+  // visible text ("<name> <done>/<total> done") must lead the accessible name
   rec.head.setAttribute('aria-label',
-    `Group ${name}, ${stats.done} of ${stats.total} done — press Enter to ${collapsed ? 'expand' : 'collapse'}`);
+    `${name} ${stats.done}/${stats.total} done — group, press Enter to ${collapsed ? 'expand' : 'collapse'}`);
   const backlogCount = members.filter((t) => t.status === 'backlog').length;
   if (backlogCount) {
     if (!rec.queueBtn) {
       rec.queueBtn = document.createElement('button');
       rec.queueBtn.className = 'card-run card-group-queue';
       rec.queueBtn.dataset.act = 'queue-group';
-      rec.queueBtn.textContent = '▶';
+      // glyph hidden from AT (button has aria-label below) so it doesn't leak
+      // into the group head's visible text (axe label-content-name-mismatch)
+      const glyph = document.createElement('span');
+      glyph.setAttribute('aria-hidden', 'true');
+      glyph.textContent = '▶';
+      rec.queueBtn.appendChild(glyph);
       rec.head.appendChild(rec.queueBtn);
     }
     const lbl = `Queue ${backlogCount} cards`;
