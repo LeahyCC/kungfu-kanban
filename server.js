@@ -145,7 +145,14 @@ let coalesceTimer = null;
 
 function emitSse(msg) {
   const data = `data: ${JSON.stringify(msg)}\n\n`;
-  const taskId = msg && msg.type === 'task' && msg.task ? msg.task.id : null;
+  // A congested client buffers last-write-wins per id and drops keyless frames.
+  // Both task and deleted frames must carry the id so a delete survives
+  // backpressure (a delete is terminal, so keying it under the same id lets it
+  // overwrite any still-pending task frame — never the other way around).
+  const taskId =
+    msg && msg.type === 'task' && msg.task ? msg.task.id
+    : msg && msg.type === 'deleted' ? msg.taskId
+    : null;
   for (const res of sseClients) sseSend(res, data, taskId);
 }
 
@@ -161,10 +168,19 @@ function broadcast(msg) {
     const slim = { ...msg.task };
     for (const f of SLIM_OMIT) delete slim[f];
     slim.v = nextRev();
-    coalesced.set(slim.id, { ...msg, task: slim, full: false });
+    // The flag rides the TASK, not the frame: the client's mergeTaskPayload
+    // reads incoming.full to decide shallow-merge (keep omitted heavy fields)
+    // vs wholesale-replace. On the frame it was invisible to the client, so
+    // every slim frame wiped prompt/resultText/acceptanceCriteria from state.
+    slim.full = false;
+    coalesced.set(slim.id, { ...msg, task: slim });
     if (!coalesceTimer) coalesceTimer = setTimeout(flushCoalesced, COALESCE_MS);
     return;
   }
+  // A removal changes the board — advance the revision so GET /api/tasks?v=
+  // won't answer 304 to a client that missed this frame (leaving a ghost card
+  // no refetch could clear).
+  if (msg && msg.type === 'deleted') nextRev();
   // A delete must never be followed by a stale task frame for the same id —
   // flush whatever is pending for it first, then let the delete through.
   if (msg && msg.type === 'deleted' && coalesced.has(msg.taskId)) {
