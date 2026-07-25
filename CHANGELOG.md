@@ -5,6 +5,29 @@ All notable changes to Kungfu Kanban. Format follows
 minor bumps for features, patch bumps for fixes. The board's status line
 compares your clone against `origin/main` and offers a one-click update.
 
+## [1.6.2] — 2026-07-23
+
+### Fixed
+- Post-merge fixes for the v1.6.0 performance overhaul, found by an adversarial
+  review of the merged branch:
+  - **Slim SSE frames wiped client task text (critical).** The `full: false`
+    slim-projection flag was placed on the SSE *frame* envelope, but the client's
+    `mergeTaskPayload` reads it on the *task* — so the "keep the omitted heavy
+    fields" branch never fired and every task event wholesale-replaced the cached
+    task, dropping `prompt`/`resultText`/`acceptanceCriteria` from board state
+    (breaking filter-by-prompt and risking an empty-prompt round-trip on the next
+    edit-save). The flag now rides the task, where the client reads it. The
+    server-net test now asserts the flag's position instead of the frame's.
+  - **Deleted cards could linger as ghosts.** A delete never advanced the board
+    revision, so `GET /api/tasks?v=` answered 304 to a client that had missed the
+    `deleted` SSE frame, leaving a card no refetch could clear. Deletes now bump
+    the revision; regression test added.
+  - **Deleted frames were dropped under SSE backpressure.** A congested client
+    buffers frames last-write-wins by id and drops keyless ones; `deleted` frames
+    carried no id key, so a delete during congestion was lost. They now key on the
+    task id (a delete is terminal, so it overwrites any still-pending task frame,
+    never the reverse).
+
 ## [1.6.1] — 2026-07-23
 
 Release bookkeeping: the last *tagged* release is v1.1.0 (1.2–1.5.x were dated

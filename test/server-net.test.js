@@ -196,8 +196,11 @@ describe('network/SSE contract (no auth gate)', () => {
 
       const isFor = (m) => m.type === 'task' && m.task && m.task.id === created.id;
       const f1 = await sse.waitFor(isFor);
-      // ...but the SSE frame is a slim projection
-      assert.equal(f1.full, false);
+      // ...but the SSE frame is a slim projection. The slim flag rides the TASK,
+      // not the frame — the client's mergeTaskPayload reads incoming.full (on the
+      // task) to keep the omitted heavy fields. On the frame it was invisible
+      // client-side, so every slim frame wiped prompt/resultText/acceptanceCriteria.
+      assert.equal(f1.task.full, false, 'slim flag must ride the task, where the client reads it');
       assert.ok(!('prompt' in f1.task), 'prompt must not ride SSE');
       assert.ok(!('resultText' in f1.task), 'resultText must not ride SSE');
       assert.ok(!('acceptanceCriteria' in f1.task), 'acceptanceCriteria must not ride SSE');
@@ -258,6 +261,22 @@ describe('network/SSE contract (no auth gate)', () => {
     } finally {
       await sse.close();
     }
+  });
+
+  test('a delete advances the board version — a stale ?v= refetches instead of 304 (no ghost cards)', async () => {
+    const created = await (await postJson(base, '/api/tasks', { title: 'delete-bumps-version' })).json();
+    const verBefore = (await fetch(`${base}/api/tasks`)).headers.get('x-board-version');
+    // sanity: right now that version is up to date, so it 304s
+    assert.equal((await fetch(`${base}/api/tasks?v=${verBefore}`)).status, 304);
+
+    await fetch(`${base}/api/tasks/${created.id}`, { method: 'DELETE' });
+
+    // the board lost a card — a client still holding the pre-delete version must
+    // get the full board (200), never a 304 that would strand a ghost card.
+    const r = await fetch(`${base}/api/tasks?v=${verBefore}`);
+    assert.equal(r.status, 200, 'pre-delete version must not 304 after a delete');
+    const body = await r.json();
+    assert.ok(!body.some((t) => t.id === created.id), 'deleted card must be absent from the refetch');
   });
 
   test('GET /api/tasks — X-Board-Version header, ?v=<current> -> 304, ?v=<stale> -> 200', async () => {
