@@ -1152,9 +1152,18 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
   list-style: none;
 }
 .archive-row summary::-webkit-details-marker { display: none; }
-.archive-row summary:hover { background: var(--accent-wash); }
-.archive-row .a-title { flex: 1; min-width: 0; }
+.archive-row summary:hover,
+.archive-row[open] summary { background: var(--accent-wash); }
+.archive-row summary:focus-visible { outline-offset: -2px; }
+.archive-row .a-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .archive-row .a-meta { color: var(--ink-400); font-size: 12px; white-space: nowrap; }
+.archive-row .a-meta time { color: inherit; }
 .archive-row .a-body { padding: 4px 4px 14px; }
 .archive-row .a-prompt {
   font-family: var(--font-mono);
