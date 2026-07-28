@@ -326,7 +326,8 @@ function patchCardEl(el, t, pass) {
   const cls = 'card'
     + (isRunning ? ' running-card brush' : '')
     + (t.status === 'done' ? ' done-card' : '')
-    + (t.error && t.status === 'review' ? ' failed-card' : '');
+    + (t.error && t.status === 'review' ? ' failed-card' : '')
+    + (t.effort === 'max' ? ' ultra-card' : ''); // ultracode: full-power runs wear the rainbow
   // assigning className only on change keeps the .brush mount animation from
   // restarting when an unrelated field re-patches the card
   if (el.className !== cls) el.className = cls;
@@ -345,7 +346,8 @@ function patchCardEl(el, t, pass) {
   if (t.createdBy === 'auto') meta.push('<span class="badge skillauto">auto-fix</span>');
   if (t.createdBy === 'schedule') meta.push('<span class="badge sched">⏱ scheduled run</span>');
   meta.push(`<span class="badge model">${esc(t.model || 'default')}</span>`);
-  if (t.effort && t.effort !== 'default') meta.push(`<span class="badge">${esc(t.effort)}</span>`);
+  if (t.effort === 'max') meta.push('<span class="badge ultra" title="ultracode — maximum effort">🌈 max</span>');
+  else if (t.effort && t.effort !== 'default') meta.push(`<span class="badge">${esc(t.effort)}</span>`);
   if (t.agent) meta.push(`<span class="badge">agent:${esc(t.agent)}</span>`);
   if (t.worktree) meta.push('<span class="badge wt">worktree</span>');
   if (t.issueNumber) meta.push(`<span class="badge">#${t.issueNumber}</span>`);

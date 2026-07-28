@@ -3,6 +3,7 @@
 
 import { state } from './state.js';
 import { $, esc, scheduleToInput, fillSelect } from './util.js';
+import { renderLookPane } from './appearance.js';
 import { api, confirmDlg, withBusy } from './api.js';
 import { loadTasks } from './board.js';
 import { renderUsage } from './chips.js';
@@ -68,6 +69,10 @@ export function openModal(task) {
   f.cwd.oninput = () => { rs.value = (state.config.repos || []).some((r) => r.path === f.cwd.value) ? f.cwd.value : ''; };
   fillSelect(f.model, state.config.models, task ? task.model : 'default');
   fillSelect(f.effort, state.config.efforts, task ? task.effort : 'default');
+  // 'default' is no longer a mystery: show what it resolves to at launch
+  const s = state.config.settings;
+  f.model.options[0].text = s.defaultModel ? `default (${s.defaultModel})` : 'default (CLI picks)';
+  f.effort.options[0].text = s.defaultEffort ? `default (${s.defaultEffort})` : 'default (CLI picks)';
   fillSelect(f.permissionMode, state.config.permissionModes, task ? task.permissionMode : (state.config.settings.defaultPermissionMode || 'acceptEdits'));
   const agentOpts = ['', ...state.config.agents.map((a) => a.name)];
   fillSelect(f.agent, agentOpts, task && task.agent ? task.agent : '');
@@ -399,7 +404,8 @@ let settingsSnapshot = '';
 function settingsFormSnapshot() {
   const f = $('#settingsForm');
   return JSON.stringify([
-    f.defaultCwd.value, f.defaultPermissionMode.value, f.reposDir.value, f.ntfyTopic.value,
+    f.defaultCwd.value, f.defaultPermissionMode.value, f.defaultModel.value, f.defaultEffort.value,
+    f.reposDir.value, f.ntfyTopic.value,
     f.notifyMac.checked, f.keepAwake.checked, f.archiveDays.value, f.prWatchMin.value,
     f.prWatchAutoFix.checked, f.usageBudgetM.value,
   ]);
@@ -419,6 +425,10 @@ export function openSettings() {
   const f = $('#settingsForm');
   f.defaultCwd.value = state.config.settings.defaultCwd || '';
   fillSelect(f.defaultPermissionMode, state.config.permissionModes, state.config.settings.defaultPermissionMode || 'acceptEdits');
+  fillSelect(f.defaultModel, state.config.models, state.config.settings.defaultModel || 'default');
+  fillSelect(f.defaultEffort, state.config.efforts, state.config.settings.defaultEffort || 'default');
+  f.defaultModel.options[0].text = 'default (CLI picks)';
+  f.defaultEffort.options[0].text = 'default (CLI picks)';
   f.reposDir.value = state.config.settings.reposDir || '';
   f.ntfyTopic.value = state.config.settings.ntfyTopic || '';
   f.notifyMac.checked = state.config.settings.notifyMac !== false;
@@ -429,6 +439,8 @@ export function openSettings() {
   f.usageBudgetM.value = (state.config.settings.usageBudgetTokens || 0) / 1_000_000;
   renderUsage();
   renderSkillStatus();
+  renderLookPane();
+  showSetPane('setCards'); // always open on the first tab
   api('/api/version').then((v) => {
     if (v && v.version) $('#settingsVersion').textContent = `v${v.version}`;
   });
@@ -455,6 +467,31 @@ $('#skillInstallBtn').addEventListener('click', async () => {
   const r = await api('/api/skill/install', { method: 'POST' });
   if (r.ok) renderSkillStatus();
   else $('#skillStatus').textContent = `✕ ${r.error || 'install failed'}`;
+});
+
+// Settings panes: one section visible at a time, so the modal reads as four
+// short forms instead of one intimidating wall.
+function showSetPane(id) {
+  for (const tab of document.querySelectorAll('.set-tab')) {
+    const on = tab.dataset.pane === id;
+    tab.classList.toggle('active', on);
+    tab.setAttribute('aria-selected', on ? 'true' : 'false');
+    tab.tabIndex = on ? 0 : -1;
+    $(`#${tab.dataset.pane}`).classList.toggle('hidden', !on);
+  }
+}
+for (const tab of document.querySelectorAll('.set-tab')) {
+  tab.addEventListener('click', () => showSetPane(tab.dataset.pane));
+}
+document.querySelector('.set-tabs').addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const tabs = [...document.querySelectorAll('.set-tab')];
+  const i = tabs.indexOf(document.activeElement);
+  if (i === -1) return;
+  e.preventDefault();
+  const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+  next.focus();
+  next.click();
 });
 
 $('#settingsBtn').addEventListener('click', openSettings);
@@ -489,6 +526,8 @@ $('#settingsForm').addEventListener('submit', async (e) => {
     body: {
       defaultCwd: f.defaultCwd.value,
       defaultPermissionMode: f.defaultPermissionMode.value,
+      defaultModel: f.defaultModel.value,
+      defaultEffort: f.defaultEffort.value,
       reposDir: f.reposDir.value,
       ntfyTopic: f.ntfyTopic.value,
       notifyMac: f.notifyMac.checked,

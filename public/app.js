@@ -16,7 +16,7 @@ import { render, loadTasks, setFilter } from './js/board.js';
 import { closeDrawer } from './js/drawer.js';
 import { closeTaskModal, closeImportModal, closeSettings } from './js/modals.js';
 import { closeErrors, closeAttn, loadErrors, loadManager } from './js/manager.js';
-import { applyCooldown, applyModelBlocks, renderNetChip, setServerOffline, renderHealth, renderUsage } from './js/chips.js';
+import { applyCooldown, applyModelBlocks, renderNetChip, setServerOffline, renderHealth, renderUsage, setCliAuth } from './js/chips.js';
 import { closePalette } from './js/palette.js'; // importing also wires the palette + global hotkeys
 import { connectSSE } from './js/sse.js';
 
@@ -99,6 +99,7 @@ function bootError(msg) {
   $('#maxConcurrent').value = state.config.settings.maxConcurrent || 2;
   applyCooldown(state.config.cooldownUntil || 0);
   setServerOffline(!!state.config.offline);
+  setCliAuth(!!state.config.cliLoggedOut);
   renderNetChip();
   applyModelBlocks(state.config.modelBlocks || {});
   connectSSE(); // handlers exist before an early event can land
@@ -111,4 +112,27 @@ function bootError(msg) {
 
 // minimal service worker: makes "add to home screen" a real PWA (cached shell
 // when offline); it never intercepts /api/, so live data stays live
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  // When a NEW shell version takes control (board self-update, deploy), the
+  // page it claimed is still running the old cached modules — reload once so
+  // the fresh shell actually shows. First-ever install (no prior controller)
+  // must not reload; the page it claimed was served straight from network.
+  let hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) { hadController = true; return; }
+    reloadWhenIdle();
+  });
+}
+
+// Reload for the new shell only when no overlay is open — an open modal or
+// drawer may hold un-submitted text (skipWaiting+claim fires this in EVERY
+// tab), and one more session on the old coherent shell is exactly what the
+// versioned cache guarantees is safe.
+function reloadWhenIdle() {
+  const busy = document.querySelector('.backdrop:not(.hidden)')
+    || !$('#drawer').classList.contains('hidden')
+    || document.querySelector('dialog.kk-dialog[open]');
+  if (!busy) location.reload();
+  else setTimeout(reloadWhenIdle, 2000);
+}

@@ -33,6 +33,7 @@
   <!-- break the module discovery waterfall: fetch the whole graph in parallel -->
   <link rel="modulepreload" href="app.js" />
   <link rel="modulepreload" href="js/api.js" />
+  <link rel="modulepreload" href="js/appearance.js" />
   <link rel="modulepreload" href="js/archive.js" />
   <link rel="modulepreload" href="js/board.js" />
   <link rel="modulepreload" href="js/chips.js" />
@@ -46,12 +47,24 @@
   <link rel="modulepreload" href="js/state.js" />
   <link rel="modulepreload" href="js/util.js" />
   <script>
-    // Saved choice wins; first visit follows the OS. Pre-paint, no flash.
+    // Pre-paint the saved look (theme, zoom, accent, density) before first
+    // paint so there's no flash; js/appearance.js owns the same values and is
+    // the editor for them. Legacy kk-theme is read once as a fallback.
     try {
-      var saved = localStorage.getItem('kk-theme');
-      if (saved === 'light' || (!saved && matchMedia('(prefers-color-scheme: light)').matches)) {
-        document.documentElement.dataset.theme = 'light';
+      var L = JSON.parse(localStorage.getItem('kk-look') || '{}');
+      if (L.theme === undefined) {
+        var old = localStorage.getItem('kk-theme');
+        L.theme = old === 'light' ? 'light' : old === 'dark' ? 'dark' : 'system';
       }
+      var r = document.documentElement;
+      if (L.theme === 'light' || (L.theme !== 'dark' && matchMedia('(prefers-color-scheme: light)').matches)) {
+        r.dataset.theme = 'light';
+      }
+      if (L.scale && L.scale !== 100) r.style.zoom = L.scale / 100;
+      if (L.rainbow) r.classList.add('kk-rainbow');
+      if (L.compact) r.classList.add('kk-compact');
+      if (L.still) r.classList.add('kk-still');
+      if (/^#[0-9a-f]{6}$/i.test(L.accent || '')) r.style.setProperty('--accent', L.accent);
     } catch (e) {}
   </script>
 </head>
@@ -76,6 +89,7 @@
       <span id="cooldownChip" class="cooldown-chip hidden" title="Subscription limits hit — auto flow paused; queued cards launch when it resets">⏳ <span id="cooldownTimer">--:--</span></span>
       <span id="modelChip" class="cooldown-chip model-chip hidden" title="Model capped or unavailable — launches use the next model down until it resets">⬇ <span id="modelChipText"></span></span>
       <span id="netChip" class="cooldown-chip net-chip hidden" role="status" title="No internet connection — cards that die on it requeue automatically and relaunch when it's back">📡 offline</span>
+      <span id="cliAuthChip" class="cooldown-chip err-chip hidden" role="status" title="The Claude CLI on this Mac is logged out — auto launches are paused. Run claude /login in a terminal, then launch any card or send a follow-up to resume.">🔐 logged out</span>
       <span id="sseChip" class="cooldown-chip hidden" role="status" title="Live connection to the server lost — reconnecting; the board may be stale until it's back">⚡ reconnecting…</span>
       <span class="status-chip" title="Backlog + Queued"><span class="belt-dot belt-todo"></span><span id="countBacklog" class="status-count">0</span><span class="sr-only">cards in Backlog or Queued</span></span>
       <span class="status-chip" title="Running"><span class="belt-dot belt-doing"></span><span id="countRunning" class="status-count">0</span><span class="sr-only">cards Running</span></span>
@@ -315,41 +329,92 @@ The prompt: self-contained instructions for the executing agent.
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
       <h2 id="settingsTitle">Settings <span id="settingsVersion" class="badge model" title="Board version — the status line offers ⬆ update when origin has a newer one"></span></h2>
       <form id="settingsForm">
-        <div id="usageBreakdown" class="footnote"></div>
-        <label title="Anthropic doesn't publish exact quotas, so pick a number that matches your experience of when limits hit — the ⛽ chip then shows what's left at a glance">5-hour budget <span class="hint-inline">(output Mtok, 0 = just show usage)</span>
-          <input name="usageBudgetM" type="number" min="0" max="1000" step="0.5" class="tiny" />
-        </label>
-        <label title="Pre-filled as the working directory on new cards">Default working directory
-          <input name="defaultCwd" placeholder="/Users/you/project" />
-        </label>
-        <label title="Permission mode for new cards and imports that don't set one themselves">Default card permissions
-          <select name="defaultPermissionMode"></select>
-        </label>
-        <p class="hint">bypassPermissions = agents run <b>any</b> command without asking. Fine on a solo box you trust; think twice if card prompts can carry untrusted text.</p>
-        <label>Repos directory <span class="hint-inline">(scanned for the card repo picker)</span>
-          <input name="reposDir" placeholder="/Users/you/Code" />
-        </label>
-        <label>ntfy topic <span class="hint-inline">(push to your phone via ntfy.sh — leave empty to disable)</span>
-          <input name="ntfyTopic" placeholder="my-secret-kanban-topic" />
-        </label>
-        <label class="check-row"><input type="checkbox" name="notifyMac" /> macOS notifications</label>
-        <label class="check-row" title="Holds caffeinate power assertions while agents work — running cards, Sensei reviews, PR pushes, and subscription cooldowns with queued cards — so the Mac can't idle-sleep mid-flow. The display may still turn off, and a closed lid on battery still sleeps"><input type="checkbox" name="keepAwake" /> keep Mac awake while cards run</label>
-        <label>Archive "done" cards after (days)
-          <input name="archiveDays" type="number" min="0" max="365" />
-        </label>
-        <p class="hint">Cards left in Done longer than this are moved to <code>data/archive.jsonl</code> and their transcripts deleted. Set to 0 to turn off archiving.</p>
-        <label>Check PRs every <span class="hint-inline">(minutes, 0 = off — merged PRs ship their card; conflicted PRs can auto-fix)</span>
-          <input name="prWatchMin" type="number" min="0" max="120" class="tiny" />
-        </label>
-        <label class="check-row"><input type="checkbox" name="prWatchAutoFix" /> auto-fix PR merge conflicts (spawns a fix card, max 2 tries)</label>
-        <label title="Personal skills in ~/.claude/skills, installed and kept current automatically at server start; the button is a manual repair hatch. kungfu-todo: say 'create a kungfu todo for…' in any Claude Code session. ponytail: the lazy-senior-dev discipline. humanizer: strips AI writing tells from prose (both ship with the board, auto-selected on new cards).">Claude Code skills <span class="hint-inline">(kungfu-todo + ponytail + humanizer — auto-installed at boot)</span></label>
-        <div class="skill-install-row">
-          <span id="skillStatus" class="footnote">checking…</span>
-          <button type="button" id="skillInstallBtn" class="ghost hidden">Install</button>
+        <div class="set-tabs" role="tablist" aria-label="Settings sections">
+          <button type="button" class="set-tab active" role="tab" aria-selected="true" data-pane="setCards">Cards</button>
+          <button type="button" class="set-tab" role="tab" aria-selected="false" tabindex="-1" data-pane="setLook">Appearance</button>
+          <button type="button" class="set-tab" role="tab" aria-selected="false" tabindex="-1" data-pane="setAlerts">Alerts</button>
+          <button type="button" class="set-tab" role="tab" aria-selected="false" tabindex="-1" data-pane="setSystem">System</button>
         </div>
+
+        <!-- Cards: what a new card gets by default -->
+        <div id="setCards" class="set-pane" role="tabpanel">
+          <label title="Pre-filled as the working directory on new cards">Default working directory
+            <input name="defaultCwd" placeholder="/Users/you/project" />
+          </label>
+          <label>Repos directory <span class="hint-inline">(scanned for the card repo picker)</span>
+            <input name="reposDir" placeholder="/Users/you/Code" />
+          </label>
+          <div class="row">
+            <label title="What a card's 'default' model resolves to at launch — leave on 'default' to let the CLI pick">Default model
+              <select name="defaultModel"></select>
+            </label>
+            <label title="What a card's 'default' effort resolves to at launch">Default effort
+              <select name="defaultEffort"></select>
+            </label>
+          </div>
+          <label title="Permission mode for new cards and imports that don't set one themselves">Default permissions
+            <select name="defaultPermissionMode"></select>
+          </label>
+          <p class="hint">bypassPermissions = agents run <b>any</b> command without asking. Fine on a solo box you trust; think twice if card prompts can carry untrusted text.</p>
+          <label>Archive "done" cards after <span class="hint-inline">(days, 0 = never)</span>
+            <input name="archiveDays" type="number" min="0" max="365" class="tiny" />
+          </label>
+          <p class="hint">Archived cards move to the Archive tab; their transcripts are deleted.</p>
+        </div>
+
+        <!-- Appearance: per-device, saved in this browser -->
+        <div id="setLook" class="set-pane hidden" role="tabpanel">
+          <label>Theme
+            <select id="lookTheme">
+              <option value="dark">night dojo</option>
+              <option value="light">day dojo</option>
+              <option value="system">follow the OS</option>
+            </select>
+          </label>
+          <label>Text size <span class="hint-inline" id="lookScaleVal">100%</span>
+            <input id="lookScale" type="range" min="80" max="140" step="5" />
+          </label>
+          <label>Accent colour</label>
+          <div id="lookSwatches" class="look-swatches"></div>
+          <label class="check-row" title="Every card wears the rainbow ring, not just max-effort ones"><input type="checkbox" id="lookRainbow" /> 🌈 rainbow mode (all cards)</label>
+          <label class="check-row" title="Tighter cards and columns — more board on screen"><input type="checkbox" id="lookCompact" /> compact density</label>
+          <label class="check-row" title="Overrides the OS setting for this board only"><input type="checkbox" id="lookStill" /> reduce motion</label>
+          <p class="hint">Appearance is saved in this browser, not on the board — each device keeps its own look. <button type="button" id="lookReset" class="ghost mini">Reset to defaults</button></p>
+        </div>
+
+        <!-- Alerts: usage budget + notifications -->
+        <div id="setAlerts" class="set-pane hidden" role="tabpanel">
+          <div id="usageBreakdown" class="footnote"></div>
+          <label title="Anthropic doesn't publish exact quotas, so pick a number that matches your experience of when limits hit — the ⛽ chip then shows what's left at a glance">5-hour budget <span class="hint-inline">(output Mtok, 0 = just show usage)</span>
+            <input name="usageBudgetM" type="number" min="0" max="1000" step="0.5" class="tiny" />
+          </label>
+          <p class="hint">At 100% the board pauses auto launches and resumes as the window slides.</p>
+          <label>ntfy topic <span class="hint-inline">(push to your phone via ntfy.sh — empty = off)</span>
+            <input name="ntfyTopic" placeholder="my-secret-kanban-topic" />
+          </label>
+          <label class="check-row"><input type="checkbox" name="notifyMac" /> macOS notifications</label>
+          <label class="check-row" title="Holds caffeinate power assertions while agents work — running cards, Sensei reviews, PR pushes, and subscription cooldowns with queued cards — so the Mac can't idle-sleep mid-flow. The display may still turn off, and a closed lid on battery still sleeps"><input type="checkbox" name="keepAwake" /> keep Mac awake while cards run</label>
+          <div class="skill-install-row">
+            <button type="button" id="notifyTestBtn" class="ghost">🔔 Test notification</button>
+          </div>
+        </div>
+
+        <!-- System: PR watch, skills, session -->
+        <div id="setSystem" class="set-pane hidden" role="tabpanel">
+          <label>Check PRs every <span class="hint-inline">(minutes, 0 = off)</span>
+            <input name="prWatchMin" type="number" min="0" max="120" class="tiny" />
+          </label>
+          <label class="check-row"><input type="checkbox" name="prWatchAutoFix" /> auto-fix PR merge conflicts (spawns a fix card, max 2 tries)</label>
+          <p class="hint">Merged PRs ship their card automatically; conflicted ones can spawn a fix card.</p>
+          <label title="Personal skills in ~/.claude/skills, installed and kept current automatically at server start; the button is a manual repair hatch. kungfu-todo: say 'create a kungfu todo for…' in any Claude Code session. ponytail: the lazy-senior-dev discipline. humanizer: strips AI writing tells from prose (both ship with the board, auto-selected on new cards).">Claude Code skills <span class="hint-inline">(auto-installed at boot)</span></label>
+          <div class="skill-install-row">
+            <span id="skillStatus" class="footnote">checking…</span>
+            <button type="button" id="skillInstallBtn" class="ghost hidden">Install</button>
+          </div>
+        </div>
+
         <div class="modal-actions">
           <button type="button" id="logoutBtn" class="ghost hidden" title="Clear this device's auth cookie — you'll need the token to sign back in">Sign out</button>
-          <button type="button" id="notifyTestBtn" class="ghost">🔔 Test notification</button>
           <button type="button" id="settingsCancelBtn" class="ghost" title="Close without saving">Cancel</button>
           <button type="submit" class="primary" title="Apply — takes effect immediately, no restart needed">Save</button>
         </div>

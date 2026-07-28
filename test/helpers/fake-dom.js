@@ -93,7 +93,11 @@ class El {
     this.parentNode = null;
     this.attributes = {};
     this.dataset = {};
-    this.style = {};
+    // CSSStyleDeclaration-ish: appearance.js sets/removes custom properties
+    this.style = {
+      setProperty(k, v) { this[k] = v; },
+      removeProperty(k) { delete this[k]; },
+    };
     this.className = '';
     this._listeners = {};
     this._innerHTML = '';

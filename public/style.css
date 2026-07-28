@@ -816,18 +816,64 @@ input.tiny { width: 60px; }
 .card.done-card .meta { opacity: 0.8; }
 .card .card-seal {
   position: absolute;
-  top: -6px;
+  /* fully inside the card box: .card sets content-visibility: auto, which
+     brings paint containment — a negative top made the stamp's upper edge
+     get clipped rather than overhang */
+  top: 4px;
   right: 8px;
   font-size: 9px;
   padding: 3px 5px;
   pointer-events: none; /* never steal taps from the buttons beneath it */
+  /* grow from the top-right corner so the stamp's oversized first frame
+     expands INTO the card instead of past its clipped top edge */
+  transform-origin: 100% 0;
+  transition: transform 140ms var(--ease);
 }
+/* the stamp straightens as you reach for the card */
+.card:hover .card-seal, .card:focus-visible .card-seal { transform: rotate(0deg); }
 .card .failword {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--error);
 }
 .card.failed-card { border-left: 3px solid var(--error); }
+
+/* ultracode: max-effort cards (and every card in 🌈 rainbow mode) wear a
+   spinning rainbow ring. Painted in the BORDER box behind a padding-box paper
+   fill, so no pseudo-element is needed (.brush already owns ::after on running
+   cards) and there's no layout shift — the border grows 1px, the padding gives
+   it back. The spin animates a registered <angle> so the conic gradient turns
+   in place; browsers without @property just get the static ring.
+   ponytail: an animated gradient repaints the card's 2px ring each frame —
+   bounded to the ring, paused for reduced-motion, and off entirely unless a
+   card is ultra/rainbow. If a huge rainbow-mode board ever feels warm, move
+   the ring to a transform-animated ::before behind a ::after paper fill. */
+@property --kk-ring {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.card.ultra-card {
+  border: 2px solid transparent;
+  padding: 9px 11px;
+  background:
+    linear-gradient(var(--paper-1), var(--paper-1)) padding-box,
+    conic-gradient(from var(--kk-ring), #e0524a, #d2a24c, #7fb08d, #6fa3d4, #9b6fd4, #e0524a) border-box;
+  animation: ultra-spin 6s linear infinite;
+}
+@keyframes ultra-spin { to { --kk-ring: 360deg; } }
+@media (prefers-reduced-motion: reduce) {
+  .card.ultra-card { animation: none; }
+}
+/* source order puts .ultra-card after .running-card, so restore the running
+   lane's bottom room (11px + 2px border ≈ the normal 12px + 1px) */
+.card.ultra-card.running-card { padding-bottom: 11px; }
+.badge.ultra {
+  background: linear-gradient(115deg, #e0524a, #d2a24c, #7fb08d, #6fa3d4, #9b6fd4);
+  color: #141210;
+  border-color: transparent;
+  font-weight: 600;
+}
 .card .pr-link, .drawer .pr-link {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -1078,6 +1124,69 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
   margin-top: 10px;
   padding-top: 12px;
   border-top: 1px solid var(--rule);
+}
+
+/* ---- settings: tabbed panes ---- */
+.set-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 16px;
+}
+.set-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-400);
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 7px 12px;
+  cursor: pointer;
+  border-radius: 0;
+}
+.set-tab:hover { color: var(--ink-900); }
+.set-tab.active { color: var(--ink-900); border-bottom-color: var(--accent); font-weight: 600; }
+.set-pane > label:first-child { margin-top: 0; }
+
+/* accent swatches */
+.look-swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.look-sw {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--rule);
+  cursor: pointer;
+  padding: 0;
+}
+.look-sw.active { border-color: var(--rule-strong); box-shadow: 0 0 0 2px var(--paper-1), 0 0 0 4px var(--rule-strong); }
+.look-custom { background: none; }
+.set-pane input[type='range'] { width: 100%; accent-color: var(--accent); }
+
+/* 🌈 rainbow mode: every card wears the ring, not just max-effort ones */
+:root.kk-rainbow .card { border: 2px solid transparent; padding: 9px 11px; }
+:root.kk-rainbow .card {
+  background:
+    linear-gradient(var(--paper-1), var(--paper-1)) padding-box,
+    conic-gradient(from var(--kk-ring), #e0524a, #d2a24c, #7fb08d, #6fa3d4, #9b6fd4, #e0524a) border-box;
+  animation: ultra-spin 6s linear infinite;
+}
+:root.kk-rainbow .card.running-card { padding-bottom: 11px; }
+/* stagger so the board shimmers instead of pulsing in lockstep */
+:root.kk-rainbow .card:nth-child(2n) { animation-delay: -1.5s; }
+:root.kk-rainbow .card:nth-child(3n) { animation-delay: -3s; }
+:root.kk-rainbow .card:nth-child(5n) { animation-delay: -4.5s; }
+
+/* compact density: more board on screen */
+:root.kk-compact .card { padding: 6px 9px; }
+:root.kk-compact .card .title { font-size: 13px; }
+:root.kk-compact .col-body { gap: 6px; }
+:root.kk-compact .card .meta { margin-top: 3px; }
+
+/* per-board reduced motion — same stance as the OS setting */
+:root.kk-still *, :root.kk-still *::before, :root.kk-still *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
 }
 
 /* ---- command palette ---- */
