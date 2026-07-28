@@ -5,6 +5,45 @@ All notable changes to Kungfu Kanban. Format follows
 minor bumps for features, patch bumps for fixes. The board's status line
 compares your clone against `origin/main` and offers a one-click update.
 
+## [Unreleased]
+
+### Added
+- **Board defaults for model and effort.** ⚙ Settings gains "Default model" and
+  "Default effort" — a card left on `default` now resolves to the board default
+  at launch (fresh runs, follow-ups, and the fallback ladder all respect it; an
+  explicit card choice always wins). The card editor's `default` options stop
+  being a mystery: they read `default (sonnet)` / `default (CLI picks)`.
+- **Ultracode cards wear the rainbow.** Max-effort cards get a rainbow ring
+  that shifts continuously through the spectrum, plus a 🌈 max badge, so
+  full-power runs are unmissable. The spin animates a registered `<angle>`, so
+  it repaints only the 2px ring and stops under reduced-motion.
+- **Appearance settings.** A new tab in ⚙ Settings, saved per device: theme
+  (night / day / follow the OS), text size, accent colour (seven swatches plus
+  a custom picker — the whole vermillion family, including on-accent contrast,
+  is derived from your choice), 🌈 rainbow mode for every card, compact
+  density, and a per-board reduce-motion switch.
+
+### Changed
+- **Settings is four short tabs, not one wall.** The modal grew past the point
+  of being scannable, so it's now Cards / Appearance / Alerts / System, each a
+  handful of related fields, opening on Cards.
+- The SHIPPED seal no longer has its top edge clipped (cards carry paint
+  containment from `content-visibility`, so the stamp's overhang was cut off),
+  and it straightens as you hover the card.
+- **Logged-out guard.** When a run or Sensei pass dies on "Not logged in", the
+  board trips one deduped ⚠ entry plus a 🔐 chip, pauses auto launches and
+  Sensei triggers, and requeues the victim card — instead of spamming the
+  activity log on every interval. Every human-initiated run stays ungated as
+  the probe (Run button, drawer follow-up, Sensei chat), so after
+  `claude /login` any success clears the gate and resumes the queue.
+
+### Fixed
+- **No more double-refresh after updates.** The service worker serves the
+  cached shell first, so the update flow's automatic reload still showed the
+  old UI and a manual second refresh was needed. The page now reloads itself
+  once when a new shell version takes control — board self-updates and deploys
+  land on screen without touching ⌘R.
+
 ## [1.7.1] — 2026-07-28
 
 ### Added
