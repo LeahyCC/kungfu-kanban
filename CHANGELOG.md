@@ -33,7 +33,10 @@ inside this section rather than as a release of their own.
   (night / day / follow the OS), text size, accent colour (seven swatches plus
   a custom picker — the whole vermillion family, including on-accent contrast,
   is derived from your choice), 🌈 rainbow mode for every card, compact
-  density, and a per-board reduce-motion switch.
+  density, and a per-board reduce-motion switch. A custom accent is never
+  allowed to render link text below AA: the derived ink shifts away from the
+  card surface only as far as 4.5:1 demands, so a mid-tone or very bright
+  pick stays readable on both dojos.
 
 ### Changed
 - **Settings is four short tabs, not one wall.** The modal grew past the point
