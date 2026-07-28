@@ -337,9 +337,36 @@ app.post('/api/import/draft', async (req, res) => {
         explore: !!b.explore && !!repoPath,
       });
     }
-    // cancelled in the UI → stop the claude process, don't burn usage
-    req.on('close', () => { if (!res.writableEnded) op.kill(); });
+    killOnDisconnect(res, op); // cancelled in the UI → stop the claude process
     res.json(await op.promise);
+  } catch (e) {
+    if (!res.writableEnded) res.status(500).json({ error: String(e.message || e).slice(0, 300) });
+  }
+});
+
+// Kill an agent call when the CLIENT actually goes away, so a cancelled UI
+// doesn't burn subscription usage. This must hang off the RESPONSE, not the
+// request: `req`'s 'close' fires as soon as the body has been read (~16ms in,
+// long before the work finishes), so the old req-based guard SIGTERM'd the
+// agent it had just spawned. `writableFinished` separates "we answered" from
+// "the connection dropped".
+function killOnDisconnect(res, op) {
+  res.on('close', () => { if (!res.writableFinished) op.kill(); });
+}
+
+// Sharpen a single prompt in place — returns better text, touches nothing.
+app.post('/api/prompt/improve', async (req, res) => {
+  const b = req.body || {};
+  if (cooldown.active()) return res.status(503).json({ error: 'subscription is cooling down — try after the timer' });
+  const text = (b.text || '').trim();
+  if (!text) return res.status(400).json({ error: 'nothing to improve' });
+  try {
+    const repos = discoverRepos(reposDir());
+    const repoPath = repos.some((r) => r.path === b.repoPath) ? b.repoPath : null;
+    const op = importer.improvePrompt(text.slice(0, 5000), { repoPath });
+    killOnDisconnect(res, op);
+    const out = await op.promise;
+    res.json({ text: out.markdown });
   } catch (e) {
     if (!res.writableEnded) res.status(500).json({ error: String(e.message || e).slice(0, 300) });
   }
