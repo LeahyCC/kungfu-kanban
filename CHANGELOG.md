@@ -5,6 +5,41 @@ All notable changes to Kungfu Kanban. Format follows
 minor bumps for features, patch bumps for fixes. The board's status line
 compares your clone against `origin/main` and offers a one-click update.
 
+## [Unreleased]
+
+### Added
+- **Archive tab.** Done cards swept out of the board by `archiveDays` are no
+  longer gone from sight: a third tab browses `data/archive.jsonl` newest-first
+  with search, per-week throughput, per-repo counts, and token totals
+  (`GET /api/archive`, `GET /api/archive/:id`). Rows expand to the full prompt
+  and result; PR links come along. Read-only — restore can come later if it's
+  ever missed.
+- **Command palette + global shortcuts.** `⌘K` (or `?`) opens a palette that
+  runs commands and jumps to cards by fuzzy title/prompt match; `n` new card,
+  `i` import, `/` focus filter, `1`/`2`/`3` switch tabs. Shortcuts never fire
+  while typing or while a modal/drawer is open, and the empty palette doubles
+  as the shortcut cheat-sheet.
+- **Usage budget enforcement.** The 5-hour ⛽ budget (`usageBudgetM`) now has
+  teeth: when rolling output-token burn meets it, auto launches pause and
+  manual runs park in Queued — exactly like the subscription cooldown — and
+  the chip shows "5h budget spent · paused". Flow resumes on its own as the
+  window slides; the escape hatch is raising or clearing the budget in ⚙
+  Settings. The Sensei also sits out while the budget is spent.
+
+### Fixed
+- Offline-guard error entries were stored under the wrong kind (`run-failed`)
+  because `offline` was missing from the error tracker's kind whitelist — so
+  they never auto-resolved when the connection came back and sat in the ⚠
+  tracker until dismissed by hand. Found while wiring the budget guard's
+  entries the same way; both kinds are whitelisted now, with a regression test.
+
+### Notes
+- Cards imported from GitHub issues already auto-close their source issue on
+  merge (`Fixes #N` in the PR body) — now locked by a regression test. Known
+  limits, accepted: retargeting a card's repo after import can point `#N` at
+  the wrong repo, and PRs into a non-default base don't auto-close (GitHub
+  semantics).
+
 ## [1.6.2] — 2026-07-23
 
 ### Fixed

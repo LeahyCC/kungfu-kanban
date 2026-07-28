@@ -78,7 +78,11 @@ export async function renderUsage() {
   if (!u || u.output === undefined) return;
   const chip = $('#usageChip');
   const txt = $('#usageChipText');
-  if (u.budgetTokens > 0) {
+  if (u.blocked) {
+    txt.textContent = '5h budget spent · paused';
+    chip.classList.remove('warn');
+    chip.classList.add('bad');
+  } else if (u.budgetTokens > 0) {
     const left = Math.max(0, u.budgetTokens - u.output);
     const pct = Math.round((u.output / u.budgetTokens) * 100);
     txt.textContent = `5h ${fmtTok(left)} left`;

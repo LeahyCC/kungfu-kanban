@@ -33,6 +33,7 @@
   <!-- break the module discovery waterfall: fetch the whole graph in parallel -->
   <link rel="modulepreload" href="app.js" />
   <link rel="modulepreload" href="js/api.js" />
+  <link rel="modulepreload" href="js/archive.js" />
   <link rel="modulepreload" href="js/board.js" />
   <link rel="modulepreload" href="js/chips.js" />
   <link rel="modulepreload" href="js/deps.js" />
@@ -40,6 +41,7 @@
   <link rel="modulepreload" href="js/manager.js" />
   <link rel="modulepreload" href="js/markdown.js" />
   <link rel="modulepreload" href="js/modals.js" />
+  <link rel="modulepreload" href="js/palette.js" />
   <link rel="modulepreload" href="js/sse.js" />
   <link rel="modulepreload" href="js/state.js" />
   <link rel="modulepreload" href="js/util.js" />
@@ -65,11 +67,12 @@
     <nav class="app-tabs" role="tablist" aria-label="Application">
       <button id="tabBoard" class="app-tab active" role="tab" aria-selected="true" aria-controls="board">Board</button>
       <button id="tabManager" class="app-tab" role="tab" aria-selected="false" aria-controls="managerView" tabindex="-1">Sensei <span id="suggCount" class="pill hidden"></span></button>
+      <button id="tabArchive" class="app-tab" role="tab" aria-selected="false" aria-controls="archiveView" tabindex="-1">Archive</button>
     </nav>
     <div class="app-status" aria-label="Board summary">
       <button id="attnChip" class="cooldown-chip attn-chip hidden" title="Sensei suggestions waiting on your ✓, plus cards stopped on a permission block. Click to review, approve, or reject.">🔔 <span id="attnChipText">0</span></button>
       <button id="errChip" class="cooldown-chip err-chip hidden" title="Open operational errors & blocks — permission stops, wrong-base PRs, failed launches. Click to review or have the Sensei fix them.">⚠ <span id="errChipText">0</span></button>
-      <span id="usageChip" class="cooldown-chip usage-chip hidden" title="All Claude Code output tokens on this Mac in the rolling 5-hour limit window (board + terminal). Set a budget in ⚙ Settings for a % meter.">⛽ <span id="usageChipText"></span></span>
+      <span id="usageChip" class="cooldown-chip usage-chip hidden" title="All Claude Code output tokens on this Mac in the rolling 5-hour limit window (board + terminal). Set a budget in ⚙ Settings for a % meter — at 100% auto launches pause and resume as the window slides.">⛽ <span id="usageChipText"></span></span>
       <span id="cooldownChip" class="cooldown-chip hidden" title="Subscription limits hit — auto flow paused; queued cards launch when it resets">⏳ <span id="cooldownTimer">--:--</span></span>
       <span id="modelChip" class="cooldown-chip model-chip hidden" title="Model capped or unavailable — launches use the next model down until it resets">⬇ <span id="modelChipText"></span></span>
       <span id="netChip" class="cooldown-chip net-chip hidden" role="status" title="No internet connection — cards that die on it requeue automatically and relaunch when it's back">📡 offline</span>
@@ -175,6 +178,13 @@
       <h2>Activity log <button type="button" id="clearLogBtn" class="ghost mini" title="Clear the activity log for a fresh start">✕ clear</button></h2>
       <div id="mgrLog" class="mgr-log"></div>
     </section>
+  </div>
+
+  <!-- Archive: read-only browser over cards swept out of Done -->
+  <div id="archiveView" class="archive-view hidden" role="tabpanel" aria-labelledby="tabArchive" tabindex="-1">
+    <div id="archiveStats" class="slab archive-stats"></div>
+    <input id="archiveSearch" class="filter" type="search" placeholder="⌕ search archive…" aria-label="Search archived cards by title, repo, model, or group" />
+    <div id="archiveList" class="archive-list"></div>
   </div>
 
   <!-- Card editor modal -->
@@ -372,6 +382,17 @@ The prompt: self-contained instructions for the executing agent.
         <button type="button" id="attnRejectAllBtn" class="ghost" title="Reject every Sensei suggestion below and dismiss the permission-blocked cards">✗ Reject all</button>
         <button type="button" id="attnCloseBtn" class="ghost">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Command palette -->
+  <div id="paletteBackdrop" class="backdrop palette-backdrop hidden">
+    <div class="modal palette" role="dialog" aria-modal="true" aria-label="Command palette">
+      <input id="paletteInput" type="text" role="combobox" aria-expanded="true"
+        aria-controls="paletteList" aria-autocomplete="list" autocomplete="off"
+        placeholder="Type a command or card title…" aria-label="Command palette" />
+      <ul id="paletteList" role="listbox" aria-label="Commands and cards"></ul>
+      <span class="footnote pal-hint">↑↓ choose · ↵ run · esc close — ? or ⌘K opens this anytime</span>
     </div>
   </div>
 

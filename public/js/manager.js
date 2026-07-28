@@ -7,29 +7,39 @@ import { $, nearBottom, fmtLogTs, fillSelect, announce } from './util.js';
 import { api, confirmDlg, withBusy, toast } from './api.js';
 import { openDrawer, bypassAndRerun } from './drawer.js';
 import { loadTasks } from './board.js';
+import { loadArchive } from './archive.js';
 
-// ---------- manager tab ----------
+// ---------- tabs ----------
+const TABS = [
+  ['#tabBoard', 'board', '#board'],
+  ['#tabManager', 'manager', '#managerView'],
+  ['#tabArchive', 'archive', '#archiveView'],
+];
 export function showTab(which) {
-  $('#board').classList.toggle('hidden', which !== 'board');
   $('#boardToolbar').classList.toggle('hidden', which !== 'board');
-  $('#managerView').classList.toggle('hidden', which !== 'manager');
-  for (const [id, key] of [['#tabBoard', 'board'], ['#tabManager', 'manager']]) {
-    const tab = $(id);
+  for (const [tabSel, key, panelSel] of TABS) {
+    $(panelSel).classList.toggle('hidden', which !== key);
+    const tab = $(tabSel);
     tab.classList.toggle('active', which === key);
     tab.setAttribute('aria-selected', which === key ? 'true' : 'false');
     tab.tabIndex = which === key ? 0 : -1;
   }
   if (which === 'manager') loadManager();
+  if (which === 'archive') loadArchive();
 }
 $('#tabBoard').addEventListener('click', () => showTab('board'));
 $('#tabManager').addEventListener('click', () => showTab('manager'));
-// roving arrow-key navigation between the two tabs
+$('#tabArchive').addEventListener('click', () => showTab('archive'));
+// roving arrow-key navigation across the tabs, with wraparound
 document.querySelector('.app-tabs').addEventListener('keydown', (e) => {
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-  const other = document.activeElement === $('#tabBoard') ? $('#tabManager') : $('#tabBoard');
+  const tabs = [...document.querySelectorAll('.app-tab')];
+  const i = tabs.indexOf(document.activeElement);
+  if (i === -1) return;
   e.preventDefault();
-  other.focus();
-  other.click();
+  const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+  next.focus();
+  next.click();
 });
 
 export async function loadManager() {
