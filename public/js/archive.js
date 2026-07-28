@@ -30,12 +30,19 @@ function renderRows() {
   const q = ($('#archiveSearch').value || '').trim().toLowerCase();
   const rows = items
     .filter((t) => !q || [t.title, t.cwd, t.model, t.group].filter(Boolean).join(' ').toLowerCase().includes(q))
-    .map((t) => `<details class="archive-row" data-id="${esc(t.id)}">
+    .map((t) => {
+      const ts = t.finishedAt || t.createdAt;
+      const when = ts ? `<time datetime="${esc(new Date(ts).toISOString())}" title="${esc(new Date(ts).toLocaleString())}">${esc(fmtLogTs(ts))}</time>` : '';
+      return `<details class="archive-row" data-id="${esc(t.id)}">
       <summary><span class="a-title">${esc(t.title)}</span>
-        <span class="a-meta">${esc(t.cwd ? t.cwd.split('/').pop() : '')} · ${esc(t.model || '')} · ${fmtTok(t.stats && t.stats.outputTokens)} tok · ${esc(fmtLogTs(t.finishedAt || t.createdAt))}${
+        <span class="a-meta">${esc(t.cwd ? t.cwd.split('/').pop() : '')} · ${esc(t.model || '')} · ${fmtTok(t.stats && t.stats.outputTokens)} tok · ${when}${
           t.prUrl ? ` <a class="pr-link" href="${esc(t.prUrl)}" target="_blank" rel="noopener">PR ↗</a>` : ''}</span>
-      </summary><div class="a-body">loading…</div></details>`);
-  $('#archiveList').innerHTML = rows.join('') || '<p class="sub">nothing archived yet — done cards land here after the sweep</p>';
+      </summary><div class="a-body">loading…</div></details>`;
+    });
+  $('#archiveList').innerHTML = rows.join('') ||
+    `<div class="empty-col">${q
+      ? 'no archived cards match your search'
+      : 'nothing archived yet — done cards land here after the sweep'}</div>`;
 }
 
 // Full record (prompt + result) fetched once, on first expand. 'toggle' does
