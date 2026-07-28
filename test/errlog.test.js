@@ -58,7 +58,7 @@ test('capture: an unrecognized kind falls back to "run-failed"', () => {
 test('capture: every kind a guard resolveKind()s is stored verbatim', () => {
   // taskless, like the real offline.js/budget.js captures — resolveKind only
   // touches taskless entries
-  for (const kind of ['offline', 'budget']) {
+  for (const kind of ['offline', 'budget', 'auth']) {
     const e = errlog.capture(kind, { text: `${kind} tripped` });
     try {
       assert.equal(e.kind, kind);
