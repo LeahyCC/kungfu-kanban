@@ -5,7 +5,7 @@ All notable changes to Kungfu Kanban. Format follows
 minor bumps for features, patch bumps for fixes. The board's status line
 compares your clone against `origin/main` and offers a one-click update.
 
-## [Unreleased]
+## [1.7.1] — 2026-07-28
 
 ### Added
 - **Archive tab.** Done cards swept out of the board by `archiveDays` are no
@@ -25,6 +25,12 @@ compares your clone against `origin/main` and offers a one-click update.
   the chip shows "5h budget spent · paused". Flow resumes on its own as the
   window slides; the escape hatch is raising or clearing the budget in ⚙
   Settings. The Sensei also sits out while the budget is spent.
+
+### Changed
+- Archive tab polish: titles ellipsize so meta columns stay aligned, rows share
+  the board's hover/focus treatment, timestamps carry the full date on hover
+  (`<time>`), and empty states now match the rest of the app — distinguishing an
+  empty archive from a search with no matches.
 
 ### Fixed
 - Offline-guard error entries were stored under the wrong kind (`run-failed`)
