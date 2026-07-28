@@ -52,6 +52,24 @@ test('capture: an unrecognized kind falls back to "run-failed"', () => {
   }
 });
 
+// Regression: these guards auto-resolve their own entries via resolveKind(),
+// which only works if capture stores the kind verbatim. 'offline' silently
+// fell back to 'run-failed' for months — its entries never auto-cleared.
+test('capture: every kind a guard resolveKind()s is stored verbatim', () => {
+  // taskless, like the real offline.js/budget.js captures — resolveKind only
+  // touches taskless entries
+  for (const kind of ['offline', 'budget']) {
+    const e = errlog.capture(kind, { text: `${kind} tripped` });
+    try {
+      assert.equal(e.kind, kind);
+      errlog.resolveKind(kind);
+      assert.ok(errlog.list().find((x) => x.id === e.id).resolved, `${kind} did not auto-resolve`);
+    } finally {
+      errlog.resolveKind(kind); // idempotent cleanup if the asserts threw early
+    }
+  }
+});
+
 test('capture: falsy text is a no-op — no entry created', () => {
   assert.equal(errlog.capture('run-failed', { taskId: 't-empty', text: '' }), null);
   assert.equal(errlog.capture('run-failed', { taskId: 't-empty' }), null);
