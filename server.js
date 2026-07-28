@@ -4,7 +4,7 @@ const path = require('path');
 const { execFile } = require('child_process');
 const { discoverSkills, discoverAgents, discoverRepos, defaultReposDir } = require('./lib/discovery');
 const os = require('os');
-const { state, save, saveSettings, flush, getTask, readTranscript, clearTranscript, sweepArchive, nextRev } = require('./lib/store');
+const { state, save, saveSettings, flush, getTask, readTranscript, clearTranscript, sweepArchive, readArchive, nextRev } = require('./lib/store');
 const runner = require('./lib/runner');
 const manager = require('./lib/manager');
 const auth = require('./lib/auth');
@@ -446,7 +446,8 @@ app.post('/api/skill/install', (req, res) => {
 // Rolling 5-hour usage across all local Claude Code activity. Cached 2 min.
 app.get('/api/usage', async (req, res) => {
   const usage = await require('./lib/usage').scan();
-  res.json({ ...usage, budgetTokens: state.settings.usageBudgetTokens || 0 });
+  // active() doubles as the refresh trigger whenever a tab polls
+  res.json({ ...usage, budgetTokens: state.settings.usageBudgetTokens || 0, blocked: require('./lib/budget').active() });
 });
 
 // Update the Claude Code CLI in place. `claude update` knows its own install
@@ -665,6 +666,41 @@ app.delete('/api/tasks/:id', (req, res) => {
 app.get('/api/tasks/:id/transcript', (req, res) => {
   if (!/^[0-9a-f-]{36}$/.test(req.params.id)) return res.status(404).json({ error: 'not found' });
   res.json(readTranscript(req.params.id));
+});
+
+// --- Archive browser: read-only over data/archive.jsonl ---
+// ponytail: full-file read + 1000-row cap — offset paging if an archive ever outgrows it
+const ARCHIVE_CAP = 1000;
+app.get('/api/archive', (req, res) => {
+  const all = readArchive();
+  const stats = { total: all.length, tokensOut: 0, tokensIn: 0, costUsd: 0, perWeek: {}, perRepo: {} };
+  for (const t of all) {
+    const s = t.stats || {};
+    stats.tokensOut += s.outputTokens || 0;
+    stats.tokensIn += s.inputTokens || 0;
+    stats.costUsd += s.costUsd || 0;
+    const ts = Date.parse(t.finishedAt || t.createdAt || '');
+    if (Number.isFinite(ts)) {
+      const d = new Date(ts);
+      d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // back to Monday
+      const wk = d.toISOString().slice(0, 10);
+      stats.perWeek[wk] = (stats.perWeek[wk] || 0) + 1;
+    }
+    const repo = t.cwd ? path.basename(t.cwd) : '(none)';
+    stats.perRepo[repo] = (stats.perRepo[repo] || 0) + 1;
+  }
+  const items = all.slice(-ARCHIVE_CAP).reverse().map((t) => {
+    const slim = { ...t };
+    for (const f of SLIM_OMIT) delete slim[f];
+    return slim;
+  });
+  res.json({ items, total: all.length, stats });
+});
+
+app.get('/api/archive/:id', (req, res) => {
+  const hit = readArchive().find((t) => t.id === req.params.id);
+  if (!hit) return res.status(404).json({ error: 'not found' });
+  res.json(hit);
 });
 
 app.post('/api/tasks/:id/run', (req, res) => {

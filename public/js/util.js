@@ -68,6 +68,17 @@ export function fillSelect(sel, opts, value) {
   sel.value = value || opts[0] || '';
 }
 
+// palette matcher: 3 prefix > 2 substring > 1 in-order subsequence > 0 miss.
+// q and text must already be lowercase.
+export function fuzzyScore(q, text) {
+  if (!q) return 1;
+  if (text.startsWith(q)) return 3;
+  if (text.includes(q)) return 2;
+  let i = 0;
+  for (const ch of text) if (ch === q[i] && ++i === q.length) return 1;
+  return 0;
+}
+
 // trailing-edge debounce (board filter input)
 export function debounce(fn, ms) {
   let t = null;

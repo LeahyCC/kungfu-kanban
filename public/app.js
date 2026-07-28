@@ -17,13 +17,15 @@ import { closeDrawer } from './js/drawer.js';
 import { closeTaskModal, closeImportModal, closeSettings } from './js/modals.js';
 import { closeErrors, closeAttn, loadErrors, loadManager } from './js/manager.js';
 import { applyCooldown, applyModelBlocks, renderNetChip, setServerOffline, renderHealth, renderUsage } from './js/chips.js';
+import { closePalette } from './js/palette.js'; // importing also wires the palette + global hotkeys
 import { connectSSE } from './js/sse.js';
 
 // ---------- Escape + focus trap for modals, the drawer, and dialogs ----------
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (document.querySelector('dialog.kk-dialog[open]')) return; // <dialog> closes itself
-    if (!$('#modalBackdrop').classList.contains('hidden')) { e.preventDefault(); closeTaskModal(); }
+    if (!$('#paletteBackdrop').classList.contains('hidden')) { e.preventDefault(); closePalette(); }
+    else if (!$('#modalBackdrop').classList.contains('hidden')) { e.preventDefault(); closeTaskModal(); }
     else if (!$('#importBackdrop').classList.contains('hidden')) { e.preventDefault(); closeImportModal(); }
     else if (!$('#settingsBackdrop').classList.contains('hidden')) { e.preventDefault(); closeSettings(); }
     else if (!$('#errorsBackdrop').classList.contains('hidden')) { e.preventDefault(); closeErrors(); }
