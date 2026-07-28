@@ -240,3 +240,64 @@ test('notifyGroupCompletions: ungrouped tasks and an empty board are ignored wit
     assert.doesNotThrow(() => notifyGroupCompletions());
   });
 });
+
+// --- board-default model/effort resolution ---------------------------------
+
+test('buildArgs: a "default" card resolves to the board default model/effort', () => {
+  const prevM = store.state.settings.defaultModel;
+  const prevE = store.state.settings.defaultEffort;
+  store.state.settings.defaultModel = 'sonnet';
+  store.state.settings.defaultEffort = 'high';
+  try {
+    const args = buildArgs({ id: 'a', prompt: 'p', model: 'default', effort: 'default' }, null);
+    assert.equal(args[args.indexOf('--model') + 1], 'sonnet');
+    assert.equal(args[args.indexOf('--effort') + 1], 'high');
+    // an explicit card choice still wins over the board default
+    const explicit = buildArgs({ id: 'a', prompt: 'p', model: 'haiku', effort: 'low' }, null);
+    assert.equal(explicit[explicit.indexOf('--model') + 1], 'haiku');
+    assert.equal(explicit[explicit.indexOf('--effort') + 1], 'low');
+    // and so does the fallback-ladder model
+    const ladder = buildArgs({ id: 'a', prompt: 'p', model: 'default' }, 'opus');
+    assert.equal(ladder[ladder.indexOf('--model') + 1], 'opus');
+  } finally {
+    if (prevM === undefined) delete store.state.settings.defaultModel;
+    else store.state.settings.defaultModel = prevM;
+    if (prevE === undefined) delete store.state.settings.defaultEffort;
+    else store.state.settings.defaultEffort = prevE;
+  }
+});
+
+test('buildArgs: no board default → "default" still adds no --model/--effort', () => {
+  const prevM = store.state.settings.defaultModel;
+  const prevE = store.state.settings.defaultEffort;
+  delete store.state.settings.defaultModel;
+  delete store.state.settings.defaultEffort;
+  try {
+    const args = buildArgs({ id: 'a', prompt: 'p', model: 'default', effort: 'default' }, null);
+    assert.ok(!args.includes('--model'));
+    assert.ok(!args.includes('--effort'));
+  } finally {
+    if (prevM !== undefined) store.state.settings.defaultModel = prevM;
+    if (prevE !== undefined) store.state.settings.defaultEffort = prevE;
+  }
+});
+
+test('buildArgs: a BLOCKED board default steps down the ladder (no relaunch loop)', () => {
+  const models = require('../lib/models');
+  const prevM = store.state.settings.defaultModel;
+  const prevB = store.state.settings.modelBlocks;
+  store.state.settings.defaultModel = 'sonnet';
+  store.state.settings.modelBlocks = { sonnet: Date.now() + 30 * 60_000 };
+  try {
+    // the ladder must apply to the board default too — otherwise a card left
+    // on 'default' relaunches into the same blocked model forever
+    assert.equal(models.effective('sonnet'), 'haiku');
+    const args = buildArgs({ id: 'a', prompt: 'p', model: 'default' }, null);
+    assert.equal(args[args.indexOf('--model') + 1], 'haiku');
+  } finally {
+    if (prevM === undefined) delete store.state.settings.defaultModel;
+    else store.state.settings.defaultModel = prevM;
+    if (prevB === undefined) delete store.state.settings.modelBlocks;
+    else store.state.settings.modelBlocks = prevB;
+  }
+});

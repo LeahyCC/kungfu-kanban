@@ -47,11 +47,13 @@ export function paintThemeToggle() {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = light ? '#F6F2E9' : '#141210';
 }
-$('#themeToggle').addEventListener('click', () => {
-  const next = !(document.documentElement.dataset.theme === 'light');
-  if (next) document.documentElement.dataset.theme = 'light';
-  else delete document.documentElement.dataset.theme;
-  try { localStorage.setItem('kk-theme', next ? 'light' : 'dark'); } catch {}
+// The header toggle is a shortcut for the Appearance pane's theme setting —
+// both write the same stored look (imported lazily to keep the module cycle
+// evaluation-safe: the call only happens on click, long after both load).
+$('#themeToggle').addEventListener('click', async () => {
+  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  const { setTheme } = await import('./appearance.js');
+  setTheme(next);
   paintThemeToggle();
 });
 paintThemeToggle();
@@ -62,6 +64,10 @@ paintThemeToggle();
 let serverOffline = false;
 export function setServerOffline(v) {
   serverOffline = !!v;
+}
+// 🔐 chip: the Claude CLI on this Mac is logged out — auto flow paused
+export function setCliAuth(blocked) {
+  $('#cliAuthChip').classList.toggle('hidden', !blocked);
 }
 export function renderNetChip() {
   $('#netChip').classList.toggle('hidden', navigator.onLine && !serverOffline);

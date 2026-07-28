@@ -236,6 +236,7 @@ app.get('/api/config', (req, res) => {
     settings: { ...state.settings, reposDir: reposDir() },
     cooldownUntil: cooldown.active() ? state.settings.cooldownUntil : 0,
     offline: offline.active(),
+    cliLoggedOut: require('./lib/authgate').active(),
     modelBlocks: models.blocks(),
     authGate: !!auth.getToken(), // the UI shows Sign out only when a gate exists
   });
@@ -268,6 +269,16 @@ app.put('/api/settings', (req, res) => {
   if (typeof defaultPermissionMode === 'string') {
     if (PERMISSION_MODES.includes(defaultPermissionMode)) state.settings.defaultPermissionMode = defaultPermissionMode;
     else if (!defaultPermissionMode) delete state.settings.defaultPermissionMode; // empty resets to acceptEdits
+  }
+  // Board-wide defaults a card's 'default' model/effort resolves to at launch.
+  const { defaultModel, defaultEffort } = req.body || {};
+  if (typeof defaultModel === 'string') {
+    if (MODELS.includes(defaultModel) && defaultModel !== 'default') state.settings.defaultModel = defaultModel;
+    else delete state.settings.defaultModel; // 'default' or empty = let the CLI pick
+  }
+  if (typeof defaultEffort === 'string') {
+    if (EFFORTS.includes(defaultEffort) && defaultEffort !== 'default') state.settings.defaultEffort = defaultEffort;
+    else delete state.settings.defaultEffort;
   }
   if (Number.isInteger(archiveDays) && archiveDays >= 0 && archiveDays <= 365) {
     state.settings.archiveDays = archiveDays;
