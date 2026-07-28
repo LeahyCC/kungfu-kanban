@@ -65,6 +65,14 @@ inside this section rather than as a release of their own.
   old UI and a manual second refresh was needed. The page now reloads itself
   once when a new shell version takes control — board self-updates and deploys
   land on screen without touching ⌘R.
+- **`gh pr create` racing a card's own agent no longer strands the card.**
+  When a card's agent opened its own PR before the board's PR flow ran, `gh`
+  refused the duplicate and the card was left with `prUrl: null` — no diff, no
+  checks, nothing for the merge flow to act on — and got logged as an
+  operational error even though the PR existed. `gh`'s failure message
+  carries the existing PR's URL; the flow now recovers it and records the
+  card as opened instead of erroring. Any other `gh pr create` failure still
+  behaves as before.
 
 ## [1.7.1] — 2026-07-28
 
