@@ -7,6 +7,9 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+Bookkeeping: 1.8.0 was merged to `main` but never tagged, so its notes ship
+inside this section rather than as a release of their own.
+
 ### Added
 - **The empty board is now a composer.** A quiet dojo opens with a prompt box
   and the settings that matter — project, model, effort, permissions, and
@@ -17,21 +20,6 @@ compares your clone against `origin/main` and offers a one-click update.
   creates and runs. Your last-used settings are remembered per device.
 - `POST /api/prompt/improve` — sharpen one prompt in place. No cards, no board
   side effects.
-
-### Fixed
-- **✨ Draft and ↻ Refine killed the agent they had just spawned.** The
-  cancel-on-disconnect guard hung off the *request*'s `close` event, which
-  modern Node emits as soon as the body has been read — about 16ms in, long
-  before the agent finishes — so every draft died instantly with an empty error
-  that echoed the whole prompt back. The guard now hangs off the *response* and
-  distinguishes "we answered" from "the connection dropped", so cancelling
-  still stops the run and burns no usage. Regression test covers both paths.
-- Agent-call failures report the CLI's own reason (usage limits, auth, model
-  errors) instead of a wall of echoed prompt: a non-zero exit still carries the
-  cause as JSON on stdout, which the error path used to discard.
-
-
-### Added
 - **Board defaults for model and effort.** ⚙ Settings gains "Default model" and
   "Default effort" — a card left on `default` now resolves to the board default
   at launch (fresh runs, follow-ups, and the fallback ladder all respect it; an
@@ -62,6 +50,16 @@ compares your clone against `origin/main` and offers a one-click update.
   `claude /login` any success clears the gate and resumes the queue.
 
 ### Fixed
+- **✨ Draft and ↻ Refine killed the agent they had just spawned.** The
+  cancel-on-disconnect guard hung off the *request*'s `close` event, which
+  modern Node emits as soon as the body has been read — about 16ms in, long
+  before the agent finishes — so every draft died instantly with an empty error
+  that echoed the whole prompt back. The guard now hangs off the *response* and
+  distinguishes "we answered" from "the connection dropped", so cancelling
+  still stops the run and burns no usage. Regression test covers both paths.
+- Agent-call failures report the CLI's own reason (usage limits, auth, model
+  errors) instead of a wall of echoed prompt: a non-zero exit still carries the
+  cause as JSON on stdout, which the error path used to discard.
 - **No more double-refresh after updates.** The service worker serves the
   cached shell first, so the update flow's automatic reload still showed the
   old UI and a manual second refresh was needed. The page now reloads itself
