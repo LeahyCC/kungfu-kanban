@@ -16,7 +16,7 @@ import { $, esc, relTime, fmtTok, scheduleLabel } from './util.js';
 import { api, toast, confirmDlg, withBusy } from './api.js';
 import { isPrUnshipped, depPass } from './deps.js';
 import { openDrawer } from './drawer.js';
-import { openModal } from './modals.js';
+import { buildComposer, mountComposer } from './composer.js';
 
 // Rebuilding mid-drag kills the drag; defer renders until it ends. Column
 // elements (and their scroll positions) persist across renders.
@@ -852,35 +852,15 @@ function pruneGroups(seen) {
   }
 }
 
+// A quiet board is the best moment to start work, so the empty state IS the
+// composer: prompt box, project/model settings, and the ways out. Built once
+// and kept — remounting would discard half-typed text on every render pass.
 let emptyEl = null;
 function emptyStateEl() {
   if (emptyEl) return emptyEl;
-  const empty = document.createElement('div');
-  empty.className = 'dojo-empty';
-  empty.innerHTML = `
-    <h3>The dojo is quiet</h3>
-    <p>Cards create themselves — say the word in any Claude Code session and the board
-      drafts, imports, and triages them. Results land in Review.</p>
-    <div class="empty-prompt" title="The kungfu-todo skill is auto-installed for every Claude Code session on this machine">
-      <span class="c">$ claude</span>
-      <span>&raquo; create a kungfu todo for: fix the flaky auth test, then add a healthcheck endpoint</span>
-    </div>
-    <p class="empty-sub">Or ⇪ Import: paste a plan, ✨ describe the work and the Sensei writes the
-      cards, or pull your open GitHub issues.</p>`;
-  const actions = document.createElement('div');
-  actions.className = 'empty-actions';
-  const imp = document.createElement('button');
-  imp.className = 'primary';
-  imp.textContent = '⇪ Import / draft cards';
-  imp.addEventListener('click', () => $('#importBtn').click());
-  const manual = document.createElement('button');
-  manual.className = 'ghost';
-  manual.textContent = '＋ Write one by hand';
-  manual.addEventListener('click', () => openModal(null));
-  actions.append(imp, manual);
-  empty.appendChild(actions);
-  emptyEl = empty;
-  return empty;
+  emptyEl = buildComposer();
+  queueMicrotask(() => { if (emptyEl.isConnected) mountComposer(); }); // selects need it in the DOM
+  return emptyEl;
 }
 
 function updateHeaderStatus() {

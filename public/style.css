@@ -1042,7 +1042,7 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
   word-break: break-word;
 }
 
-/* board empty state — the dojo is quiet */
+/* boot states (loading / cannot reach the dojo) reuse this centred column */
 .dojo-empty {
   grid-column: 1 / -1;
   display: flex;
@@ -1054,34 +1054,75 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 }
 .dojo-empty h3 { font-size: 1.375rem; font-weight: 600; }
 .dojo-empty p { color: var(--ink-600); font-size: 0.875rem; max-width: 440px; }
-.dojo-empty .empty-sub { font-size: 0.8125rem; color: var(--ink-400); }
-/* the terminal prompt that creates cards — the ink slab speaks */
-.dojo-empty .empty-prompt {
+.dojo-empty .empty-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+/* board empty state — the composer: a quiet board is where work starts */
+.composer {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(680px, 100%);
+  margin: 0 auto;
+  padding: 40px 0 24px;
+}
+.composer h3 { font-size: 1.375rem; font-weight: 600; }
+.composer .cmp-lead { color: var(--ink-600); font-size: 0.875rem; }
+.composer .cmp-cli {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  background: var(--accent-wash);
+  border-radius: 3px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+#cmpPrompt {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  padding: 12px 14px;
+  resize: vertical;
+}
+.composer .cmp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: end;
+}
+.composer .cmp-row label {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  align-items: flex-start;
-  text-align: left;
-  background: var(--slab-bg);
-  color: var(--slab-text);
-  border: 1px solid var(--slab-rule);
-  border-radius: 4px;
-  padding: 12px 16px;
-  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-400);
+  margin: 0;
+  flex: 1 1 130px;
+}
+.composer .cmp-row select { width: 100%; }
+.composer .cmp-row .cmp-check {
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  text-transform: none;
+  letter-spacing: 0;
   font-size: 12.5px;
-  line-height: 1.5;
-  max-width: 440px;
+  color: var(--ink-600);
+  padding-bottom: 7px;
 }
-.dojo-empty .empty-prompt .c { color: var(--ink-400); }
-/* like .fmt-example: an instructional example, not agent output — paper surface in
-   light mode. On paper-2 the .c tint (--ink-400 #5F594F) rises to ~5.7:1, so it needs
-   no separate override; the dark slab is kept only for the real transcript. */
-[data-theme='light'] .dojo-empty .empty-prompt {
-  background: var(--paper-2);
-  color: var(--ink-900);
-  border-color: var(--rule);
+.composer .cmp-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.composer .cmp-spacer { flex: 1; }
+.composer .cmp-undo { color: var(--ink-400); }
+
+@media (max-width: 700px) {
+  .composer { padding-top: 20px; }
+  .composer .cmp-row label { flex-basis: 100%; }
+  .composer .cmp-spacer { display: none; }
+  .composer .cmp-actions button { flex: 1 1 auto; }
 }
-.dojo-empty .empty-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
 /* ============================================================
    MODAL — printed card, hard shadow
