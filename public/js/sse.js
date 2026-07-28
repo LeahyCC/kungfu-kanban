@@ -12,7 +12,7 @@
 
 import { state, RUNNING_LIKE, optimistic, mergeTaskPayload } from './state.js';
 import { $, createCoalescer } from './util.js';
-import { applyCooldown, applyModelBlocks, renderNetChip, setServerOffline } from './chips.js';
+import { applyCooldown, applyModelBlocks, renderNetChip, setServerOffline, renderUsage } from './chips.js';
 import { renderErrChip, loadErrors, loadManager, setMgrBusy, renderAttn, refreshMgrBadgeSoon } from './manager.js';
 import { render, loadTasks } from './board.js';
 import { renderDrawerMeta, renderDrawerActions, closeDrawer, appendTranscriptEntry } from './drawer.js';
@@ -80,6 +80,10 @@ export function connectSSE() {
     }
     if (evt.type === 'modelblocks') {
       applyModelBlocks(evt.blocks);
+      return;
+    }
+    if (evt.type === 'usage') {
+      renderUsage(); // budget tripped or freed — repaint the ⛽ chip
       return;
     }
     if (evt.type === 'errors') {

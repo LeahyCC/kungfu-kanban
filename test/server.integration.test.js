@@ -313,3 +313,98 @@ describe('auth gate', () => {
     assert.equal(res.status, 200);
   });
 });
+
+describe('archive browser', () => {
+  let child, base, dataDir;
+  const A = {
+    id: 'aaaaaaaa-1111-2222-3333-444444444444',
+    title: 'older archived card',
+    prompt: 'do the old thing',
+    resultText: 'did the old thing',
+    acceptanceCriteria: 'it is done',
+    cwd: '/Users/x/repos/alpha',
+    status: 'done',
+    finishedAt: '2026-07-01T12:00:00.000Z',
+    stats: { outputTokens: 1000, inputTokens: 200 },
+  };
+  const B = {
+    id: 'bbbbbbbb-1111-2222-3333-444444444444',
+    title: 'newer archived card',
+    prompt: 'do the new thing',
+    resultText: 'did the new thing',
+    cwd: '/Users/x/repos/beta',
+    status: 'done',
+    finishedAt: '2026-07-15T12:00:00.000Z',
+    prUrl: 'https://github.com/x/beta/pull/9',
+    stats: { outputTokens: 500, inputTokens: 100 },
+  };
+
+  before(async () => {
+    dataDir = mkTempDataDir();
+    fs.writeFileSync(
+      path.join(dataDir, 'archive.jsonl'),
+      [JSON.stringify(A), 'not json {', JSON.stringify(B), ''].join('\n')
+    );
+    ({ child, base } = await bootServer({ KFK_DATA_DIR: dataDir }));
+    await putJson(base, '/api/manager/config', { enabled: false });
+  });
+
+  after(async () => {
+    await killChild(child);
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+
+  test('GET /api/archive — slim items newest-first, corrupt lines skipped, stats summed', async () => {
+    const res = await fetch(`${base}/api/archive`);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.total, 2); // the corrupt line is not a record
+    assert.equal(body.items.length, 2);
+    assert.equal(body.items[0].id, B.id); // newest (last appended) first
+    assert.equal(body.items[1].id, A.id);
+    for (const f of ['prompt', 'resultText', 'acceptanceCriteria']) {
+      assert.ok(!(f in body.items[0]), `slim item leaked ${f}`);
+    }
+    assert.equal(body.stats.total, 2);
+    assert.equal(body.stats.tokensOut, 1500);
+    assert.equal(body.stats.tokensIn, 300);
+    assert.equal(body.stats.perRepo.alpha, 1);
+    assert.equal(body.stats.perRepo.beta, 1);
+    // both finishedAt dates are Wednesdays — their Monday keys
+    assert.equal(body.stats.perWeek['2026-06-29'], 1);
+    assert.equal(body.stats.perWeek['2026-07-13'], 1);
+  });
+
+  test('GET /api/archive/:id — full record; unknown id 404', async () => {
+    const res = await fetch(`${base}/api/archive/${A.id}`);
+    assert.equal(res.status, 200);
+    const full = await res.json();
+    assert.equal(full.prompt, A.prompt);
+    assert.equal(full.resultText, A.resultText);
+    const miss = await fetch(`${base}/api/archive/nope`);
+    assert.equal(miss.status, 404);
+  });
+});
+
+describe('archive browser (empty)', () => {
+  let child, base, dataDir;
+
+  before(async () => {
+    dataDir = mkTempDataDir(); // no archive.jsonl at all
+    ({ child, base } = await bootServer({ KFK_DATA_DIR: dataDir }));
+  });
+
+  after(async () => {
+    await killChild(child);
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+
+  test('GET /api/archive — empty payload, not a 500', async () => {
+    const res = await fetch(`${base}/api/archive`);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.deepEqual(body.items, []);
+    assert.equal(body.total, 0);
+    assert.equal(body.stats.tokensOut, 0);
+  });
+});
