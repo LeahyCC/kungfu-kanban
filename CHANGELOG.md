@@ -5,7 +5,7 @@ All notable changes to Kungfu Kanban. Format follows
 minor bumps for features, patch bumps for fixes. The board's status line
 compares your clone against `origin/main` and offers a one-click update.
 
-## [Unreleased]
+## [1.7.1] — 2026-07-28
 
 ### Added
 - **Archive tab.** Done cards swept out of the board by `archiveDays` are no
