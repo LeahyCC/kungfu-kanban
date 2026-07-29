@@ -18,6 +18,7 @@ const errlog = require('./lib/errlog');
 const bus = require('./lib/bus');
 const prflow = require('./lib/prflow');
 const singleton = require('./lib/singleton');
+const ptylib = require('./lib/pty');
 
 // Before anything arms a timer or a watcher: refuse to be the second
 // automation loop on this board. See lib/singleton.js for the six-day orphan
@@ -83,6 +84,19 @@ app.use((req, res, next) => {
   };
   next();
 });
+
+// xterm.js for the built-in terminal, served straight out of node_modules so
+// no build step and no vendored blob in git. Loaded on demand by js/term.js —
+// the board's first paint never pays for it.
+for (const [route, pkg] of [
+  ['/vendor/xterm', '@xterm/xterm/lib'],
+  ['/vendor/xterm-css', '@xterm/xterm/css'],
+  ['/vendor/xterm-fit', '@xterm/addon-fit/lib'],
+]) {
+  app.use(route, express.static(path.join(__dirname, 'node_modules', pkg), {
+    setHeaders: (res) => res.setHeader('Cache-Control', 'max-age=86400'),
+  }));
+}
 
 app.use(
   express.static(path.join(__dirname, 'public'), {
@@ -269,6 +283,13 @@ app.put('/api/settings', (req, res) => {
     prwatch.applyInterval();
   }
   if (typeof prWatchAutoFix === 'boolean') state.settings.prWatchAutoFix = prWatchAutoFix;
+  // Turning the built-in terminal off also ends the shells it already opened —
+  // a switch that leaves live sessions running isn't a switch.
+  const { terminal } = req.body || {};
+  if (typeof terminal === 'boolean') {
+    state.settings.terminal = terminal;
+    if (!terminal) ptylib.killAll();
+  }
   const { usageBudgetM } = req.body || {};
   if (typeof usageBudgetM === 'number' && usageBudgetM >= 0 && usageBudgetM <= 1000) {
     state.settings.usageBudgetTokens = Math.round(usageBudgetM * 1_000_000);
@@ -537,6 +558,86 @@ app.post('/api/system/update-claude', (req, res) => {
     res.json({ ok: true, output: out.slice(0, 300) });
   });
 });
+
+// --- Built-in terminal -----------------------------------------------------
+// A real shell on a real pty (lib/pty.js), reachable from whatever device the
+// board is open on. Sessions live server-side, so a reload reattaches instead
+// of restarting. Output rides SSE base64-framed (terminal bytes are binary and
+// full of newlines — neither survives a raw SSE data line); keystrokes come
+// back over POST, which on loopback/tailnet is well under a frame of latency.
+function termEnabled() {
+  return state.settings.terminal !== false;
+}
+function termGate(req, res, next) {
+  if (!termEnabled()) return res.status(403).json({ error: 'the built-in terminal is off — enable it in ⚙ Settings' });
+  next();
+}
+
+app.get('/api/term', termGate, (req, res) => res.json({ sessions: ptylib.list() }));
+
+app.post('/api/term', termGate, (req, res) => {
+  const b = req.body || {};
+  const r = ptylib.create({
+    cwd: b.cwd || state.settings.defaultCwd,
+    cols: b.cols,
+    rows: b.rows,
+    label: b.label,
+  });
+  if (r.error) return res.status(400).json(r);
+  res.json(r.session);
+});
+
+app.get('/api/term/:id/stream', termGate, (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  // Coalesce per tick: a chatty build emits thousands of small writes, and one
+  // SSE frame each would spend more time framing than rendering.
+  let pending = [];
+  let timer = null;
+  const flush = () => {
+    timer = null;
+    if (!pending.length) return;
+    const chunk = Buffer.concat(pending);
+    pending = [];
+    if (!res.destroyed) res.write(`data: ${chunk.toString('base64')}\n\n`);
+  };
+  const handle = ptylib.attach(req.params.id, (chunk) => {
+    pending.push(chunk);
+    if (!timer) timer = setTimeout(flush, 16);
+  });
+  if (!handle) {
+    res.write('event: gone\ndata: {}\n\n');
+    return res.end();
+  }
+  if (handle.backlog.length) res.write(`data: ${handle.backlog.toString('base64')}\n\n`);
+  const ping = setInterval(() => { if (!res.destroyed) res.write(': ping\n\n'); }, 25_000);
+  req.on('close', () => {
+    clearInterval(ping);
+    clearTimeout(timer);
+    handle.detach();
+  });
+});
+
+app.post('/api/term/:id/input', termGate, (req, res) => {
+  const data = (req.body || {}).data;
+  if (typeof data !== 'string') return res.status(400).json({ error: 'no data' });
+  if (!ptylib.write(req.params.id, Buffer.from(data, 'base64'))) {
+    return res.status(410).json({ error: 'session is gone' });
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/term/:id/resize', termGate, (req, res) => {
+  const b = req.body || {};
+  if (!ptylib.resize(req.params.id, b.cols, b.rows)) return res.status(410).json({ error: 'session is gone' });
+  res.json({ ok: true });
+});
+
+app.delete('/api/term/:id', termGate, (req, res) => res.json({ ok: ptylib.kill(req.params.id) }));
 
 // System health: is the claude CLI reachable, is gh authed? Cached 5 min.
 let healthCache = { at: 0, data: null };
@@ -867,6 +968,7 @@ if (HOST !== '127.0.0.1' && HOST !== 'localhost' && !auth.getToken()) {
 // before exiting — a restart is safe even with cards in flight.
 function shutdown() {
   runner.stopAll();
+  ptylib.killAll(); // no orphan shells across a kickstart
   flush();
   singleton.release(); // the next start must not have to wait out our stale lock
   process.exit(0);
