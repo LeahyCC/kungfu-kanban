@@ -33,3 +33,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: exit 0
+  # One merged PR, one release. Runs only after everything above is green, and
+  # only on main; a PR that bumped no version (or left its notes under
+  # [Unreleased]) is a silent no-op. Tag + Release only — never a commit, so
+  # main's ruleset can't block it. See scripts/cut-release.js.
+  release:
+    needs: [test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write     # push the annotated tag, publish the Release
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0      # full history + tags — cut-release checks them
+          fetch-tags: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: node scripts/cut-release.js
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
