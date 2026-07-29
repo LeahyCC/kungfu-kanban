@@ -49,6 +49,13 @@ export function haystackFor(t) {
   }
   return h;
 }
+// ▶ Run can legitimately park a card instead of launching it (unmet deps, no
+// free slot, a gate up). Silence there reads as a dead button — say why.
+function notePark(r) {
+  if (r && r.queued && r.reason) toast(`⛓ queued — ${r.reason}`, 'status');
+  return r;
+}
+
 function matchesFilter(t) {
   return !filterText || haystackFor(t).includes(filterText);
 }
@@ -288,7 +295,7 @@ function attachDropHandlers(rec, col) {
     // optimistic: the card moves now; a failure rolls it back (api toasts).
     const prev = applyOptimistic(id, { status: col.key });
     const r = col.key === 'queued'
-      ? await api(`/api/tasks/${id}/run`, { method: 'POST' })
+      ? notePark(await api(`/api/tasks/${id}/run`, { method: 'POST' }))
       : await api(`/api/tasks/${id}`, { method: 'PATCH', body: { status: col.key } });
     if (!r || r.error) rollbackOptimistic(id, prev);
     else mergeTaskResponse(r);
@@ -584,7 +591,7 @@ function quickAction(btn, id, act) {
       const prev = applyOptimistic(id, { status: 'queued' });
       const r = await api(`/api/tasks/${id}/run`, { method: 'POST' });
       if (!r || r.error) { rollbackOptimistic(id, prev); return; }
-      if (r.queued && r.waitingOn && r.waitingOn.length) toast(`⛓ queued — waits on: ${r.waitingOn.join(' · ')}`, 'status');
+      notePark(r);
       mergeTaskResponse(r);
     } else if (act === 'unqueue') {
       const prev = applyOptimistic(id, { status: 'backlog' });
