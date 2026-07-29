@@ -7,6 +7,25 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.12.0] — 2026-07-29
+
+### Added
+- **A release is cut on every merged PR.** Four versions (1.8.0 through 1.10.1)
+  reached `main` without ever being tagged, because cutting the tag and the
+  GitHub Release was a manual step nobody owned. Merging to `main` now runs
+  `scripts/cut-release.js`: it reads the version, and if there is a dated
+  `## [X.Y.Z]` section for it that isn't tagged yet, creates the annotated tag
+  and publishes the Release with that section as the notes. Tag and Release
+  only — it never commits, so `main`'s ruleset can't block it. A PR that bumped
+  no version, or left its notes under `[Unreleased]`, releases nothing and
+  stays green. The convention that makes it work: **PRs write their changelog
+  section dated**, not under `[Unreleased]` (see CLAUDE.md and the PR
+  template). Publishing is opt-in when run by hand — a bare
+  `node scripts/cut-release.js` prints what it would do and exits, because the
+  first local smoke run of it published a real v1.12.0 that had to be deleted
+  from the feed. CI passes `CI=true`; a human passes `--yes`. (#113 dated the
+  1.11.0 section this builds on.)
+
 ### Fixed
 - **The terminal no longer scrambles fast typing.** Each keystroke was its own
   POST, and concurrent requests have no ordering guarantee — so typing quickly
@@ -16,7 +35,9 @@ compares your clone against `origin/main` and offers a one-click update.
   Sends are now serialized — one request in flight, anything typed meanwhile
   coalesces into the next — so a burst costs *fewer* requests than before, not
   more, and arrives in order. A failed send no longer wedges the queue or
-  raises an unhandled rejection either.
+  raises an unhandled rejection either. Shipped to `main` as 1.11.1 in #114 but
+  never tagged — its notes were undated, which is the exact hole the automation
+  above closes, so it is released here instead.
 
 ## [1.11.0] — 2026-07-29
 
