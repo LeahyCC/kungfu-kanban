@@ -24,7 +24,17 @@ compares your clone against `origin/main` and offers a one-click update.
   `node scripts/cut-release.js` prints what it would do and exits, because the
   first local smoke run of it published a real v1.12.0 that had to be deleted
   from the feed. CI passes `CI=true`; a human passes `--yes`. (#113 dated the
-  1.11.0 section this builds on.)
+  1.11.0 section this builds on; #115 shipped the automation itself.)
+- A release no longer has to cite **its own** PR. The audit reconciles every PR
+  merged since the prior tag against the release section, and the release's own
+  merge commit joins that range the instant it lands — so the section had to
+  reference the PR that wrote it, which you can only manage by amending a PR
+  after opening it. It cost the automation its first run: #115 merged, the audit
+  failed on the missing `#115`, `test` was skipped, the `release` job never ran,
+  and nothing was tagged. The PR whose merge commit is HEAD is now exempt. On a
+  `pull_request` the checked-out HEAD is a merge preview with no
+  "Merge pull request #N" subject, so nothing is exempt there and the PR-time
+  audit keeps its full strength.
 
 ### Fixed
 - **The terminal no longer scrambles fast typing.** Each keystroke was its own

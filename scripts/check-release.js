@@ -53,7 +53,7 @@ function mergedPRNumbers(mergeLog) {
 }
 
 // { ok, code, message }. code: no-section | unreleased | empty-unreleased | not-release | first-release | incomplete | ok
-function auditRelease({ version, changelog, tags, mergeLogSince }) {
+function auditRelease({ version, changelog, tags, mergeLogSince, headMergePR }) {
   const body = sectionBody(changelog, version);
   const tagged = tags.includes('v' + version);
   if (body === null) {
@@ -77,7 +77,14 @@ function auditRelease({ version, changelog, tags, mergeLogSince }) {
   if (!prior) {
     return { ok: true, code: 'first-release', message: `${version} is the first tagged release — nothing prior to reconcile.` };
   }
-  const prs = mergedPRNumbers(mergeLogSince(prior));
+  // A release must account for every OTHER PR since the prior tag — that is the
+  // point: nothing slips in uncited. It must not have to cite the PR that wrote
+  // the section, which is self-evidently in the release and can only be cited by
+  // amending a PR after opening it (you don't know your own number before then).
+  // On main after a merge, HEAD *is* that merge commit; on a pull_request the
+  // checked-out HEAD is a merge preview with no "Merge pull request #N" subject,
+  // so nothing is excluded and the PR-time audit keeps its full strength.
+  const prs = mergedPRNumbers(mergeLogSince(prior)).filter((pr) => pr !== headMergePR);
   const missing = prs.filter((pr) => !new RegExp(`#${pr}(?!\\d)`).test(body));
   if (missing.length) {
     return { ok: false, code: 'incomplete', message: `Release ${version} is missing changelog entries for ${missing.map((p) => '#' + p).join(', ')} (merged since ${prior}). Cite each in the ## [${version}] section, or omit only deliberately.` };
@@ -91,11 +98,15 @@ function run() {
   // execFile with an arg array — no shell, per the repo convention. `tag` is
   // always a validated vX.Y.Z string from priorReleaseTag; never user input.
   const git = (...args) => execFileSync('git', args, { encoding: 'utf8' });
+  // The PR this very commit merged, if HEAD is a merge commit — excluded from
+  // the citation requirement (see auditRelease).
+  const headMergePR = (mergedPRNumbers(git('log', '-1', '--pretty=%s%n%b', 'HEAD')) || [])[0] || null;
   const res = auditRelease({
     version: JSON.parse(fs.readFileSync('package.json', 'utf8')).version,
     changelog: fs.readFileSync('CHANGELOG.md', 'utf8'),
     tags: git('tag').split('\n').map((s) => s.trim()).filter(Boolean),
     mergeLogSince: (tag) => git('log', `${tag}..HEAD`, '--merges', '--pretty=%s%n%b'),
+    headMergePR,
   });
   console.log((res.ok ? '✓ ' : '✗ ') + res.message);
   process.exit(res.ok ? 0 : 1);
