@@ -53,6 +53,18 @@ inside this section rather than as a release of their own.
   `claude /login` any success clears the gate and resumes the queue.
 
 ### Fixed
+- **A stray second server drove the board for six days.** A card's own smoke
+  test on 2026-07-22 backgrounded `node -e "require('./server.js')"` in the
+  checkout and leaked it. It never held `:4747`, so nothing looked wrong — but
+  it ran a full automation loop against the real `data/`: a Sensei pass every
+  five minutes whose CLI could not authenticate (**1331** `Not logged in` rows
+  in the error tracker), a second inbox watcher racing the first (duplicate
+  imports, "could not archive" errors, one duplicate card launched and failed),
+  and a second PR watcher. The port was never a lock — a scratch server picks
+  its own — so the **data dir** is one now: a second server against the same
+  `data/` refuses to start and says who holds it. It waits out a
+  `launchctl kickstart -k` handover, takes over a lock whose process is gone,
+  and ignores a garbage lock file, so the board can't be stranded by one.
 - **▶ Run looked broken on a card that couldn't start yet.** A card with an
   unmet dependency (or a full board, or a gate up) is parked rather than
   launched — correct, but the drawer's Run button ignored the answer entirely
