@@ -106,6 +106,7 @@
     <div class="toolbar-actions">
       <input id="filterInput" class="filter" type="search" placeholder="⌕ filter cards…" aria-label="Filter cards by text, repo, model, or skill" title="Filter the board by title, prompt, repo path, model, agent, or skill" />
       <label class="conc" title="How many agent sessions may run at once — extras wait in Queued. Keeps parallel cards from burning your subscription rate limits.">parallel <input id="maxConcurrent" type="number" min="1" max="8" /></label>
+      <button id="termToggle" class="ghost" title="A real shell on this Mac — your $SHELL, your ~/.zshrc, your prompt (⌘J)">▸_ Terminal</button>
       <button id="newTaskBtn" class="ghost" title="Fallback: write a card by hand — nothing runs until you launch it">＋ New card</button>
       <button id="importBtn" class="primary"
         title="The main way in: paste a plan, ✨ describe the work and let the Sensei draft the cards, or pull GitHub issues">⇪
@@ -407,6 +408,7 @@ The prompt: self-contained instructions for the executing agent.
           </label>
           <label class="check-row"><input type="checkbox" name="prWatchAutoFix" /> auto-fix PR merge conflicts (spawns a fix card, max 2 tries)</label>
           <p class="hint">Merged PRs ship their card automatically; conflicted ones can spawn a fix card.</p>
+          <label class="check-row" title="The ▸_ Terminal panel: a real shell on this Mac, running your $SHELL with ~/.zshrc. Anyone who can reach the board with the token gets it — turn it off if that's not what you want."><input type="checkbox" name="terminal" /> built-in terminal (⌘J)</label>
           <label title="Personal skills in ~/.claude/skills, installed and kept current automatically at server start; the button is a manual repair hatch. kungfu-todo: say 'create a kungfu todo for…' in any Claude Code session. ponytail: the lazy-senior-dev discipline. humanizer: strips AI writing tells from prose (both ship with the board, auto-selected on new cards).">Claude Code skills <span class="hint-inline">(auto-installed at boot)</span></label>
           <div class="skill-install-row">
             <span id="skillStatus" class="footnote">checking…</span>
@@ -483,6 +485,20 @@ The prompt: self-contained instructions for the executing agent.
     </form>
   </div>
 </div>
+
+<!-- Built-in terminal: a real shell on the host, server-side session so it
+     survives a reload. xterm.js loads on demand the first time it opens. -->
+<section id="termPanel" class="term-panel hidden" aria-label="Terminal">
+  <div class="term-bar">
+    <span class="term-title" aria-hidden="true">▸_</span>
+    <div id="termTabs" class="term-tabs" role="tablist" aria-label="Shell sessions"></div>
+    <div class="term-bar-actions">
+      <button id="termKill" class="ghost mini" title="End this shell for good and open a fresh one">⏻ kill</button>
+      <button id="termClose" class="ghost mini" title="Hide the terminal — whatever is running keeps running (⌘J)" aria-label="Hide terminal">✕</button>
+    </div>
+  </div>
+  <div id="termScreen" class="term-screen"></div>
+</section>
 
 <script type="module" src="app.js"></script>
 </body>
