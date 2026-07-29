@@ -143,6 +143,32 @@ Columns: **Backlog → Queued → Running → Review → Done**
 - Cards with a PR get **⇉ Merge PR / Close PR** buttons in the drawer — merging
   happens via `gh` and stamps the card Done on the spot.
 
+### Built-in terminal (⌘J)
+
+**▸_ Terminal** in the toolbar (or ⌘J, or `t` in the command palette) opens a real
+shell at the bottom of the board — your `$SHELL` started as a login+interactive
+shell, so `~/.zshrc` and `~/.zprofile` load exactly as they do in your own terminal:
+prompt, aliases, plugins, colours. It is a genuine pty, so job control and
+full-screen TUIs (vim, lazygit, `claude -r <session-id>`) work, and resizing the
+panel resizes the shell.
+
+Sessions belong to the **server**, not the tab. Close the panel, reload the board,
+or pick it up on your phone over Tailscale — `npm test` keeps running and the panel
+reattaches with its scrollback. The panel bar holds one tab per shell (＋ for a new
+one), **⏻ kill** ends the current shell for good, and **✕** just hides the panel.
+Up to 8 sessions; a shell with nobody attached is reaped after 30 idle minutes.
+
+No native module is involved: the pty comes from Python's standard library
+(`lib/ptyhost.py`, spawned by `lib/pty.js`), so installing the board is still
+`git pull && npm i`. It needs `python3` — stock on macOS with the Xcode command
+line tools.
+
+⚠ It is a shell on your Mac behind the same token as the rest of the board. That is
+not a new trust boundary (anyone with the token can already run a card at
+`bypassPermissions`), but it is a much more direct one — turn it off in
+**⚙ Settings → System → built-in terminal** if you'd rather not have it. Turning it
+off also kills any sessions already open.
+
 ### Archiving old Done cards
 
 The Done column would otherwise grow forever, so a daily sweep moves cards out
@@ -523,13 +549,15 @@ to restart it.
 | `PORT` | `4747` | listen port |
 | `HOST` | `127.0.0.1` | bind address; anything non-loopback requires a token |
 | `KFK_TOKEN` | — | access token (overrides `data/auth-token`) |
+| `KFK_SHELL` | `$SHELL` | shell the built-in terminal launches |
+| `KFK_PYTHON` | `python3` | interpreter for the terminal's pty helper |
 
 **Files (`data/`, gitignored — this is all app state)**
 
 | File | Contents |
 |---|---|
 | `tasks.json` | all cards |
-| `settings.json` | parallel cap, default cwd, ntfy topic, notification toggle, archive-after-days, manager config, `maxRunMinutes` (per-run watchdog, default 120, 0 disables) |
+| `settings.json` | parallel cap, default cwd, ntfy topic, notification toggle, archive-after-days, manager config, `maxRunMinutes` (per-run watchdog, default 120, 0 disables), `terminal` (built-in terminal, default on) |
 | `manager.json` | pending suggestions, chat history, launch timestamps |
 | `manager-log.jsonl` | manager activity log |
 | `errors.json` | error tracker entries (see [Error tracker](#error-tracker)) |
@@ -585,6 +613,10 @@ carries — `bypassPermissions` means exactly that. Accordingly:
   titles.
 - The token cookie is `HttpOnly`/`SameSite=Lax`, compared timing-safe, and lives a
   year; rotate `data/auth-token` to invalidate.
+- The [built-in terminal](#built-in-terminal-j) is a shell on the host, gated by the
+  same token. It doesn't widen the blast radius (a card at `bypassPermissions`
+  already runs anything), but it is the most direct path to one — switch it off in
+  ⚙ Settings → System if you don't want it, and treat token loss as shell loss.
 
 ---
 

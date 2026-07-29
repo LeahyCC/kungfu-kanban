@@ -1566,8 +1566,23 @@ a.err-card:hover { text-decoration: underline; }
   contain-intrinsic-size: auto 40px;
 }
 .t-entry.init { color: #978F80; font-size: 11.5px; }
-.t-entry.tool { color: #978F80; }
-.t-entry.tool::before { content: '⚙ '; }
+/* tool calls read as a terminal command stream: coral prompt sigil, bright
+   tool name, dim argument clipped to one line so a run of `gh api … | jq …`
+   calls stops being a five-line-each wall. Click a row to unclip it. */
+.t-entry.tool {
+  display: flex;
+  gap: 7px;
+  color: #978F80;
+  cursor: pointer;
+  padding: 0 5px;
+  margin: 0 -5px;
+  border-radius: 3px;
+}
+.t-entry.tool::before { content: '❯'; color: #E0524A; flex: none; }
+.t-entry.tool:hover { background: rgba(236, 229, 214, 0.055); }
+.t-tool-name { color: var(--slab-text); flex: none; }
+.t-tool-args { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-entry.tool.open .t-tool-args { white-space: pre-wrap; overflow: visible; }
 .t-entry.assistant { color: var(--slab-text); }
 .t-entry.result { border-top: 1px solid var(--slab-rule); padding-top: 8px; }
 .t-entry.pr { color: #6FA3D4; }
@@ -1613,6 +1628,64 @@ a.err-card:hover { text-decoration: underline; }
 /* hardcoded (not var(--accent)) so links stay bright on the always-dark slab —
    the themed token flips to a dim red on the slab in light mode (~3:1) */
 .t-entry.md a { color: #E0524A; text-decoration: underline; }
+
+/* ---------- built-in terminal ---------- */
+/* A bottom sheet on the ink slab. Fixed, so the board keeps its own scroll
+   behind it; the shell lives on the server, so closing this is only hiding. */
+.term-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(46vh, 560px);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--slab-bg);
+  border-top: 2px solid var(--rule-strong);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+  animation: termin 160ms var(--ease) both;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@keyframes termin { from { transform: translateY(18px); opacity: 0; } }
+.term-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--slab-rule);
+  background: rgba(236, 229, 214, 0.04);
+}
+.term-title { color: #E0524A; font-family: var(--font-mono); font-size: 12px; padding-left: 3px; }
+.term-tabs { display: flex; gap: 4px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.term-tabs::-webkit-scrollbar { display: none; }
+.term-tab {
+  flex: none;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #978F80;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 2px 9px;
+  cursor: pointer;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.term-tab:hover { color: var(--slab-text); background: rgba(236, 229, 214, 0.06); }
+.term-tab.active { color: var(--slab-text); border-color: var(--slab-rule); background: rgba(236, 229, 214, 0.09); }
+.term-tab.dead { text-decoration: line-through; opacity: 0.5; }
+.term-tab.add { color: #E0524A; }
+.term-bar-actions { display: flex; gap: 4px; flex: none; }
+.term-bar-actions .mini { padding: 1px 8px; font-size: 11px; }
+.term-screen { flex: 1; min-height: 0; padding: 6px 4px 4px 8px; }
+.term-screen .xterm { height: 100%; }
+/* phones: a terminal needs the room, and the on-screen keyboard takes half */
+@media (max-width: 700px) {
+  .term-panel { height: min(60vh, 480px); }
+}
 
 /* responsive */
 @media (max-width: 900px) {
