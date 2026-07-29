@@ -391,7 +391,8 @@ function patchCardEl(el, t, pass) {
   if (t.prChecks && t.status !== 'done') {
     const c = t.prChecks;
     if (c.conflicting) meta.push(`<span class="badge err" title="Merge conflicts with ${esc(c.base || 'the base branch')} — auto-fix runs when enabled">⚔ conflicts</span>`);
-    if (c.failing) meta.push(`<span class="badge err" title="Failing checks: ${esc((c.failed || []).join(' · '))}">CI ✕ ${c.failing}</span>`);
+    if (c.failing && c.infra) meta.push(`<span class="badge err" title="Not this card's code — the failed jobs never started. ${esc(c.infraNote || 'Check the GitHub account\'s Actions billing/spending limit.')}">⛔ CI blocked — GitHub account</span>`);
+    else if (c.failing) meta.push(`<span class="badge err" title="Failing checks: ${esc((c.failed || []).join(' · '))}">CI ✕ ${c.failing}</span>`);
     else if (c.wrongBase) meta.push(`<span class="badge err" title="PR targets ${esc(c.base || '?')} but the card wants ${esc(t.prBaseBranch || '?')}">CI wrong base</span>`);
     else if (c.pending) meta.push(`<span class="badge" title="CI still running (${c.pending} pending)">CI … ${c.pending}</span>`);
     else if (c.passing) meta.push(`<span class="badge dep-met" title="All ${c.passing} checks green">CI ✓</span>`);
