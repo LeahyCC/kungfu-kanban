@@ -7,6 +7,30 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.13.0] — 2026-07-29
+
+### Added
+- **Every card has its own terminal.** ▸_ Terminal in a card's drawer opens a
+  shell **in that card's own working tree** — the git worktree the agent ran in
+  when the card used one, not the parent repo — so `git diff`, the test suite,
+  and `claude -r <session-id>` all land where the work actually happened. The
+  path is shown in the panel bar, because running the tests in the wrong tree is
+  a confusing way to lose ten minutes. One shell per card: closing the card and
+  reopening it reattaches to the same session with its scrollback, and ⏻ kill
+  ends it and hands you a fresh one in the same tree. Cards of any status get
+  one — on a running card to watch what it's doing, on a finished one to check
+  what it did.
+- One xterm instance serves both surfaces (the board's ⌘J sheet and the open
+  card), moving between them rather than paying for a second renderer;
+  switching reattaches to whichever session belongs to that surface, and both
+  keep running server-side regardless.
+
+### Fixed
+- The release script's success line printed the version twice
+  (`✓ released v1.12.0 — v1.12.0 — …`) because the title already carries it.
+  Cosmetic, and only in the CI log — the published release title was always
+  correct — but it shipped in #115 and #117, so it's fixed here.
+
 ## [1.12.0] — 2026-07-29
 
 ### Added

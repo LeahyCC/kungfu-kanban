@@ -104,6 +104,30 @@ test('exit is reported, and a killed session stops accepting input', async () =>
   assert.equal(pty.write(session.id, Buffer.from('x')), false, 'writes to a gone session are refused');
 });
 
+test('a card gets one shell, and reopening finds it instead of stacking more', async () => {
+  const a = pty.create({ cwd: os.tmpdir(), cols: 80, rows: 24, taskId: 'card-1', label: 'Fix the thing' }).session;
+  assert.equal(a.taskId, 'card-1', 'the session carries its card');
+  assert.equal(a.label, 'Fix the thing');
+
+  const found = pty.forTask('card-1');
+  assert.equal(found.id, a.id, 'the card finds its own shell');
+  // The raw session holds a ChildProcess: leaking it into res.json() would
+  // throw on the circular structure, so forTask must hand back the public shape.
+  assert.equal(found.child, undefined, 'no child process in the public shape');
+  assert.equal(JSON.parse(JSON.stringify(found)).id, a.id, 'serializable as-is');
+
+  assert.equal(pty.forTask('other-card'), null, 'another card has no shell yet');
+  assert.equal(pty.forTask(null), null, 'no card id, no session');
+  assert.equal(pty.forTask(undefined), null);
+
+  // An ended shell must not be handed back as a dead pane — the card should get
+  // a fresh one next time it is opened.
+  pty.write(a.id, Buffer.from('exit\n'));
+  await waitFor(a.id, /session ended/);
+  assert.equal(pty.forTask('card-1'), null, 'an exited shell is not reused');
+  pty.kill(a.id);
+});
+
 test('the session count is capped so a runaway client cannot fork-bomb the Mac', () => {
   const made = [];
   for (let i = 0; i < pty.MAX_SESSIONS; i++) {
