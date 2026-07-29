@@ -11,6 +11,18 @@ Bookkeeping: 1.8.0 was merged to `main` but never tagged, so its notes ship
 inside this section rather than as a release of their own.
 
 ### Added
+- **A built-in terminal (⌘J).** A real shell on the host — your `$SHELL`,
+  your `~/.zshrc`, your starship prompt, your aliases — in a panel at the
+  bottom of the board. It is a genuine pty, so colours, job control, and
+  full-screen TUIs (vim, lazygit, `claude` itself) all work, and resizing the
+  window resizes the shell. Sessions live on the SERVER: closing the panel or
+  reloading the board leaves whatever you started running, and reopening
+  reattaches with scrollback — including from your phone over the tailnet.
+  Several shells can be open at once (tabs in the panel bar, ⏻ kill ends one
+  for good). No native module: the pty comes from Python's stdlib via
+  `lib/ptyhost.py`, so the install stays `git pull && npm i`.
+  Off switch: ⚙ Settings → System → "built-in terminal" (it is a shell behind
+  your board token; turning it off also ends any open sessions).
 - **The board now says WHY CI is red when it's the GitHub account, not the
   code.** When a PR's checks settle red, the watcher probes the failed run's
   jobs once; jobs that died with no runner assigned (`runner_id 0`, zero
@@ -48,6 +60,11 @@ inside this section rather than as a release of their own.
   pick stays readable on both dojos.
 
 ### Changed
+- **The card transcript reads like a terminal.** A tool call used to wrap
+  across four or five lines, so a run of `gh api … | jq …` calls was a wall of
+  monospace with the tool name buried in it. Each call is now one line: a
+  vermillion `❯` prompt, the tool name bright, its argument dimmed and clipped
+  with an ellipsis. Hover for the full text, click the row to unclip it.
 - **Settings is four short tabs, not one wall.** The modal grew past the point
   of being scannable, so it's now Cards / Appearance / Alerts / System, each a
   handful of related fields, opening on Cards.
