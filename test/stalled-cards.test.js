@@ -15,7 +15,7 @@ const store = require('../lib/store');
 store.state.settings.notifyMac = false;
 store.state.settings.keepAwake = false;
 
-const { needsPrUrl } = require('../lib/prwatch');
+const { needsPrUrl, prBelongsTo } = require('../lib/prwatch');
 const { exitError } = require('../lib/runner');
 const { validTopic } = require('../lib/notify');
 const authgate = require('../lib/authgate');
@@ -51,6 +51,31 @@ test('needsPrUrl: leaves alone anything the lookup must not touch', () => {
   for (const status of ['backlog', 'queued', 'running']) {
     assert.equal(needsPrUrl({ ...base, status }), false, `${status} has no verdict to reconcile`);
   }
+});
+
+// Branch names are the agent's choice, so the branch alone doesn't prove
+// ownership — but the ownership test has to survive a relaunch. Card d617fdd6
+// opened PR #952 at 05:15 and was relaunched at 05:20; keying off startedAt
+// rejected its own PR three times.
+
+test('prBelongsTo: a PR opened by an earlier run still belongs after a relaunch', () => {
+  const card = { createdAt: '2026-07-29T01:48:23.316Z', startedAt: '2026-07-29T05:20:10.061Z' };
+  const pr = { url: 'https://github.com/o/r/pull/952', createdAt: '2026-07-29T05:15:23Z' };
+  assert.equal(prBelongsTo(pr, card), true);
+});
+
+test('prBelongsTo: a PR that predates the card belongs to whoever used the branch name first', () => {
+  const card = { createdAt: '2026-07-29T01:48:23.316Z' };
+  assert.equal(prBelongsTo({ url: 'https://x/1', createdAt: '2026-07-20T00:00:00Z' }, card), false);
+});
+
+test('prBelongsTo: rejects a missing or malformed result, keeps an undated one', () => {
+  const card = { createdAt: '2026-07-29T01:48:23.316Z' };
+  assert.equal(prBelongsTo(null, card), false);
+  assert.equal(prBelongsTo({ url: '' }, card), false);
+  assert.equal(prBelongsTo({ url: 'not-a-url', createdAt: '2026-07-30T00:00:00Z' }, card), false);
+  assert.equal(prBelongsTo({ url: 'https://x/1' }, card), true, 'no createdAt to judge by — take it');
+  assert.equal(prBelongsTo({ url: 'https://x/1', createdAt: '2026-07-20T00:00:00Z' }, {}), true, 'card has no createdAt');
 });
 
 // --- the failure text the board threw away ------------------------------
