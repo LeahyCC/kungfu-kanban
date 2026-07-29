@@ -44,6 +44,13 @@ if (transcriptBox) {
 // permission-block entry already closes the log), then keep the LAST `cap`
 // entries. The blocked-entry reverse scan runs on the FULL list, before
 // capping. Exported for tests.
+// ▶ Run can legitimately park a card instead of launching it (unmet deps, no
+// free slot, a gate up). Silence there reads as a dead button — say why.
+function notePark(r) {
+  if (r && r.queued && r.reason) toast(`⛓ queued — ${r.reason}`, 'status');
+  return r;
+}
+
 export function planTranscript(entries, taskError, cap = TRANSCRIPT_CAP) {
   const blocked = [...entries].reverse().find((e) => e.kind === 'blocked');
   const list = entries.slice();
@@ -354,7 +361,7 @@ export function renderDrawerActions(t) {
   } else {
     mk('▶ Run', 'primary', 'Launch now — re-running clears the previous transcript and result', async () => {
       if (t.resultText && !(await confirmDlg('Re-running clears the previous transcript and result. Continue?', { confirmLabel: '▶ Run' }))) return;
-      await api(`/api/tasks/${t.id}/run`, { method: 'POST' });
+      notePark(await api(`/api/tasks/${t.id}/run`, { method: 'POST' }));
     });
     mk('Edit', 'ghost', 'Edit the card (prompt, model, schedule, …)', () => { closeDrawer(true); openModal(t); });
     if (t.status === 'review') mk('✓ Done', '', 'Stamp it shipped — moves the card to Done', async () => {
@@ -408,7 +415,7 @@ export function renderDrawerActions(t) {
       sel.disabled = true;
       const prev = applyOptimistic(t.id, { status: to });
       const r = to === 'queued'
-        ? await api(`/api/tasks/${t.id}/run`, { method: 'POST' })
+        ? notePark(await api(`/api/tasks/${t.id}/run`, { method: 'POST' }))
         : await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: to } });
       sel.disabled = false;
       if (!r || r.error) {
@@ -451,6 +458,7 @@ export async function bypassAndRerun(t) {
   if (r.error) return;
   const r2 = await api(`/api/tasks/${t.id}/run`, { method: 'POST' });
   if (r2.error) return;
+  if (notePark(r2).queued) return; // parked, not running — don't claim otherwise
   toast(`"${t.title}" is back on the mats, running unrestricted.`, 'status');
 }
 
