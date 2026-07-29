@@ -174,6 +174,23 @@ carry their own `(v1.10.0)`-style markers where the version mattered.
   card as opened instead of erroring. Any other `gh pr create` failure still
   behaves as before.
 
+### Merged in this release
+
+Every PR since v1.7.1 — four versions' worth, listed because the notes above
+are grouped by theme rather than by version:
+
+- #112 — Built-in terminal (⌘J) + terminal-style transcript rows (v1.11.0)
+- #111 — Compare settled-to-settled in trackChecks (v1.10.1)
+- #110 — Show in-app why CI is red when it's the GitHub account, not the code (v1.10.0)
+- #109 — One automation loop per data dir (v1.9.3)
+- #108 — Judge PR ownership by the card's createdAt, not its last run
+- #107 — Harden PR adoption after adversarial review
+- #106 — Reconcile merged PRs whose URL never reached the card (v1.9.2)
+- #105 — Keep the PR link when `gh pr create` says one already exists
+- #104 — Composer empty state, and fix ✨ Draft killing its own agent (v1.9.0)
+- #103 — Keep a custom accent above AA as link text
+- #102 — Board defaults, rainbow ultracode, appearance settings, logged-out guard (v1.8.0)
+
 ## [1.7.1] — 2026-07-28
 
 ### Added
