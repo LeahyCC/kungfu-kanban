@@ -11,6 +11,15 @@ Bookkeeping: 1.8.0 was merged to `main` but never tagged, so its notes ship
 inside this section rather than as a release of their own.
 
 ### Added
+- **The board now says WHY CI is red when it's the GitHub account, not the
+  code.** When a PR's checks settle red, the watcher probes the failed run's
+  jobs once; jobs that died with no runner assigned (`runner_id 0`, zero
+  steps) are the Actions billing/spending-limit signature. The card gets a
+  "⛔ CI blocked — GitHub account" badge quoting GitHub's own annotation
+  ("recent account payments have failed…"), the drawer spells it out, one
+  notification fires per red spell, the auto CI fixer stands down (no session
+  resumes burned on failures no push can fix), and the Sensei snapshot
+  carries `infra: true` with explicit do-not-retry guidance. (v1.10.0)
 - **The empty board is now a composer.** A quiet dojo opens with a prompt box
   and the settings that matter — project, model, effort, permissions, and
   worktree+PR — plus four ways out: ✨ Improve prompt (rewrites what you typed
@@ -62,7 +71,12 @@ inside this section rather than as a release of their own.
   Actions was billing-blocked). The watcher now remembers the last **settled**
   outcome and only fires when a settled state genuinely differs — a different
   failed set, or recovery to green — while pending phases in between are
-  no-ops. The 60s hot poll is unchanged.
+  no-ops. This is the other half of the v1.10.0 account-block work: that one
+  stopped the *auto-fixer* and the Sensei from acting on a billing block, this
+  one stops the watcher from re-reporting the same red set at all. The verified
+  `infra` verdict now also survives the pending phase, so a card keeps its
+  "⛔ CI blocked" badge across a re-run instead of losing it the moment the
+  counts blank. The 60s hot poll is unchanged. (v1.10.1)
 - **A stray second server drove the board for six days.** A card's own smoke
   test on 2026-07-22 backgrounded `node -e "require('./server.js')"` in the
   checkout and leaked it. It never held `:4747`, so nothing looked wrong — but
