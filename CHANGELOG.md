@@ -53,6 +53,44 @@ inside this section rather than as a release of their own.
   `claude /login` any success clears the gate and resumes the queue.
 
 ### Fixed
+- **▶ Run looked broken on a card that couldn't start yet.** A card with an
+  unmet dependency (or a full board, or a gate up) is parked rather than
+  launched — correct, but the drawer's Run button ignored the answer entirely
+  and the board only explained the dependency case, so the click just seemed to
+  do nothing. Every refusal now carries a reason and every Run path shows it:
+  `⛓ queued — waits on <card>`, `— all 4 run slots are busy`, `— subscription
+  limits are cooling down`. ⚡ Bypass & re-run no longer claims a parked card is
+  "running unrestricted".
+- **Merged PRs left their cards stuck in Review.** When the executing agent
+  opened its own PR under its own branch name, the card's `gh pr create` came
+  back "already exists" and the card kept `prUrl: null` — and the PR watcher
+  skips cards with no PR URL, so merging the PR never shipped the card and
+  every dependent stayed queued behind it. Six cards sat that way on
+  2026-07-28. The sweep now backfills a missing PR URL first: it reads the
+  branch out of the card's own worktree and asks GitHub which PR belongs to it,
+  so a merge always moves the card to Done no matter who opened the PR.
+- **A failing card reported "claude exited with code 1" and nothing else.** The
+  CLI writes its own failures to stdout (the result event) with stderr empty,
+  so stamping the exit code over `task.error` discarded the only text the
+  auth-gate, cooldown, and offline detectors match on. A logged-out CLI failed
+  cards one at a time instead of pausing the board once; the real message is
+  now kept.
+- **The Sensei logged the same unactionable error every five minutes.** A CLI
+  that answers with its trouble in prose ("Not logged in · Please run /login")
+  still reports success, so the decision JSON failed to parse and the run was
+  logged as a plain error — 1331 identical entries accumulated over six days,
+  and the auth gate was *cleared* on the way past. Both the errored and the
+  unparsable paths now trip the right gate (limit → cooldown, logged out →
+  auth gate) and log one pause; the gate clears only on a parsed decision, and
+  an errored run reports its stderr.
+- **ntfy push spammed the server log.** A topic that isn't a legal ntfy topic —
+  including the common trick of editing it to disable push — was POSTed anyway
+  and earned an HTTP 400 per notification. An invalid topic now means push is
+  off.
+- **A raced inbox import logged a permanent "could not archive" error.** Two
+  scans of the same file left the second one unable to move an already-archived
+  file, so the tracker carried an open error claiming the card would re-import
+  when it never would. Gone-means-archived is no longer an error.
 - **✨ Draft and ↻ Refine killed the agent they had just spawned.** The
   cancel-on-disconnect guard hung off the *request*'s `close` event, which
   modern Node emits as soon as the body has been read — about 16ms in, long
