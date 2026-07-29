@@ -333,6 +333,37 @@ test('live transcript: rAF batching appends once per frame and enforces the cap 
   assert.equal(box.children[box.children.length - 1].textContent, 'flood 599', 'tail kept');
 });
 
+// ---------- terminal-style tool rows ----------
+
+test('tool entries split into name + args and toggle open on click', () => {
+  resetAll();
+  const box = dom.document.querySelector('#transcript');
+  const cmd = "Bash gh api repos/LeahyCC/bouldi/check-runs | jq '.check_runs[]'";
+  box.appendChild(drawer.entryEl({ kind: 'tool', text: cmd }));
+  const row = box.firstChild;
+  assert.equal(row.title, cmd, 'full command survives on the row for hover');
+  assert.equal(row.children[0].className, 't-tool-name');
+  assert.equal(row.children[0].textContent, 'Bash');
+  assert.equal(row.children[1].className, 't-tool-args');
+  assert.equal(row.children[1].textContent, cmd.slice('Bash '.length));
+
+  // an argless tool is a name and nothing else
+  const bare = drawer.entryEl({ kind: 'tool', text: 'TodoWrite' });
+  assert.equal(bare.children.length, 1);
+  assert.equal(bare.children[0].textContent, 'TodoWrite');
+
+  // clicking a clipped row unclips it; clicking again re-clips
+  box.dispatch('click', { target: row.children[1] });
+  assert.ok(row.classList.contains('open'), 'click expands the clipped command');
+  box.dispatch('click', { target: row });
+  assert.ok(!row.classList.contains('open'), 'click again collapses it');
+
+  // non-tool entries keep their plain-text shape
+  const user = drawer.entryEl({ kind: 'user', text: 'hello there' });
+  assert.equal(user.children.length, 0);
+  assert.equal(user.textContent, 'hello there');
+});
+
 // ---------- perf hook ----------
 
 test('__kkPerf records render durations, capped at 500 entries', () => {
