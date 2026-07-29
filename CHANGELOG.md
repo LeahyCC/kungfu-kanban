@@ -7,8 +7,14 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
-Bookkeeping: 1.8.0 was merged to `main` but never tagged, so its notes ship
-inside this section rather than as a release of their own.
+## [1.11.0] — 2026-07-29
+
+Bookkeeping: this section is **four versions wide**. 1.8.0, 1.9.x, 1.10.0 and
+1.10.1 all merged to `main` without ever being tagged, so their notes ship
+here rather than as releases of their own — the same call the 1.8.0 note made,
+applied to everything that piled up behind it. The last tagged release was
+1.7.1 (2026-07-28); this one covers the 27 commits since. Individual entries
+carry their own `(v1.10.0)`-style markers where the version mattered.
 
 ### Added
 - **A built-in terminal (⌘J).** A real shell on the host — your `$SHELL`,
@@ -167,6 +173,23 @@ inside this section rather than as a release of their own.
   carries the existing PR's URL; the flow now recovers it and records the
   card as opened instead of erroring. Any other `gh pr create` failure still
   behaves as before.
+
+### Merged in this release
+
+Every PR since v1.7.1 — four versions' worth, listed because the notes above
+are grouped by theme rather than by version:
+
+- #112 — Built-in terminal (⌘J) + terminal-style transcript rows (v1.11.0)
+- #111 — Compare settled-to-settled in trackChecks (v1.10.1)
+- #110 — Show in-app why CI is red when it's the GitHub account, not the code (v1.10.0)
+- #109 — One automation loop per data dir (v1.9.3)
+- #108 — Judge PR ownership by the card's createdAt, not its last run
+- #107 — Harden PR adoption after adversarial review
+- #106 — Reconcile merged PRs whose URL never reached the card (v1.9.2)
+- #105 — Keep the PR link when `gh pr create` says one already exists
+- #104 — Composer empty state, and fix ✨ Draft killing its own agent (v1.9.0)
+- #103 — Keep a custom accent above AA as link text
+- #102 — Board defaults, rainbow ultracode, appearance settings, logged-out guard (v1.8.0)
 
 ## [1.7.1] — 2026-07-28
 
