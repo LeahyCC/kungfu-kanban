@@ -53,6 +53,25 @@ function luminance({ r, g, b }) {
 
 const mix = (c, t, amt) => Math.round(c + (t - c) * amt);
 
+export function contrast(a, b) {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+// --accent-ink is the accent used as TEXT (PR links, accent copy), so a
+// user-picked colour has to stay readable on the card surface. Start at the
+// design's 20% shift away from the surface and keep going only as far as AA
+// (4.5:1) demands — a colour that already passes keeps its intended shade.
+export function readableInk(c, surface, light) {
+  const target = light ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 };
+  let out = c;
+  for (let amt = 0.2; amt <= 0.9; amt += 0.05) {
+    out = { r: mix(c.r, target.r, amt), g: mix(c.g, target.g, amt), b: mix(c.b, target.b, amt) };
+    if (contrast(out, surface) >= 4.5) break;
+  }
+  return out;
+}
+
 export function applyLook(look) {
   const root = document.documentElement;
 
@@ -71,9 +90,11 @@ export function applyLook(look) {
   const c = rgb(look.accent);
   if (c) {
     const dark = luminance(c) > 0.45; // bright accent → dark text on top
-    const ink = light
-      ? { r: mix(c.r, 0, 0.2), g: mix(c.g, 0, 0.2), b: mix(c.b, 0, 0.2) }   // deepen on paper
-      : { r: mix(c.r, 255, 0.2), g: mix(c.g, 255, 0.2), b: mix(c.b, 255, 0.2) }; // lift on ink
+    // read the card surface from the token so this can't drift from the theme
+    // (the data-theme swap above already landed, so this is the right one)
+    const surface = rgb(getComputedStyle(root).getPropertyValue('--paper-1').trim())
+      || (light ? { r: 253, g: 251, b: 245 } : { r: 28, g: 25, b: 22 });
+    const ink = readableInk(c, surface, light);
     root.style.setProperty('--accent', look.accent);
     root.style.setProperty('--accent-ink', `rgb(${ink.r}, ${ink.g}, ${ink.b})`);
     root.style.setProperty('--accent-wash', `rgba(${c.r}, ${c.g}, ${c.b}, 0.10)`);
