@@ -11,6 +11,8 @@ Fixes #
 **Checklist**
 
 - [ ] `npm test` passes locally (`node --test`)
+- [ ] Version bumped and the changelog section is **dated** (`## [X.Y.Z] — YYYY-MM-DD`) —
+      merging cuts the tag and GitHub Release from it (or: deliberately no release)
 - [ ] A regression test ships with any bug fix
 - [ ] No new runtime dependency (or: a linked issue/discussion approving one)
 - [ ] No unexplained changes to `.github/workflows/` or `package-lock.json`
