@@ -479,6 +479,19 @@ The prompt: self-contained instructions for the executing agent.
       <textarea id="promptEdit" rows="4" title="The prompt the agent receives — edit it right here"></textarea>
     </div>
     <div id="transcript" class="transcript slab"></div>
+    <!-- This card's own shell, in its worktree. Hidden until ▸_ Terminal;
+         the session lives on the server, so closing the card doesn't end it. -->
+    <section id="drawerTerm" class="drawer-term hidden" aria-label="Card terminal">
+      <div class="term-bar">
+        <span class="term-title" aria-hidden="true">▸_</span>
+        <span id="drawerTermPath" class="term-path"></span>
+        <div class="term-bar-actions">
+          <button id="drawerTermKill" class="ghost mini" type="button" title="End this card's shell for good">⏻ kill</button>
+          <button id="drawerTermClose" class="ghost mini" type="button" title="Hide it — whatever is running keeps running" aria-label="Hide card terminal">✕</button>
+        </div>
+      </div>
+      <div id="drawerTermScreen" class="term-screen"></div>
+    </section>
     <form id="followForm" class="follow-row hidden">
       <input name="message" placeholder="Follow-up: fix the bug where…, also add…" autocomplete="off" />
       <button type="submit" class="primary" title="Resume this card's session with extra instructions — the agent keeps its full context">▶ Send</button>

@@ -17,11 +17,13 @@ import { $ } from './util.js';
 import { api, toast } from './api.js';
 import { state } from './state.js';
 
-let term = null;      // xterm Terminal
+let term = null;      // xterm Terminal — one instance, moved between mounts
 let fit = null;       // FitAddon
 let es = null;        // EventSource for the attached session
 let sessionId = null;
 let loading = null;   // in-flight import() of xterm
+let mount = null;     // the element currently holding term.element
+let cardTermId = null; // the card whose drawer terminal is showing, if any
 
 const panel = () => $('#termPanel');
 
@@ -114,9 +116,20 @@ function sendResize() {
 }
 
 function refit() {
-  if (!fit || panel().classList.contains('hidden')) return;
+  if (!fit || !mount || !mount.isConnected || !mount.offsetParent) return;
   try { fit.fit(); } catch {}
   sendResize();
+}
+
+// One xterm instance, two homes: the board's bottom sheet and the open card's
+// drawer. Moving its element is far less machinery than a second Terminal (and
+// a second WebGL/canvas renderer), and you only ever look at one of them —
+// switching reattaches to that surface's own server-side session, which is
+// still running either way.
+function mountInto(el) {
+  if (!term || !el || mount === el) { mount = el || mount; return; }
+  mount = el;
+  el.appendChild(term.element);
 }
 
 // ---------- attach / detach ----------
@@ -192,22 +205,19 @@ async function renderTabs() {
   bar.appendChild(add);
 }
 
-// ---------- open / close ----------
-export async function openTerminal({ cwd, label } = {}) {
-  const p = panel();
-  p.classList.remove('hidden');
-  document.body.classList.add('term-open');
-
-  if (!term) {
-    let mods;
-    try {
-      mods = await loadXterm();
-    } catch (e) {
-      toast('✕ could not load the terminal — is the server up to date? (npm i)');
-      p.classList.add('hidden');
-      document.body.classList.remove('term-open');
-      return;
-    }
+// ---------- one-time xterm construction ----------
+// Returns false when xterm couldn't be loaded, so callers can put their own UI
+// back rather than leaving an empty pane open.
+async function ensureTerm(into) {
+  if (term) { mountInto(into); return true; }
+  let mods;
+  try {
+    mods = await loadXterm();
+  } catch {
+    toast('✕ could not load the terminal — is the server up to date? (npm i)');
+    return false;
+  }
+  {
     term = new mods.Terminal({
       allowProposedApi: true,
       cursorBlink: true,
@@ -222,7 +232,8 @@ export async function openTerminal({ cwd, label } = {}) {
     });
     fit = new mods.FitAddon();
     term.loadAddon(fit);
-    term.open($('#termScreen'));
+    term.open(into);
+    mount = into;
     const sendInput = inputQueue((chunk) => {
       // base64 so control bytes and pasted UTF-8 survive JSON transport intact
       const bytes = new TextEncoder().encode(chunk);
@@ -235,8 +246,25 @@ export async function openTerminal({ cwd, label } = {}) {
       sendInput(data);
     });
     term.onResize(() => sendResize());
-    new ResizeObserver(() => refit()).observe($('#termScreen'));
+    // One observer on the terminal's own element, so it follows the instance
+    // from mount to mount instead of watching a container it has left.
+    new ResizeObserver(() => refit()).observe(term.element);
   }
+  return true;
+}
+
+// ---------- the board's bottom sheet ----------
+export async function openTerminal({ cwd, label } = {}) {
+  const p = panel();
+  p.classList.remove('hidden');
+  document.body.classList.add('term-open');
+  if (!(await ensureTerm($('#termScreen')))) {
+    p.classList.add('hidden');
+    document.body.classList.remove('term-open');
+    return;
+  }
+  mountInto($('#termScreen'));
+  cardTermId = null;
 
   // Reattach to a live session when there is one and the caller didn't ask for
   // a specific directory; otherwise open a fresh shell there.
@@ -251,6 +279,46 @@ export async function openTerminal({ cwd, label } = {}) {
   refit();
   term.focus();
   renderTabs();
+}
+
+// ---------- a card's own shell, inside its drawer ----------
+// The server picks the directory (the card's worktree when it has one) and
+// hands back the card's existing session if it still has one, so closing and
+// reopening a card lands you back in the same shell.
+export async function openCardTerminal(taskId) {
+  const box = $('#drawerTerm');
+  if (!box) return;
+  box.classList.remove('hidden');
+  if (!(await ensureTerm($('#drawerTermScreen')))) {
+    box.classList.add('hidden');
+    return;
+  }
+  mountInto($('#drawerTermScreen'));
+  cardTermId = taskId;
+
+  const r = await api(`/api/tasks/${taskId}/term`, { method: 'POST', body: { cols: term.cols, rows: term.rows } });
+  if (r.error) { box.classList.add('hidden'); return; }
+  if (r.id !== sessionId) { term.reset(); attach(r.id); }
+  // Say which tree you're in — a card's worktree is not its repo, and running
+  // the tests in the wrong one is a confusing way to lose ten minutes.
+  const path = $('#drawerTermPath');
+  if (path) { path.textContent = r.cwd || ''; path.title = r.cwd || ''; }
+  refit();
+  term.focus();
+}
+
+export function closeCardTerminal() {
+  const box = $('#drawerTerm');
+  if (box) box.classList.add('hidden');
+  if (cardTermId === null) return;
+  cardTermId = null;
+  // The shell keeps running server-side; we just stop listening to it.
+  detach();
+  sessionId = null;
+}
+
+export function isCardTerminalOpen(taskId) {
+  return cardTermId !== null && (taskId === undefined || cardTermId === taskId);
 }
 
 export function closeTerminal() {
@@ -273,6 +341,17 @@ export function toggleTerminal() {
 
 // ---------- wiring ----------
 $('#termToggle').addEventListener('click', () => toggleTerminal());
+$('#drawerTermClose').addEventListener('click', () => closeCardTerminal());
+$('#drawerTermKill').addEventListener('click', async () => {
+  if (!sessionId || cardTermId === null) return closeCardTerminal();
+  const dying = sessionId;
+  const card = cardTermId;
+  detach();
+  sessionId = null;
+  await api(`/api/term/${dying}`, { method: 'DELETE', quiet: true });
+  if (term) term.reset();
+  openCardTerminal(card); // a killed shell is replaced by a fresh one in the same tree
+});
 $('#termClose').addEventListener('click', () => closeTerminal());
 $('#termKill').addEventListener('click', async () => {
   if (!sessionId) return closeTerminal();

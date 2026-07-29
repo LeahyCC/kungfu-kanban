@@ -1687,6 +1687,35 @@ a.err-card:hover { text-decoration: underline; }
   .term-panel { height: min(60vh, 480px); }
 }
 
+/* the card's own shell, under its transcript. flex:none with a fixed height so
+   it takes a predictable bite out of the drawer instead of fighting the
+   transcript for the leftovers — the transcript keeps flexing above it. */
+.drawer-term {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  height: min(38vh, 340px);
+  margin-top: 10px;
+  background: var(--slab-bg);
+  border: 1px solid var(--slab-rule);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.drawer-term .term-bar { border-radius: 4px 4px 0 0; }
+.drawer-term .term-screen { padding: 6px 4px 4px 8px; }
+.term-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;        /* clip the boring prefix, keep the worktree name */
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #978F80;
+}
+
 /* responsive */
 @media (max-width: 900px) {
   .board { grid-template-columns: repeat(5, minmax(220px, 1fr)); }
