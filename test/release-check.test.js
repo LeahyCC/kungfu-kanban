@@ -38,6 +38,32 @@ test('mergedPRNumbers extracts PRs and drops dependabot branches', () => {
   assert.deepEqual(mergedPRNumbers(log), ['90', '92']);
 });
 
+// The release's own PR wrote the section it is being audited against, and its
+// merge commit lands in the range the moment it merges. Requiring it to cite
+// itself is a paradox you can only satisfy by amending a PR after opening it —
+// and it is what failed the automation's very first run on main (#115 released
+// nothing because its 1.12.0 section didn't cite #115).
+test('auditRelease does not make a release cite the PR that wrote it', () => {
+  const log = 'Merge pull request #93 from a/release\nMerge pull request #90 from a/b\nMerge pull request #91 from a/c';
+  const cited = { version: '1.2.0', changelog: CL, tags: ['v1.1.0'], mergeLogSince: () => log };
+
+  // On main, HEAD is that merge commit — #93 is exempt, the rest still required.
+  const onMain = auditRelease({ ...cited, headMergePR: '93' });
+  assert.equal(onMain.ok, true, onMain.message);
+  assert.match(onMain.message, /all 2 non-dependabot/, 'the exempt PR is not counted');
+
+  // On a pull_request, HEAD is a merge preview with no "Merge pull request #N"
+  // subject, so nothing is exempt and an uncited PR is still caught.
+  const onPr = auditRelease({ ...cited, headMergePR: null });
+  assert.equal(onPr.ok, false, 'the PR-time audit keeps its full strength');
+  assert.match(onPr.message, /#93/);
+
+  // Exempting one PR must not excuse a different uncited one.
+  const other = auditRelease({ ...cited, headMergePR: '90' });
+  assert.equal(other.ok, false);
+  assert.match(other.message, /#93/);
+});
+
 test('auditRelease FAILS a release missing a merged PR', () => {
   const r = auditRelease({
     version: '1.2.0', changelog: CL, tags: ['v1.1.0'],
