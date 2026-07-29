@@ -169,8 +169,14 @@ test('pauseFor: a logged-out message trips the auth gate instead of logging an e
 });
 
 test('pauseFor: a subscription limit trips the cooldown', () => {
-  assert.equal(pauseFor('anything', true), true, 'an HTTP 429 is a limit regardless of the text');
-  cooldown.clear();
+  // try/finally, not a trailing clear: cooldown.arm()'s ~1h timer is not
+  // unref'd, so a failing assertion here would hang `node --test` instead of
+  // reporting — the same class of leak as the caffeinate note above.
+  try {
+    assert.equal(pauseFor('anything', true), true, 'an HTTP 429 is a limit regardless of the text');
+  } finally {
+    cooldown.clear();
+  }
 });
 
 test('pauseFor: an ordinary failure is left for the caller to log', () => {
