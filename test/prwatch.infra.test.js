@@ -86,6 +86,34 @@ test('trackChecks: infra verdict carries across a red-state key change and clear
   }
 });
 
+// A new CI attempt blanks the counts on its way through pending. The verdict
+// has to survive that: the re-settled identical red set is deliberately not
+// "ready" any more, so nothing would re-probe and the card would sit red with
+// its "⛔ CI blocked" badge gone.
+test('trackChecks: infra verdict survives a new CI attempt passing through pending', () => {
+  const t = fakeTask();
+  try {
+    const red = {
+      baseRefName: 'main',
+      statusCheckRollup: [{ __typename: 'CheckRun', name: 'test', status: 'COMPLETED', conclusion: 'FAILURE', detailsUrl: 'https://github.com/x/y/actions/runs/9/job/1' }],
+    };
+    trackChecks(t, red);
+    t.prChecks.infra = true;
+    t.prChecks.infraNote = 'spending limit';
+
+    // the re-run starts: no failures reported at all right now
+    trackChecks(t, { baseRefName: 'main', statusCheckRollup: [{ __typename: 'CheckRun', name: 'test', status: 'IN_PROGRESS' }] });
+    assert.equal(t.prChecks.infra, true, 'verdict must not be dropped mid-attempt');
+
+    // ...and re-settles on the same billing-blocked failure
+    assert.equal(trackChecks(t, red), false, 'same red set re-settling is not a fresh verdict');
+    assert.equal(t.prChecks.infra, true);
+    assert.equal(t.prChecks.infraNote, 'spending limit');
+  } finally {
+    errlog.resolveTask(t.id);
+  }
+});
+
 // --- probeInfra gates: never probes when there is nothing decisive to learn ---
 
 test('probeInfra: no-ops on pending, green, or already-verdicted checks', async () => {
