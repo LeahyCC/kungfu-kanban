@@ -7,6 +7,17 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Fixed
+- **The terminal no longer scrambles fast typing.** Each keystroke was its own
+  POST, and concurrent requests have no ordering guarantee — so typing quickly
+  (or holding a key down, or being on a tailnet where the round trip is tens of
+  milliseconds) could deliver `ls` to the shell as `sl`. Caught in the wild:
+  `echo "shell=$SHELL…` arrived as `echo "shell$=HSLEL zs=hZ$SH_VESROIN…`.
+  Sends are now serialized — one request in flight, anything typed meanwhile
+  coalesces into the next — so a burst costs *fewer* requests than before, not
+  more, and arrives in order. A failed send no longer wedges the queue or
+  raises an unhandled rejection either.
+
 ## [1.11.0] — 2026-07-29
 
 Bookkeeping: this section is **four versions wide**. 1.8.0, 1.9.x, 1.10.0 and
