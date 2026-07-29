@@ -183,6 +183,51 @@ test('trackChecks: returns true exactly when the PR becomes decision-ready', () 
   assert.equal(trackChecks(t, { baseRefName: 'main', statusCheckRollup: [green('a'), green('b')] }), false);
 });
 
+// A new CI attempt on a red PR (push or re-run) passes through pending and
+// re-settles with the same failed set — that must be a no-op, not a fresh
+// 'ci-failing' capture + Sensei re-invoke per attempt (the 2026-07-29 churn:
+// billing-blocked Actions re-settled the identical red set every few minutes).
+test('trackChecks: red → pending → same red is a no-op (no new capture, not ready)', () => {
+  const t = fakeTask();
+  const red = { baseRefName: 'main', statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'COMPLETED', conclusion: 'FAILURE' }] };
+  const pending = { baseRefName: 'main', statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'IN_PROGRESS' }] };
+  try {
+    assert.equal(trackChecks(t, red), true);
+    const captures = () => errlog.list().filter((e) => e.taskId === t.id && !e.resolved).length;
+    assert.equal(captures(), 1);
+    assert.equal(trackChecks(t, pending), false);
+    assert.equal(trackChecks(t, red), false); // same red set re-settled — no re-fire
+    assert.equal(captures(), 1);
+  } finally {
+    errlog.resolveTask(t.id);
+  }
+});
+
+test('trackChecks: red → pending → different red fires again', () => {
+  const t = fakeTask();
+  const fail = (name) => ({ __typename: 'CheckRun', name, status: 'COMPLETED', conclusion: 'FAILURE' });
+  try {
+    assert.equal(trackChecks(t, { baseRefName: 'main', statusCheckRollup: [fail('build')] }), true);
+    trackChecks(t, { baseRefName: 'main', statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'IN_PROGRESS' }] });
+    assert.equal(trackChecks(t, { baseRefName: 'main', statusCheckRollup: [fail('lint')] }), true);
+    assert.equal(errlog.list().filter((e) => e.taskId === t.id && !e.resolved).length, 2);
+  } finally {
+    errlog.resolveTask(t.id);
+  }
+});
+
+test('trackChecks: red → pending → green fires recovery and resolves the capture', () => {
+  const t = fakeTask();
+  try {
+    assert.equal(trackChecks(t, { baseRefName: 'main', statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'COMPLETED', conclusion: 'FAILURE' }] }), true);
+    trackChecks(t, { baseRefName: 'main', statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'IN_PROGRESS' }] });
+    assert.equal(trackChecks(t, { baseRefName: 'main', statusCheckRollup: [{ __typename: 'CheckRun', name: 'build', status: 'COMPLETED', conclusion: 'SUCCESS' }] }), true);
+    assert.equal(errlog.list().filter((e) => e.taskId === t.id && !e.resolved).length, 0);
+  } finally {
+    errlog.resolveTask(t.id);
+  }
+});
+
 test('trackChecks: first sweep that already sees settled checks is ready (fast CI beat the sweep)', () => {
   const t = fakeTask();
   const ready = trackChecks(t, {

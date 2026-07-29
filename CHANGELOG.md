@@ -62,6 +62,21 @@ inside this section rather than as a release of their own.
   `claude /login` any success clears the gate and resumes the queue.
 
 ### Fixed
+- **A red PR no longer re-fires on every CI attempt.** The PR watcher compared
+  each sweep's failed checks against the immediately previous sweep, so a new
+  CI attempt on a red PR (push or re-run) — which passes through a pending
+  phase and re-settles with the same failed set — read as a fresh failure every
+  time: a duplicate `ci-failing` error entry, a notification, and a Sensei
+  re-invoke per attempt (~50 duplicates and ~10 sensei runs in 40 minutes while
+  Actions was billing-blocked). The watcher now remembers the last **settled**
+  outcome and only fires when a settled state genuinely differs — a different
+  failed set, or recovery to green — while pending phases in between are
+  no-ops. This is the other half of the v1.10.0 account-block work: that one
+  stopped the *auto-fixer* and the Sensei from acting on a billing block, this
+  one stops the watcher from re-reporting the same red set at all. The verified
+  `infra` verdict now also survives the pending phase, so a card keeps its
+  "⛔ CI blocked" badge across a re-run instead of losing it the moment the
+  counts blank. The 60s hot poll is unchanged. (v1.10.1)
 - **A stray second server drove the board for six days.** A card's own smoke
   test on 2026-07-22 backgrounded `node -e "require('./server.js')"` in the
   checkout and leaked it. It never held `:4747`, so nothing looked wrong — but
