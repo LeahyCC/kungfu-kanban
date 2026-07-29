@@ -286,6 +286,7 @@ export function renderDrawerMeta(t) {
   if (t.prChecks) {
     const c = t.prChecks;
     bits.push(`CI: ${c.failing ? `✕ ${c.failing} failing — ${(c.failed || []).join(' · ')}` : c.pending ? `… ${c.pending} running` : c.noCi ? 'none on this repo' : c.passing ? `✓ ${c.passing} green` : '… waiting for checks'}${c.base ? ` · base ${c.base}` : ''}${c.wrongBase ? ` (card wants ${t.prBaseBranch})` : ''}`);
+    if (c.failing && c.infra) bits.push(`⛔ CI blocked by the GitHub account, not this code: ${c.infraNote || 'jobs never start — fix the Actions billing/spending limit'}`);
     if (c.conflicting) bits.push(`⚔ merge conflicts with ${c.base || 'the base branch'}`);
   }
   const unmetD = depsUnmet(t);
