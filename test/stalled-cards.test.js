@@ -45,6 +45,9 @@ test('needsPrUrl: leaves alone anything the lookup must not touch', () => {
   assert.equal(needsPrUrl({ ...base, openPr: false }), false, 'card never wanted a PR');
   assert.equal(needsPrUrl({ ...base, worktree: false }), false, 'no worktree means no branch to look up');
   assert.equal(needsPrUrl({ ...base, cwd: null }), false, 'no repo to run gh in');
+  assert.equal(needsPrUrl({ ...base, error: 'boom' }), false, 'a failed run never reached the PR flow');
+  assert.equal(needsPrUrl({ ...base, prAdoptMisses: 3 }), false, 'stop re-shelling gh for a PR that is not there');
+  assert.equal(needsPrUrl({ ...base, prAdoptMisses: 2 }), true, 'still within the retry budget');
   for (const status of ['backlog', 'queued', 'running']) {
     assert.equal(needsPrUrl({ ...base, status }), false, `${status} has no verdict to reconcile`);
   }
