@@ -17,6 +17,21 @@ const depsLib = require('./lib/deps');
 const errlog = require('./lib/errlog');
 const bus = require('./lib/bus');
 const prflow = require('./lib/prflow');
+const singleton = require('./lib/singleton');
+
+// Before anything arms a timer or a watcher: refuse to be the second
+// automation loop on this board. See lib/singleton.js for the six-day orphan
+// that made this necessary.
+const heldBy = singleton.claim();
+if (heldBy) {
+  console.error(
+    `kungfu-kanban is already running against this data dir (pid ${heldBy}).\n` +
+    `Refusing to start a second automation loop — it would double-import the inbox,\n` +
+    `double-launch cards, and log its own failures to the real error tracker.\n` +
+    `For a scratch server:  KFK_DATA_DIR=$(mktemp -d) KFK_TEST=1 PORT=<free> node server.js`
+  );
+  process.exit(1);
+}
 
 const PORT = process.env.PORT || 4747;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -853,6 +868,7 @@ if (HOST !== '127.0.0.1' && HOST !== 'localhost' && !auth.getToken()) {
 function shutdown() {
   runner.stopAll();
   flush();
+  singleton.release(); // the next start must not have to wait out our stale lock
   process.exit(0);
 }
 process.on('SIGTERM', shutdown);
