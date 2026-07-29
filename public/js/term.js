@@ -72,6 +72,38 @@ const THEME = {
   brightWhite: '#FFF8EA',
 };
 
+// Keystrokes ride one POST each, and concurrent fetches have NO ordering
+// guarantee — type fast enough (or hold a key down, or sit on a tailnet where
+// the round trip is tens of ms) and "ls" arrives at the pty as "sl". Serialize
+// them: one request in flight at a time, and everything typed while it is out
+// coalesces into the next one, so a burst costs fewer requests, not more.
+// Exported for the ordering test.
+export function inputQueue(send) {
+  let pending = '';
+  let inFlight = false;
+  return function push(data) {
+    pending += data;
+    if (inFlight) return;
+    inFlight = true;
+    (async () => {
+      try {
+        while (pending) {
+          const chunk = pending;
+          pending = '';
+          await send(chunk);
+        }
+      } catch {
+        // Losing the keystrokes of one failed request is bad; a wedged queue
+        // — or an unhandled rejection every time the network hiccups — is
+        // worse. api() has already surfaced the failure. Anything typed since
+        // is still in `pending` and goes out with the next push.
+      } finally {
+        inFlight = false;
+      }
+    })();
+  };
+}
+
 function sendResize() {
   if (!term || !sessionId) return;
   api(`/api/term/${sessionId}/resize`, {
@@ -191,13 +223,16 @@ export async function openTerminal({ cwd, label } = {}) {
     fit = new mods.FitAddon();
     term.loadAddon(fit);
     term.open($('#termScreen'));
-    term.onData((data) => {
-      if (!sessionId) return;
+    const sendInput = inputQueue((chunk) => {
       // base64 so control bytes and pasted UTF-8 survive JSON transport intact
-      const bytes = new TextEncoder().encode(data);
+      const bytes = new TextEncoder().encode(chunk);
       let bin = '';
       for (const b of bytes) bin += String.fromCharCode(b);
-      api(`/api/term/${sessionId}/input`, { method: 'POST', body: { data: btoa(bin) }, quiet: true });
+      return api(`/api/term/${sessionId}/input`, { method: 'POST', body: { data: btoa(bin) }, quiet: true });
+    });
+    term.onData((data) => {
+      if (!sessionId) return;
+      sendInput(data);
     });
     term.onResize(() => sendResize());
     new ResizeObserver(() => refit()).observe($('#termScreen'));
