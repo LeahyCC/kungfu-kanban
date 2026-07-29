@@ -1554,6 +1554,9 @@ a.err-card:hover { text-decoration: underline; }
 /* transcript — the ink slab fills the rest */
 .transcript {
   flex: 1;
+  /* the card's terminal sits below and takes a fixed bite; without this the
+     transcript loses the fight and collapses to a couple of lines */
+  min-height: 120px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1691,10 +1694,15 @@ a.err-card:hover { text-decoration: underline; }
    it takes a predictable bite out of the drawer instead of fighting the
    transcript for the leftovers — the transcript keeps flexing above it. */
 .drawer-term {
-  flex: none;
+  /* min-height, not height. A fixed height on a flex item in this column
+     collapsed to 2px once the drawer's content exceeded the viewport — and a
+     terminal you can't see is worse than one that's the wrong size. A min-height
+     cannot be squeezed, whatever the rest of the drawer does. The transcript
+     above carries its own min-height, so neither can starve the other. */
+  flex: 1 1 auto;
+  min-height: 220px;
   display: flex;
   flex-direction: column;
-  height: min(38vh, 340px);
   margin-top: 10px;
   background: var(--slab-bg);
   border: 1px solid var(--slab-rule);

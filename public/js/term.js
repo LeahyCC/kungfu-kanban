@@ -106,8 +106,16 @@ export function inputQueue(send) {
   };
 }
 
+// Every resize is a SIGWINCH, and zsh redraws its prompt on one — so a resize
+// that isn't actually a change costs a duplicated prompt line in the shell (and
+// a pointless request). Opening the panel used to fire one every time, which is
+// why reattaching to a session showed a stack of identical prompts.
+let sentSize = '';
 function sendResize() {
   if (!term || !sessionId) return;
+  const size = `${sessionId}:${term.cols}x${term.rows}`;
+  if (size === sentSize) return;
+  sentSize = size;
   api(`/api/term/${sessionId}/resize`, {
     method: 'POST',
     body: { cols: term.cols, rows: term.rows },
@@ -115,8 +123,27 @@ function sendResize() {
   });
 }
 
+// A pane that hasn't laid out yet measures as a couple of pixels, and fit()
+// happily turns that into a 2x1 terminal. Sending that to the pty is how the
+// card terminal came up unreadable: zsh drew its prompt for two columns, and the
+// cursor-up/erase sequences that followed wiped the screen. Nothing below this
+// floor is a real terminal, so treat it as "not measurable yet" and let the
+// ResizeObserver try again once the box has a size.
+const MIN_COLS = 20;
+const MIN_ROWS = 4;
+
+function saneDims() {
+  const cols = term && term.cols >= MIN_COLS ? term.cols : 80;
+  const rows = term && term.rows >= MIN_ROWS ? term.rows : 24;
+  return { cols, rows };
+}
+
 function refit() {
   if (!fit || !mount || !mount.isConnected || !mount.offsetParent) return;
+  let proposed = null;
+  try { proposed = fit.proposeDimensions(); } catch {}
+  // Never resize a live shell down to a collapsed pane's dimensions.
+  if (!proposed || !(proposed.cols >= MIN_COLS) || !(proposed.rows >= MIN_ROWS)) return;
   try { fit.fit(); } catch {}
   sendResize();
 }
@@ -165,7 +192,7 @@ function attach(id) {
 async function newSession(cwd, label) {
   const r = await api('/api/term', {
     method: 'POST',
-    body: { cwd, label, cols: (term && term.cols) || 80, rows: (term && term.rows) || 24 },
+    body: { cwd, label, ...saneDims() },
   });
   if (r.error) return null;
   if (term) term.reset();
@@ -217,6 +244,10 @@ async function ensureTerm(into) {
     toast('✕ could not load the terminal — is the server up to date? (npm i)');
     return false;
   }
+  // Two callers racing the await above would each construct a Terminal, and the
+  // second would win `term` while the first one's element stayed in the DOM —
+  // writes then go to an instance nobody can see. Re-check after the await.
+  if (term) { mountInto(into); return true; }
   {
     term = new mods.Terminal({
       allowProposedApi: true,
@@ -296,8 +327,20 @@ export async function openCardTerminal(taskId) {
   mountInto($('#drawerTermScreen'));
   cardTermId = taskId;
 
-  const r = await api(`/api/tasks/${taskId}/term`, { method: 'POST', body: { cols: term.cols, rows: term.rows } });
+  // Measure before creating the pty where we can: a shell started at one size
+  // and immediately resized redraws its prompt with size-dependent escapes
+  // (starship emitted a cursor-up-44, whose erase-below then wiped the pane).
+  // A frame lets the panel lay out; refit() refuses a degenerate measurement, so
+  // a pane that still hasn't sized falls back to 80x24 and the ResizeObserver
+  // corrects it — which beats handing the shell a 2x1 terminal.
+  await new Promise((r) => requestAnimationFrame(r));
+  refit();
+
+  const r = await api(`/api/tasks/${taskId}/term`, { method: 'POST', body: saneDims() });
   if (r.error) { box.classList.add('hidden'); return; }
+  // The pty was just created at these dimensions, so an immediate resize to the
+  // same size is pure noise — and a SIGWINCH makes zsh redraw its prompt.
+  sentSize = `${r.id}:${r.cols}x${r.rows}`;
   if (r.id !== sessionId) { term.reset(); attach(r.id); }
   // Say which tree you're in — a card's worktree is not its repo, and running
   // the tests in the wrong one is a confusing way to lose ten minutes.
