@@ -38,6 +38,14 @@ if (transcriptBox) {
   transcriptBox.setAttribute('role', 'log');
   transcriptBox.setAttribute('aria-live', 'polite');
   transcriptBox.setAttribute('aria-relevant', 'additions');
+  // Tool rows clip to one line; click one to unclip it. A click that ends a
+  // text selection is the user copying a command, not asking to expand.
+  transcriptBox.addEventListener('click', (ev) => {
+    const sel = window.getSelection && window.getSelection();
+    if (sel && String(sel)) return;
+    const row = ev.target && ev.target.closest && ev.target.closest('.t-entry.tool');
+    if (row) row.classList.toggle('open');
+  });
 }
 
 // Pure windowing: append the synthesized error entry (unless the identical
@@ -434,12 +442,26 @@ export function renderDrawerActions(t) {
   }
 }
 
+function span(cls, text) {
+  const s = document.createElement('span');
+  s.className = cls;
+  s.textContent = text;
+  return s;
+}
+
 export function entryEl(e) {
   const div = document.createElement('div');
   div.className = `t-entry ${e.kind}`;
   if (e.kind === 'assistant' || e.kind === 'result') {
     div.classList.add('md');
     div.innerHTML = mdToHtml(e.text);
+  } else if (e.kind === 'tool') {
+    // "Bash gh api …" → a terminal command line: bright tool name, dim
+    // argument clipped to one line (CSS), full text on hover / click.
+    const i = e.text.indexOf(' ');
+    div.title = e.text;
+    div.appendChild(span('t-tool-name', i < 0 ? e.text : e.text.slice(0, i)));
+    if (i >= 0) div.appendChild(span('t-tool-args', e.text.slice(i + 1)));
   } else {
     div.textContent = e.text;
   }

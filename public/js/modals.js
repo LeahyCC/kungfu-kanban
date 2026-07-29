@@ -407,8 +407,16 @@ function settingsFormSnapshot() {
     f.defaultCwd.value, f.defaultPermissionMode.value, f.defaultModel.value, f.defaultEffort.value,
     f.reposDir.value, f.ntfyTopic.value,
     f.notifyMac.checked, f.keepAwake.checked, f.archiveDays.value, f.prWatchMin.value,
-    f.prWatchAutoFix.checked, f.usageBudgetM.value,
+    f.prWatchAutoFix.checked, f.terminal.checked, f.usageBudgetM.value,
   ]);
+}
+
+// The terminal is opt-out; when it's off the button goes away with it (the
+// server refuses the endpoints too — this is only the UI half).
+export function applyTerminalSetting() {
+  const on = state.config.settings.terminal !== false;
+  $('#termToggle').classList.toggle('hidden', !on);
+  if (!on) $('#termPanel').classList.add('hidden');
 }
 
 export async function closeSettings(force = false) {
@@ -436,6 +444,7 @@ export function openSettings() {
   f.archiveDays.value = state.config.settings.archiveDays ?? 7;
   f.prWatchMin.value = Number.isInteger(state.config.settings.prWatchMin) ? state.config.settings.prWatchMin : 10;
   f.prWatchAutoFix.checked = state.config.settings.prWatchAutoFix !== false;
+  f.terminal.checked = state.config.settings.terminal !== false;
   f.usageBudgetM.value = (state.config.settings.usageBudgetTokens || 0) / 1_000_000;
   renderUsage();
   renderSkillStatus();
@@ -535,11 +544,13 @@ $('#settingsForm').addEventListener('submit', async (e) => {
       archiveDays: parseInt(f.archiveDays.value, 10),
       prWatchMin: parseInt(f.prWatchMin.value, 10) || 0,
       prWatchAutoFix: f.prWatchAutoFix.checked,
+      terminal: f.terminal.checked,
       usageBudgetM: parseFloat(f.usageBudgetM.value) || 0,
     },
   });
   if (!r || r.error) return;
   state.config.settings = r;
+  applyTerminalSetting();
   const c = await api('/api/config'); // re-scan repos for the picker
   if (!c || c.error) return;
   state.config = c;

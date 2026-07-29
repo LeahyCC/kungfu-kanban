@@ -14,15 +14,28 @@ import { $, debounce } from './js/util.js';
 import { api } from './js/api.js';
 import { render, loadTasks, setFilter } from './js/board.js';
 import { closeDrawer } from './js/drawer.js';
-import { closeTaskModal, closeImportModal, closeSettings } from './js/modals.js';
+import { closeTaskModal, closeImportModal, closeSettings, applyTerminalSetting } from './js/modals.js';
 import { closeErrors, closeAttn, loadErrors, loadManager } from './js/manager.js';
 import { applyCooldown, applyModelBlocks, renderNetChip, setServerOffline, renderHealth, renderUsage, setCliAuth } from './js/chips.js';
 import { closePalette } from './js/palette.js'; // importing also wires the palette + global hotkeys
+import { toggleTerminal } from './js/term.js';
 import { connectSSE } from './js/sse.js';
 
 // ---------- Escape + focus trap for modals, the drawer, and dialogs ----------
+const inTerminal = () => $('#termPanel').contains(document.activeElement);
+
 document.addEventListener('keydown', (e) => {
+  // ⌘J toggles the terminal, the way it does in every editor. Meta only —
+  // Ctrl-J is a linefeed, and the shell has first claim on it.
+  if (e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'j') {
+    e.preventDefault();
+    toggleTerminal();
+    return;
+  }
   if (e.key === 'Escape') {
+    // Escape belongs to whatever is running in the shell (vim, less, fzf) —
+    // never to the drawer sitting behind the terminal panel.
+    if (inTerminal()) return;
     if (document.querySelector('dialog.kk-dialog[open]')) return; // <dialog> closes itself
     if (!$('#paletteBackdrop').classList.contains('hidden')) { e.preventDefault(); closePalette(); }
     else if (!$('#modalBackdrop').classList.contains('hidden')) { e.preventDefault(); closeTaskModal(); }
@@ -102,6 +115,7 @@ function bootError(msg) {
   setCliAuth(!!state.config.cliLoggedOut);
   renderNetChip();
   applyModelBlocks(state.config.modelBlocks || {});
+  applyTerminalSetting();
   connectSSE(); // handlers exist before an early event can land
   if (!(await loadTasks())) { bootError('loaded config, but the task list failed — retry?'); return; }
   renderHealth();

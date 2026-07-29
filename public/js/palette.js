@@ -7,9 +7,11 @@ import { haystackFor } from './board.js';
 import { openDrawer } from './drawer.js';
 import { openModal, openSettings } from './modals.js';
 import { showTab } from './manager.js';
+import { toggleTerminal } from './term.js';
 
 const COMMANDS = [
   { label: '＋ New card', key: 'n', run: () => openModal(null) },
+  { label: '▸_ Terminal', key: 't', run: () => toggleTerminal() },
   { label: '⇪ Import / draft cards', key: 'i', run: () => $('#importBtn').click() },
   { label: '⌕ Filter cards', key: '/', run: () => { const f = $('#filterInput'); f.focus(); f.select(); } },
   { label: 'Go to Board', key: '1', run: () => showTab('board') },
