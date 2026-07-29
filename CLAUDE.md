@@ -3,16 +3,20 @@
 Conventions for coding sessions in this repo:
 
 - **Version + changelog discipline**: every meaningful change bumps
-  `package.json` version (minor = feature, patch = fix) and adds a line under
-  `## [Unreleased]` → move to a dated section when pushed. The in-app update
-  check shows users the new version, so keep them honest. If a card's prompt
-  explicitly overrides this (e.g. a batch whose release card owns the version
-  bump), the card prompt wins — three batch agents following this convention
-  against explicit card instructions caused avoidable merge conflicts on
-  2026-07-20. Every release card also creates the annotated git tag
-  (`vX.Y.Z`) and the GitHub Release from the dated CHANGELOG section it
-  wrote — the release feed was backfilled 2026-07-20 and is now required
-  going forward.
+  `package.json` version (minor = feature, patch = fix) and describes itself in
+  a **dated** section — `## [X.Y.Z] — YYYY-MM-DD`, written that way in the PR,
+  not left under `## [Unreleased]`. The in-app update check shows users the new
+  version, so keep them honest. If a card's prompt explicitly overrides this
+  (e.g. a batch whose release card owns the version bump), the card prompt wins
+  — three batch agents following this convention against explicit card
+  instructions caused avoidable merge conflicts on 2026-07-20.
+  **Releases are automatic since 2026-07-29**: merging to `main` runs
+  `scripts/cut-release.js` (the `release` job in `test.yml`), which creates the
+  annotated `vX.Y.Z` tag and the GitHub Release from that dated section. One
+  merged PR, one release — no release cards. A PR that bumps no version, or
+  leaves its notes under `[Unreleased]`, releases nothing and stays green;
+  that silence is how 1.8.0 through 1.10.1 slipped out untagged before this
+  existed, so `scripts/check-release.js` still audits PR citations at PR time.
 - **The live server runs under launchd** (`com.kungfu-kanban`). Frontend files
   serve fresh from disk; server-side changes need
   `launchctl kickstart -k gui/$(id -u)/com.kungfu-kanban`. A SIGTERM/SIGINT
