@@ -91,7 +91,7 @@ function run() {
   execFileSync('gh', ['release', 'create', plan.tag, '--title', plan.title, '--notes-file', notesFile], {
     stdio: 'inherit',
   });
-  console.log(`✓ released ${plan.tag} — ${plan.title}`);
+  console.log(`✓ released ${plan.title}`); // the title already carries the version
 }
 
 if (require.main === module) run();

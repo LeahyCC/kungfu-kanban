@@ -17,11 +17,13 @@ import { $ } from './util.js';
 import { api, toast } from './api.js';
 import { state } from './state.js';
 
-let term = null;      // xterm Terminal
+let term = null;      // xterm Terminal — one instance, moved between mounts
 let fit = null;       // FitAddon
 let es = null;        // EventSource for the attached session
 let sessionId = null;
 let loading = null;   // in-flight import() of xterm
+let mount = null;     // the element currently holding term.element
+let cardTermId = null; // the card whose drawer terminal is showing, if any
 
 const panel = () => $('#termPanel');
 
@@ -104,8 +106,16 @@ export function inputQueue(send) {
   };
 }
 
+// Every resize is a SIGWINCH, and zsh redraws its prompt on one — so a resize
+// that isn't actually a change costs a duplicated prompt line in the shell (and
+// a pointless request). Opening the panel used to fire one every time, which is
+// why reattaching to a session showed a stack of identical prompts.
+let sentSize = '';
 function sendResize() {
   if (!term || !sessionId) return;
+  const size = `${sessionId}:${term.cols}x${term.rows}`;
+  if (size === sentSize) return;
+  sentSize = size;
   api(`/api/term/${sessionId}/resize`, {
     method: 'POST',
     body: { cols: term.cols, rows: term.rows },
@@ -113,10 +123,40 @@ function sendResize() {
   });
 }
 
+// A pane that hasn't laid out yet measures as a couple of pixels, and fit()
+// happily turns that into a 2x1 terminal. Sending that to the pty is how the
+// card terminal came up unreadable: zsh drew its prompt for two columns, and the
+// cursor-up/erase sequences that followed wiped the screen. Nothing below this
+// floor is a real terminal, so treat it as "not measurable yet" and let the
+// ResizeObserver try again once the box has a size.
+const MIN_COLS = 20;
+const MIN_ROWS = 4;
+
+function saneDims() {
+  const cols = term && term.cols >= MIN_COLS ? term.cols : 80;
+  const rows = term && term.rows >= MIN_ROWS ? term.rows : 24;
+  return { cols, rows };
+}
+
 function refit() {
-  if (!fit || panel().classList.contains('hidden')) return;
+  if (!fit || !mount || !mount.isConnected || !mount.offsetParent) return;
+  let proposed = null;
+  try { proposed = fit.proposeDimensions(); } catch {}
+  // Never resize a live shell down to a collapsed pane's dimensions.
+  if (!proposed || !(proposed.cols >= MIN_COLS) || !(proposed.rows >= MIN_ROWS)) return;
   try { fit.fit(); } catch {}
   sendResize();
+}
+
+// One xterm instance, two homes: the board's bottom sheet and the open card's
+// drawer. Moving its element is far less machinery than a second Terminal (and
+// a second WebGL/canvas renderer), and you only ever look at one of them —
+// switching reattaches to that surface's own server-side session, which is
+// still running either way.
+function mountInto(el) {
+  if (!term || !el || mount === el) { mount = el || mount; return; }
+  mount = el;
+  el.appendChild(term.element);
 }
 
 // ---------- attach / detach ----------
@@ -152,7 +192,7 @@ function attach(id) {
 async function newSession(cwd, label) {
   const r = await api('/api/term', {
     method: 'POST',
-    body: { cwd, label, cols: (term && term.cols) || 80, rows: (term && term.rows) || 24 },
+    body: { cwd, label, ...saneDims() },
   });
   if (r.error) return null;
   if (term) term.reset();
@@ -192,22 +232,23 @@ async function renderTabs() {
   bar.appendChild(add);
 }
 
-// ---------- open / close ----------
-export async function openTerminal({ cwd, label } = {}) {
-  const p = panel();
-  p.classList.remove('hidden');
-  document.body.classList.add('term-open');
-
-  if (!term) {
-    let mods;
-    try {
-      mods = await loadXterm();
-    } catch (e) {
-      toast('✕ could not load the terminal — is the server up to date? (npm i)');
-      p.classList.add('hidden');
-      document.body.classList.remove('term-open');
-      return;
-    }
+// ---------- one-time xterm construction ----------
+// Returns false when xterm couldn't be loaded, so callers can put their own UI
+// back rather than leaving an empty pane open.
+async function ensureTerm(into) {
+  if (term) { mountInto(into); return true; }
+  let mods;
+  try {
+    mods = await loadXterm();
+  } catch {
+    toast('✕ could not load the terminal — is the server up to date? (npm i)');
+    return false;
+  }
+  // Two callers racing the await above would each construct a Terminal, and the
+  // second would win `term` while the first one's element stayed in the DOM —
+  // writes then go to an instance nobody can see. Re-check after the await.
+  if (term) { mountInto(into); return true; }
+  {
     term = new mods.Terminal({
       allowProposedApi: true,
       cursorBlink: true,
@@ -222,7 +263,8 @@ export async function openTerminal({ cwd, label } = {}) {
     });
     fit = new mods.FitAddon();
     term.loadAddon(fit);
-    term.open($('#termScreen'));
+    term.open(into);
+    mount = into;
     const sendInput = inputQueue((chunk) => {
       // base64 so control bytes and pasted UTF-8 survive JSON transport intact
       const bytes = new TextEncoder().encode(chunk);
@@ -235,8 +277,25 @@ export async function openTerminal({ cwd, label } = {}) {
       sendInput(data);
     });
     term.onResize(() => sendResize());
-    new ResizeObserver(() => refit()).observe($('#termScreen'));
+    // One observer on the terminal's own element, so it follows the instance
+    // from mount to mount instead of watching a container it has left.
+    new ResizeObserver(() => refit()).observe(term.element);
   }
+  return true;
+}
+
+// ---------- the board's bottom sheet ----------
+export async function openTerminal({ cwd, label } = {}) {
+  const p = panel();
+  p.classList.remove('hidden');
+  document.body.classList.add('term-open');
+  if (!(await ensureTerm($('#termScreen')))) {
+    p.classList.add('hidden');
+    document.body.classList.remove('term-open');
+    return;
+  }
+  mountInto($('#termScreen'));
+  cardTermId = null;
 
   // Reattach to a live session when there is one and the caller didn't ask for
   // a specific directory; otherwise open a fresh shell there.
@@ -251,6 +310,58 @@ export async function openTerminal({ cwd, label } = {}) {
   refit();
   term.focus();
   renderTabs();
+}
+
+// ---------- a card's own shell, inside its drawer ----------
+// The server picks the directory (the card's worktree when it has one) and
+// hands back the card's existing session if it still has one, so closing and
+// reopening a card lands you back in the same shell.
+export async function openCardTerminal(taskId) {
+  const box = $('#drawerTerm');
+  if (!box) return;
+  box.classList.remove('hidden');
+  if (!(await ensureTerm($('#drawerTermScreen')))) {
+    box.classList.add('hidden');
+    return;
+  }
+  mountInto($('#drawerTermScreen'));
+  cardTermId = taskId;
+
+  // Measure before creating the pty where we can: a shell started at one size
+  // and immediately resized redraws its prompt with size-dependent escapes
+  // (starship emitted a cursor-up-44, whose erase-below then wiped the pane).
+  // A frame lets the panel lay out; refit() refuses a degenerate measurement, so
+  // a pane that still hasn't sized falls back to 80x24 and the ResizeObserver
+  // corrects it — which beats handing the shell a 2x1 terminal.
+  await new Promise((r) => requestAnimationFrame(r));
+  refit();
+
+  const r = await api(`/api/tasks/${taskId}/term`, { method: 'POST', body: saneDims() });
+  if (r.error) { box.classList.add('hidden'); return; }
+  // The pty was just created at these dimensions, so an immediate resize to the
+  // same size is pure noise — and a SIGWINCH makes zsh redraw its prompt.
+  sentSize = `${r.id}:${r.cols}x${r.rows}`;
+  if (r.id !== sessionId) { term.reset(); attach(r.id); }
+  // Say which tree you're in — a card's worktree is not its repo, and running
+  // the tests in the wrong one is a confusing way to lose ten minutes.
+  const path = $('#drawerTermPath');
+  if (path) { path.textContent = r.cwd || ''; path.title = r.cwd || ''; }
+  refit();
+  term.focus();
+}
+
+export function closeCardTerminal() {
+  const box = $('#drawerTerm');
+  if (box) box.classList.add('hidden');
+  if (cardTermId === null) return;
+  cardTermId = null;
+  // The shell keeps running server-side; we just stop listening to it.
+  detach();
+  sessionId = null;
+}
+
+export function isCardTerminalOpen(taskId) {
+  return cardTermId !== null && (taskId === undefined || cardTermId === taskId);
 }
 
 export function closeTerminal() {
@@ -273,6 +384,17 @@ export function toggleTerminal() {
 
 // ---------- wiring ----------
 $('#termToggle').addEventListener('click', () => toggleTerminal());
+$('#drawerTermClose').addEventListener('click', () => closeCardTerminal());
+$('#drawerTermKill').addEventListener('click', async () => {
+  if (!sessionId || cardTermId === null) return closeCardTerminal();
+  const dying = sessionId;
+  const card = cardTermId;
+  detach();
+  sessionId = null;
+  await api(`/api/term/${dying}`, { method: 'DELETE', quiet: true });
+  if (term) term.reset();
+  openCardTerminal(card); // a killed shell is replaced by a fresh one in the same tree
+});
 $('#termClose').addEventListener('click', () => closeTerminal());
 $('#termKill').addEventListener('click', async () => {
   if (!sessionId) return closeTerminal();

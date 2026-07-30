@@ -152,6 +152,12 @@ prompt, aliases, plugins, colours. It is a genuine pty, so job control and
 full-screen TUIs (vim, lazygit, `claude -r <session-id>`) work, and resizing the
 panel resizes the shell.
 
+**Each card has its own terminal too.** ▸_ Terminal in a card's drawer opens a shell
+in *that card's* working tree — the git worktree the agent ran in when the card used
+one, not the parent repo — so `git diff`, the tests, and `claude -r <session-id>` all
+land where the work happened. The tree's path shows in the panel bar. One shell per
+card: reopening the card reattaches to it, ⏻ kill ends it and gives you a fresh one.
+
 Sessions belong to the **server**, not the tab. Close the panel, reload the board,
 or pick it up on your phone over Tailscale — `npm test` keeps running and the panel
 reattaches with its scrollback. The panel bar holds one tab per shell (＋ for a new
