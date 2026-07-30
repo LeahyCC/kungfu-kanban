@@ -587,6 +587,37 @@ app.post('/api/term', termGate, (req, res) => {
   res.json(r.session);
 });
 
+// A card's own shell. Opens where the agent actually worked — the git worktree
+// it ran in when the card used one, not the parent repo — so `git diff`, the
+// test suite, and `claude -r <session>` all land in the right tree. One live
+// session per card: reopening the drawer reattaches instead of piling up shells.
+app.post('/api/tasks/:id/term', termGate, async (req, res) => {
+  const t = getTask(req.params.id);
+  if (!t) return res.status(404).json({ error: 'no such card' });
+  const existing = ptylib.forTask(t.id);
+  if (existing) return res.json({ ...existing, reattached: true });
+
+  let dir = t.cwd;
+  if (t.worktree) {
+    // Same lookup the PR flow uses, so we agree with it about where the card's
+    // work lives. A missing worktree (never ran, already cleaned up) falls back
+    // to the repo rather than failing to open a shell at all.
+    try {
+      const wt = await prflow.findWorktree(t.cwd, `kanban-${t.id.slice(0, 8)}`);
+      if (wt && wt.path) dir = wt.path;
+    } catch {}
+  }
+  const r = ptylib.create({
+    cwd: dir,
+    cols: (req.body || {}).cols,
+    rows: (req.body || {}).rows,
+    label: t.title,
+    taskId: t.id,
+  });
+  if (r.error) return res.status(400).json(r);
+  res.json(r.session);
+});
+
 app.get('/api/term/:id/stream', termGate, (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',

@@ -20,6 +20,7 @@ import { depsUnmet, isPrUnshipped } from './deps.js';
 import { mdToHtml } from './markdown.js';
 import { loadTasks, applyOptimistic, rollbackOptimistic, mergeTaskResponse } from './board.js';
 import { openModal } from './modals.js';
+import { openCardTerminal, closeCardTerminal } from './term.js';
 
 let drawerReturnFocus = null;
 let lastDrawerActionsStatus = null; // rebuild only when status changes — a rebuild between mousedown/mouseup eats the click
@@ -128,6 +129,7 @@ export async function closeDrawer(force = false) {
     && $('#promptEdit').value !== (t.prompt || '')
     && !(await confirmDlg('Discard the unsaved prompt edit?', { confirmLabel: 'Discard', danger: true }))) return;
   $('#drawer').classList.add('hidden');
+  closeCardTerminal(); // the shell keeps running server-side; we stop watching it
   state.drawerId = null;
   if (drawerReturnFocus) { try { drawerReturnFocus.focus(); } catch {} drawerReturnFocus = null; }
 }
@@ -145,6 +147,7 @@ export async function openDrawer(id) {
   lastDrawerActionsStatus = null; // force rebuild — opening a card is not a status change
   renderDrawerActions(t);
 
+  closeCardTerminal(); // opening a card must not show the last card's shell
   omittedCount = 0;
   pendingEntries = [];
   const box = $('#transcript');
@@ -365,6 +368,11 @@ export function renderDrawerActions(t) {
     b.addEventListener('click', () => withBusy(b, fn));
     box.appendChild(b);
   };
+  // Every status gets a shell: on a running card to watch what it's doing, on a
+  // finished one to check the diff or re-run the tests where the agent worked.
+  if (state.config.settings && state.config.settings.terminal !== false) {
+    mk('▸_ Terminal', 'ghost', "A shell in this card's own working tree — its git worktree when it has one", () => openCardTerminal(t.id));
+  }
   if (RUNNING_LIKE[t.status]) {
     mk('⏹ Stop', 'danger', 'Stop the agent (SIGTERM; the partial transcript is kept)', () => api(`/api/tasks/${t.id}/stop`, { method: 'POST' }));
   } else {

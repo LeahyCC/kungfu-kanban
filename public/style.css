@@ -1554,6 +1554,9 @@ a.err-card:hover { text-decoration: underline; }
 /* transcript — the ink slab fills the rest */
 .transcript {
   flex: 1;
+  /* the card's terminal sits below and takes a fixed bite; without this the
+     transcript loses the fight and collapses to a couple of lines */
+  min-height: 120px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1685,6 +1688,40 @@ a.err-card:hover { text-decoration: underline; }
 /* phones: a terminal needs the room, and the on-screen keyboard takes half */
 @media (max-width: 700px) {
   .term-panel { height: min(60vh, 480px); }
+}
+
+/* the card's own shell, under its transcript. flex:none with a fixed height so
+   it takes a predictable bite out of the drawer instead of fighting the
+   transcript for the leftovers — the transcript keeps flexing above it. */
+.drawer-term {
+  /* min-height, not height. A fixed height on a flex item in this column
+     collapsed to 2px once the drawer's content exceeded the viewport — and a
+     terminal you can't see is worse than one that's the wrong size. A min-height
+     cannot be squeezed, whatever the rest of the drawer does. The transcript
+     above carries its own min-height, so neither can starve the other. */
+  flex: 1 1 auto;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+  background: var(--slab-bg);
+  border: 1px solid var(--slab-rule);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.drawer-term .term-bar { border-radius: 4px 4px 0 0; }
+.drawer-term .term-screen { padding: 6px 4px 4px 8px; }
+.term-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;        /* clip the boring prefix, keep the worktree name */
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #978F80;
 }
 
 /* responsive */
