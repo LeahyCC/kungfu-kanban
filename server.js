@@ -283,6 +283,7 @@ app.put('/api/settings', (req, res) => {
     prwatch.applyInterval();
   }
   if (typeof prWatchAutoFix === 'boolean') state.settings.prWatchAutoFix = prWatchAutoFix;
+  if (typeof req.body.prWatchAutoFixCi === 'boolean') state.settings.prWatchAutoFixCi = req.body.prWatchAutoFixCi;
   // Turning the built-in terminal off also ends the shells it already opened —
   // a switch that leaves live sessions running isn't a switch.
   const { terminal } = req.body || {};
@@ -930,6 +931,13 @@ app.put('/api/manager/config', (req, res) => {
   if ('maxRetries' in b && Number.isInteger(b.maxRetries)) c.maxRetries = Math.max(0, b.maxRetries);
   if ('permissionCeiling' in b && MANAGER_PERM_CEILINGS.includes(b.permissionCeiling)) c.permissionCeiling = b.permissionCeiling;
   if (b.triggers) c.triggers = { ...c.triggers, ...b.triggers };
+  // booleans only, and only for actions the ladder actually holds back — an
+  // unknown key here would silently grant nothing, so drop it rather than store it
+  if (b.autoActions) {
+    for (const [k, v] of Object.entries(b.autoActions)) {
+      if (k in c.autoActions) c.autoActions[k] = !!v;
+    }
+  }
   saveSettings();
   manager.applyInterval();
   res.json(c);

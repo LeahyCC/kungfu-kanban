@@ -102,7 +102,7 @@ class El {
     this._listeners = {};
     this._innerHTML = '';
     this._innerHTMLWrites = 0;
-    this.textContent = '';
+    this._text = '';
     this.disabled = false;
     this.tabIndex = -1;
     this.value = '';
@@ -114,6 +114,16 @@ class El {
     this.clientHeight = 0;
   }
   get classList() { return new ClassList(this); }
+  // Aggregates descendants like the real thing — an element that mixes a text
+  // node with element children (transcript entries do) must read back whole.
+  get textContent() {
+    return this.children.length ? this.children.map((c) => c.textContent).join('') : this._text;
+  }
+  set textContent(v) {
+    for (const c of this.children) c.parentNode = null;
+    this.children = [];
+    this._text = String(v);
+  }
   set innerHTML(v) {
     this._innerHTML = String(v);
     this._innerHTMLWrites++;

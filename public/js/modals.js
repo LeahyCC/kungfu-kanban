@@ -407,7 +407,7 @@ function settingsFormSnapshot() {
     f.defaultCwd.value, f.defaultPermissionMode.value, f.defaultModel.value, f.defaultEffort.value,
     f.reposDir.value, f.ntfyTopic.value,
     f.notifyMac.checked, f.keepAwake.checked, f.archiveDays.value, f.prWatchMin.value,
-    f.prWatchAutoFix.checked, f.terminal.checked, f.usageBudgetM.value,
+    f.prWatchAutoFix.checked, f.prWatchAutoFixCi.checked, f.terminal.checked, f.usageBudgetM.value,
   ]);
 }
 
@@ -444,6 +444,7 @@ export function openSettings() {
   f.archiveDays.value = state.config.settings.archiveDays ?? 7;
   f.prWatchMin.value = Number.isInteger(state.config.settings.prWatchMin) ? state.config.settings.prWatchMin : 10;
   f.prWatchAutoFix.checked = state.config.settings.prWatchAutoFix !== false;
+  f.prWatchAutoFixCi.checked = state.config.settings.prWatchAutoFixCi !== false;
   f.terminal.checked = state.config.settings.terminal !== false;
   f.usageBudgetM.value = (state.config.settings.usageBudgetTokens || 0) / 1_000_000;
   renderUsage();
@@ -544,6 +545,7 @@ $('#settingsForm').addEventListener('submit', async (e) => {
       archiveDays: parseInt(f.archiveDays.value, 10),
       prWatchMin: parseInt(f.prWatchMin.value, 10) || 0,
       prWatchAutoFix: f.prWatchAutoFix.checked,
+      prWatchAutoFixCi: f.prWatchAutoFixCi.checked,
       terminal: f.terminal.checked,
       usageBudgetM: parseFloat(f.usageBudgetM.value) || 0,
     },
