@@ -7,6 +7,36 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.15.0] — 2026-07-31
+
+### Added
+- **One ＋ New cards button.** The toolbar's ＋ New card and ⇪ Import pair is
+  now a single button that opens the composer — the same prompt box, project /
+  model / effort / permissions row, and the three ways out (✨ Improve prompt,
+  ⇪ Split into cards, ▶ Create & run / ＋ Add to backlog) that used to appear
+  only on an empty board. Import did not go anywhere: ⇪ Split into cards still
+  hands off to it with your text and project carried across, and `i` in the
+  command palette still opens it directly.
+- **⌫ Clear on the Done column.** Done was the one column that only ever grew.
+  Its header now carries a Clear button that empties it in a single request,
+  after a confirm naming the exact count. Cards are **archived, not deleted** —
+  they go where the daily sweep already sends them and stay readable under
+  Archive, so clearing is never destructive. The button hides itself when Done
+  is empty and clears every Done card even while a board filter is narrowing
+  what you can see.
+
+### Changed
+- The empty board now points at ＋ New cards instead of embedding a second copy
+  of the composer. Two live copies would have collided on their shared element
+  ids, and a half-typed prompt now survives closing the modal.
+- `sweepArchive()` takes an `{ all }` option so the nightly age-based sweep and
+  the manual Clear share one implementation. `{ all: true }` also works when
+  auto-archiving is switched off (`archiveDays: 0`), which is what makes the
+  button honest on boards that never sweep on their own.
+- `POST /api/tasks/archive-done` is the new endpoint behind Clear. It resolves
+  each archived card's open errors and pumps the queue afterwards, since an
+  archived dependency counts as met and may unblock a waiting card.
+
 ## [1.14.0] — 2026-07-30
 
 ### Added
