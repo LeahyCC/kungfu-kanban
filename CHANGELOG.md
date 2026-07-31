@@ -7,6 +7,30 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.13.1] — 2026-07-30
+
+### Fixed
+- **Collapsing a batch closed it in every column.** The collapsed set was keyed
+  by group name alone, so folding away a finished batch in Done also folded the
+  same batch's cards in Backlog and Review — the whole board's worth of that
+  batch vanished from one click. Keyed per column now (`<column>|<group>`), so
+  each stack folds on its own and survives a reload that way. Legacy bare-name
+  entries in `localStorage` are dropped on load.
+- The ✕ delete key on a Done card sat on top of the SHIPPED seal (and the
+  rainbow ring on ultracode cards), so every finished card carried a small
+  clashing box in its top-right corner. It now stays hidden until you reach for
+  the card, and drops clear of the seal when it appears. Touch screens, which
+  have no hover, still show it — moved down out of the seal's way.
+
+### Changed
+- **The card drawer stopped shouting.** Its meta row wrapped to six lines of
+  uppercase mono — an absolute repo path, a full session UUID, a full PR URL,
+  and three separate run-stat chips — which buried the two chips that actually
+  matter (CI state and blocked dependencies). Long values now show their short
+  form with the full string in the tooltip (`cwd: carzilly_redesign`,
+  `⧉ resume session`, `PR #159`), created/updated share one chip, and turns ·
+  duration · tokens share another. Same information, roughly half the rows.
+
 ## [1.13.0] — 2026-07-29
 
 ### Added
