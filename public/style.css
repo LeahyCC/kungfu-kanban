@@ -323,6 +323,9 @@ fieldset { border: 1px solid var(--rule); border-radius: 2px; padding: 10px 12px
 fieldset legend { padding: 0 6px; }
 input.tiny { width: 60px; }
 .hint-inline { text-transform: none; letter-spacing: normal; font-weight: 400; color: var(--ink-400); }
+/* a control group whose settings don't apply at the current level — visible so
+   you can see what Semi would govern, dimmed so it doesn't read as live */
+.inert { opacity: 0.5; }
 .hint { text-transform: none; letter-spacing: normal; font-weight: 400; color: var(--ink-400); font-size: 11.5px; margin: -6px 0 14px; }
 
 .check-row {
@@ -1568,9 +1571,26 @@ a.err-card:hover { text-decoration: underline; }
 }
 .t-entry {
   white-space: pre-wrap;
-  /* 3000-entry transcripts: skip off-screen entries (cheap drawer opens) */
-  content-visibility: auto;
-  contain-intrinsic-size: auto 40px;
+  /* Two things kept the transcript from ever reaching its own bottom:
+     - flex children shrink by default, so 54 entries squeezed into the box
+       instead of overflowing it;
+     - content-visibility: auto left off-screen entries unlaid-out, so the
+       scrollHeight read at open time (470px) was a quarter of the real one
+       (2199px) and `scrollTop = scrollHeight` landed near the top.
+     planTranscript already caps the DOM at 500 entries, which is what the
+     skipping was for — the cap can carry that job on its own. */
+  flex: none;
+}
+/* the clock gutter: floated so it leads block entries without wrapping them in
+   an extra layer; floats are ignored on .tool rows, which are already flex */
+.t-time {
+  float: left;
+  flex: none;
+  margin-right: 8px;
+  color: #6E675C;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
 }
 .t-entry.init { color: #978F80; font-size: 11.5px; }
 /* tool calls read as a terminal command stream: coral prompt sigil, bright

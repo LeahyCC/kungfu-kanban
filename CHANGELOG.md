@@ -7,6 +7,43 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.14.0] — 2026-07-30
+
+### Added
+- **Per-action automation switches.** Semi used to hold back four verdicts as
+  one bundle — approve, retry, follow-up, merge — so "merge green PRs yourself,
+  but ask me before approving anything" was not expressible; the only way to get
+  auto-merge was Auto, which grants everything. A new **Act without asking**
+  group under the autonomy ladder releases them one at a time. Unchecked is the
+  Semi that has always been described, so nothing changes until you tick a box;
+  Suggest and Auto still override the group entirely, and it dims to say so.
+- **The PR watcher's two auto-fixes split into two switches.** One flag used to
+  govern both resolving merge conflicts (a merge commit pushed to your branch)
+  and fixing red CI (a fresh agent run on the card's own session) — quite
+  different amounts of trust for one checkbox. ⚙ Settings → System now has one
+  each, both on by default. Verified-infrastructure failures are still never
+  auto-fixed, on either setting.
+- **Transcript timestamps.** Every entry carries an `HH:MM:SS` gutter (full date
+  on hover), stamped once in `appendTranscript` so all ~18 call sites get it and
+  live SSE entries stamp themselves on arrival. Entries written before this
+  release have no clock and simply show none.
+
+### Fixed
+- **The card transcript never scrolled to its own bottom** — opening a card
+  showed the beginning of the run and hid the newest output, which is the part
+  you opened the card for. Two causes, both in one CSS rule: transcript entries
+  were flex children with the default `flex-shrink`, so they squeezed to fit
+  instead of overflowing; and `content-visibility: auto` left off-screen entries
+  unlaid-out, so the `scrollHeight` read when pinning was 470px against a real
+  2199px and the pin landed near the top. Entries are `flex: none` now and the
+  skipping is gone (`planTranscript` already caps the DOM at 500 entries, which
+  is what it was for). Opening a card lands on the newest line, and the existing
+  follow-the-tail behaviour during a run now has real numbers to work with.
+
+### Changed
+- The test harness's fake DOM models `textContent` as the real one does,
+  aggregating child nodes instead of shadowing them with its own property.
+
 ## [1.13.1] — 2026-07-30
 
 ### Fixed
