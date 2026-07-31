@@ -785,7 +785,11 @@ input.tiny { width: 60px; }
   border-color: var(--rule-strong);
   color: var(--ink-900);
 }
-.card-del { margin-top: 8px; } /* sits clear of the SHIPPED seal */
+/* Done cards already wear the SHIPPED seal in the top-right, so a permanently
+   visible ✕ box sat on top of it (and of the rainbow ring). Hide it until you
+   reach for the card, and drop it fully below the seal when it does show.
+   Touch has no hover — the (hover: none) block below turns it back on. */
+.card-del { opacity: 0; margin-top: 14px; }
 .card-run.card-del:hover {
   background: transparent;
   border-color: var(--error);

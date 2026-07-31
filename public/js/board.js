@@ -25,11 +25,16 @@ let renderQueued = false;
 let filterText = '';
 let lastRenderFingerprint = null;
 
-// Which group headers are collapsed, by group name — persists across reloads.
-// Applied as a class on the (reused) group wrapper, so it never has to go
-// through render()'s fingerprint gate.
+// Which group headers are collapsed, keyed "<column>|<group>" — a batch spans
+// several columns and each stack collapses on its own (a bare name collapsed
+// the group in every column at once). Persists across reloads; legacy bare
+// names are dropped on load. Applied as a class on the (reused) group wrapper,
+// so it never has to go through render()'s fingerprint gate.
 let collapsedGroups = new Set();
-try { collapsedGroups = new Set(JSON.parse(localStorage.getItem('kk-groups-collapsed') || '[]')); } catch {}
+try {
+  const saved = JSON.parse(localStorage.getItem('kk-groups-collapsed') || '[]');
+  collapsedGroups = new Set(saved.filter((k) => k.includes('|')));
+} catch {}
 
 // The board filter input writes here (filterText stays private to this module).
 export function setFilter(text) {
@@ -462,7 +467,7 @@ function groupWrap(colKey, name, members, pass) {
   rec.nameEl.textContent = name;
   const stats = pass.groupStats.get(name) || { total: 0, done: 0 };
   rec.countEl.textContent = `${stats.done}/${stats.total} done`;
-  const collapsed = collapsedGroups.has(name);
+  const collapsed = collapsedGroups.has(key);
   rec.wrap.classList.toggle('collapsed', collapsed);
   rec.head.setAttribute('aria-expanded', String(!collapsed));
   // visible text ("<name> <done>/<total> done") must lead the accessible name
@@ -495,10 +500,10 @@ function groupWrap(colKey, name, members, pass) {
 function toggleGroup(head) {
   const wrap = head.closest('.card-group');
   if (!wrap) return;
-  const name = wrap.dataset.group;
+  const key = `${wrap.dataset.col}|${wrap.dataset.group}`;
   const isCollapsed = wrap.classList.toggle('collapsed');
   head.setAttribute('aria-expanded', String(!isCollapsed));
-  if (isCollapsed) collapsedGroups.add(name); else collapsedGroups.delete(name);
+  if (isCollapsed) collapsedGroups.add(key); else collapsedGroups.delete(key);
   try { localStorage.setItem('kk-groups-collapsed', JSON.stringify([...collapsedGroups])); } catch {}
   if (isCollapsed) {
     // focus must not stay on a card that just became display:none
@@ -919,6 +924,7 @@ export function __resetBoardForTests() {
   cardNodes.clear();
   colNodes.clear();
   groupNodes.clear();
+  collapsedGroups.clear();
   stampedSeals.clear();
   tabFocus.clear();
   lastRenderFingerprint = null;

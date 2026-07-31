@@ -219,6 +219,30 @@ test('groups reconcile: wrapper reused, member moves group→ungrouped without l
   assert.equal(cardById('b').closest('.card-group'), wrap, 'group wrapper reused');
 });
 
+test('collapsing a group closes only that column, and survives a re-render', () => {
+  resetAll();
+  // one batch spanning two columns — the shape that used to collapse everywhere
+  state.tasks = [mkTask('a', { group: 'G', v: 1 }), mkTask('d', { group: 'G', status: 'done', v: 1 })];
+  board.render();
+
+  const boardEl = dom.document.querySelector('#board');
+  const groupIn = (status) => boardEl
+    .querySelector(`.column[data-status="${status}"]`)
+    .querySelector('.card-group');
+  const doneWrap = groupIn('done');
+  assert.ok(doneWrap && groupIn('backlog'), 'the group renders in both columns');
+
+  boardEl.dispatch('click', { target: doneWrap.querySelector('.card-group-head') });
+  assert.ok(doneWrap.classList.contains('collapsed'), 'the clicked stack collapsed');
+  assert.ok(!groupIn('backlog').classList.contains('collapsed'), 'the other column stayed open');
+
+  // the old bug only showed on the next render, when groupWrap re-applied by name
+  state.tasks = [mkTask('a', { group: 'G', v: 2 }), mkTask('d', { group: 'G', status: 'done', v: 2 })];
+  board.render();
+  assert.ok(groupIn('done').classList.contains('collapsed'), 'stayed collapsed');
+  assert.ok(!groupIn('backlog').classList.contains('collapsed'), 'stayed open');
+});
+
 // ---------- rAF coalescing ----------
 
 test('createCoalescer collapses N calls into one flush per frame', () => {
