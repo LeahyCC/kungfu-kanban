@@ -186,7 +186,6 @@ $('#taskForm').addEventListener('submit', (e) => {
   });
 });
 
-$('#newTaskBtn').addEventListener('click', () => openModal(null));
 $('#cancelBtn').addEventListener('click', () => closeTaskModal());
 $('#modalBackdrop').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closeTaskModal();
@@ -212,7 +211,7 @@ export async function closeImportModal(force = false) {
   if (importReturnFocus) { try { importReturnFocus.focus(); } catch {} importReturnFocus = null; }
 }
 
-$('#importBtn').addEventListener('click', () => {
+export function openImportModal() {
   importReturnFocus = document.activeElement;
   importResult('');
   draftSessionId = null;
@@ -228,7 +227,7 @@ $('#importBtn').addEventListener('click', () => {
   updatePreview();
   $('#importBackdrop').classList.remove('hidden');
   $('#importText').focus();
-});
+}
 
 // live parse preview + duplicate-title guard
 let previewTimer = null;

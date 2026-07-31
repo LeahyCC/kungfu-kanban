@@ -648,7 +648,16 @@ input.tiny { width: 60px; }
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  gap: 8px;
   padding: 10px 12px 8px;
+}
+/* the Done broom: pushed to the far edge and kept small. Deliberately NOT
+   hover-to-reveal — an opacity:0 control is dropped from the accessibility
+   tree, and board.js already hides it whenever Done is empty. */
+.col-head .col-clear {
+  margin-left: auto;
+  padding: 1px 8px;
+  font-size: 11px;
 }
 .col-head .col-name {
   font-family: var(--font-display);
@@ -1063,15 +1072,14 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 .dojo-empty p { color: var(--ink-600); font-size: 0.875rem; max-width: 440px; }
 .dojo-empty .empty-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
-/* board empty state — the composer: a quiet board is where work starts */
+/* the composer — body of the "＋ New cards" modal. Wider than a stock modal so
+   the five action buttons stay on one row instead of wrapping; the doubled
+   class beats plain .modal, which is declared later in this file. */
+.modal.composer-modal { width: min(780px, 94vw); }
 .composer {
-  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: min(680px, 100%);
-  margin: 0 auto;
-  padding: 40px 0 24px;
 }
 .composer h3 { font-size: 1.375rem; font-weight: 600; }
 .composer .cmp-lead { color: var(--ink-600); font-size: 0.875rem; }
@@ -1125,7 +1133,6 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 .composer .cmp-undo { color: var(--ink-400); }
 
 @media (max-width: 700px) {
-  .composer { padding-top: 20px; }
   .composer .cmp-row label { flex-basis: 100%; }
   .composer .cmp-spacer { display: none; }
   .composer .cmp-actions button { flex: 1 1 auto; }

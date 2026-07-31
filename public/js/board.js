@@ -16,7 +16,7 @@ import { $, esc, relTime, fmtTok, scheduleLabel } from './util.js';
 import { api, toast, confirmDlg, withBusy } from './api.js';
 import { isPrUnshipped, depPass } from './deps.js';
 import { openDrawer } from './drawer.js';
-import { buildComposer, mountComposer } from './composer.js';
+import { openComposer } from './composer.js';
 
 // Rebuilding mid-drag kills the drag; defer renders until it ends. Column
 // elements (and their scroll positions) persist across renders.
@@ -264,6 +264,18 @@ function columnEl(col) {
   const count = document.createElement('span');
   count.className = 'col-count';
   head.append(name, count);
+  // Done is the only column that grows without bound — give it a broom. Hidden
+  // until there is something to sweep; render() toggles it.
+  let clearBtn = null;
+  if (col.key === 'done') {
+    clearBtn = document.createElement('button');
+    clearBtn.className = 'ghost col-clear hidden';
+    clearBtn.textContent = '⌫ Clear';
+    clearBtn.title = 'Archive every card in Done — they stay readable under Archive';
+    clearBtn.setAttribute('aria-label', 'Clear the Done column');
+    clearBtn.addEventListener('click', (e) => withBusy(e.currentTarget, clearDone));
+    head.append(clearBtn);
+  }
   const body = document.createElement('div');
   body.className = 'col-body';
   body.setAttribute('role', 'list');
@@ -272,10 +284,24 @@ function columnEl(col) {
   empty.className = 'empty-col';
   empty.setAttribute('role', 'listitem'); // col-body is role="list"
   empty.textContent = '—';
-  rec = { el, head, body, countEl: count, emptyEl: empty, key: col.key, dragDepth: 0 };
+  rec = { el, head, body, countEl: count, emptyEl: empty, clearBtn, key: col.key, dragDepth: 0 };
   colNodes.set(col.key, rec);
   if (col.key !== 'running') attachDropHandlers(rec, col);
   return rec;
+}
+
+// Clear the Done column. The server archives rather than deletes — same
+// destination as the daily sweep — so "clear" never means "gone".
+async function clearDone() {
+  const n = state.tasks.filter((t) => t.status === 'done').length;
+  if (!n) return;
+  const cards = `${n} card${n === 1 ? '' : 's'}`;
+  if (!(await confirmDlg(`Clear ${cards} out of Done? They stay readable under Archive.`,
+    { confirmLabel: '⌫ Clear Done' }))) return;
+  const r = await api('/api/tasks/archive-done', { method: 'POST' });
+  if (r.error) return; // api() already toasted
+  toast(`Archived ${r.archived} card${r.archived === 1 ? '' : 's'}.`, 'status');
+  await loadTasks();
 }
 
 function attachDropHandlers(rec, col) {
@@ -801,6 +827,9 @@ export function render() {
       .filter((t) => (col.key === 'running' ? RUNNING_LIKE[t.status] : t.status === col.key))
       .sort((a, b) => pass.depth(a) - pass.depth(b) || (b.priority || 0) - (a.priority || 0));
     rec.countEl.textContent = colTasks.length;
+    // the broom sweeps every Done card, not just the ones the filter shows —
+    // so it keys off the real count, not colTasks
+    if (rec.clearBtn) rec.clearBtn.classList.toggle('hidden', !state.tasks.some((t) => t.status === 'done'));
     const cardWord = `${colTasks.length} card${colTasks.length === 1 ? '' : 's'}`;
     rec.el.setAttribute('aria-label', `${col.label} column, ${cardWord}`);
     rec.body.setAttribute('aria-label', `${col.label} cards`);
@@ -865,14 +894,27 @@ function pruneGroups(seen) {
   }
 }
 
-// A quiet board is the best moment to start work, so the empty state IS the
-// composer: prompt box, project/model settings, and the ways out. Built once
-// and kept — remounting would discard half-typed text on every render pass.
+// A quiet board is the best moment to start work, so the empty state points at
+// the way in rather than repeating it: the composer keeps its half-typed text
+// inside its modal, and a second live copy here would shadow its element ids.
 let emptyEl = null;
 function emptyStateEl() {
   if (emptyEl) return emptyEl;
-  emptyEl = buildComposer();
-  queueMicrotask(() => { if (emptyEl.isConnected) mountComposer(); }); // selects need it in the DOM
+  emptyEl = document.createElement('div');
+  emptyEl.className = 'dojo-empty';
+  const h = document.createElement('h3');
+  h.textContent = 'A quiet dojo';
+  const p = document.createElement('p');
+  p.textContent = 'Nothing on the board. Describe what needs doing and an agent picks it up — '
+    + 'or say “create a kungfu todo for…” in any Claude Code session and cards land here on their own.';
+  const actions = document.createElement('div');
+  actions.className = 'empty-actions';
+  const btn = document.createElement('button');
+  btn.className = 'primary';
+  btn.textContent = '＋ New cards';
+  btn.addEventListener('click', () => openComposer());
+  actions.append(btn);
+  emptyEl.append(h, p, actions);
   return emptyEl;
 }
 
