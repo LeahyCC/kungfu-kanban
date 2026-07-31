@@ -158,6 +158,15 @@
             <span class="ladder-text"><b>Auto</b><span>full autopilot within guardrails</span></span>
           </label>
         </div>
+        <fieldset id="autoActions">
+          <legend class="field-label">Act without asking</legend>
+          <p class="hint-inline">Which verdicts Semi may take on its own. Unchecked ones still queue for your ✓.</p>
+          <label class="check-row" title="A green, correctly-based PR gets merged and the card stamped Done — without waiting for your ✓"><input type="checkbox" name="auto_merge_pr" /> merge PRs (green checks only)</label>
+          <label class="check-row" title="A review card with no open PR gets stamped Done on the Sensei's own verdict"><input type="checkbox" name="auto_approve_task" /> approve finished cards</label>
+          <label class="check-row" title="A flawed card is re-run with the Sensei's feedback appended — bounded by Max retries/task"><input type="checkbox" name="auto_reject_task" /> retry flawed cards</label>
+          <label class="check-row" title="Small, specific fixes go back to the SAME agent session — no retry burned"><input type="checkbox" name="auto_followup_task" /> send follow-ups</label>
+          <p class="hint-inline auto-note"></p>
+        </fieldset>
         <label>Management style
           <textarea name="stylePrompt" rows="4" placeholder="e.g. prefer haiku for docs tasks; never auto-approve DB migrations; keep cards under one hour of work"></textarea>
         </label>
@@ -406,8 +415,9 @@ The prompt: self-contained instructions for the executing agent.
           <label>Check PRs every <span class="hint-inline">(minutes, 0 = off)</span>
             <input name="prWatchMin" type="number" min="0" max="120" class="tiny" />
           </label>
-          <label class="check-row"><input type="checkbox" name="prWatchAutoFix" /> auto-fix PR merge conflicts (spawns a fix card, max 2 tries)</label>
-          <p class="hint">Merged PRs ship their card automatically; conflicted ones can spawn a fix card.</p>
+          <label class="check-row" title="Merge conflicts with the base branch: a fresh agent run in the card's own worktree merges the base, resolves, and pushes"><input type="checkbox" name="prWatchAutoFix" /> auto-fix PR merge conflicts (spawns a fix card, max 2 tries)</label>
+          <label class="check-row" title="Red checks on an otherwise clean PR: the card's OWN session is resumed with the failing logs, so no retry is burned. Verified-infrastructure failures (billing, runners never starting) are never auto-fixed either way."><input type="checkbox" name="prWatchAutoFixCi" /> auto-fix failing CI (resumes the card's session, max 2 tries)</label>
+          <p class="hint">Merged PRs ship their card automatically. These two decide whether a red or conflicted PR gets an agent sent at it, or just waits for you.</p>
           <label class="check-row" title="The ▸_ Terminal panel: a real shell on this Mac, running your $SHELL with ~/.zshrc. Anyone who can reach the board with the token gets it — turn it off if that's not what you want."><input type="checkbox" name="terminal" /> built-in terminal (⌘J)</label>
           <label title="Personal skills in ~/.claude/skills, installed and kept current automatically at server start; the button is a manual repair hatch. kungfu-todo: say 'create a kungfu todo for…' in any Claude Code session. ponytail: the lazy-senior-dev discipline. humanizer: strips AI writing tells from prose (both ship with the board, auto-selected on new cards).">Claude Code skills <span class="hint-inline">(auto-installed at boot)</span></label>
           <div class="skill-install-row">

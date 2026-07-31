@@ -387,6 +387,14 @@ card's PR via `gh`:
   time; after that you get a "needs you" notification and it stops. Fix cards
   wear an `auto-fix` badge and flow through the normal columns, so the Sensei
   reviews the resolution like any other run.
+- **Red CI** on an otherwise clean PR → with CI auto-fix on (default), the card's
+  *own session* is resumed with the failing logs, so no retry is burned. Max 2
+  attempts. Failures the watcher has verified as infrastructure (billing,
+  runners never starting) are never auto-fixed — no code change can fix those.
+
+The two auto-fixes are separate switches in ⚙ Settings → System: pushing a merge
+commit to your branch and sending an agent at your CI are different amounts of
+trust, so you can keep either one without the other.
 
 Keep local `main` pushed: agent worktrees branch from the default branch, so an
 unpushed main is how you get avoidable conflicts in the first place.
@@ -488,6 +496,12 @@ chat ("plan the auth refactor into cards", "what's blocking?").
 | `auto` | everything, within guardrails |
 
 Deleting cards is never available to the manager, at any level.
+
+**Act without asking** (under the ladder): the four verdicts `semi` holds back —
+merge PR, approve, retry, follow-up — can each be released on their own, so
+"merge green PRs yourself but ask before approving" no longer means jumping all
+the way to `auto`. All unticked by default, which is the `semi` above; the group
+is inert on `suggest` (holds everything) and `auto` (holds nothing).
 
 **Triggers:** on task finish (review it), on new card (triage it), every N minutes
 (0 = off), and chat. Each trigger is one manager invocation — mind your rate limits

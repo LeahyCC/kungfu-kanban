@@ -20,6 +20,15 @@ export function relTime(ts) {
   return `${Math.round(h / 24)}d ago`;
 }
 
+// Transcript clock: 24h HH:MM:SS, because "which of these greps took the four
+// minutes" is the question a transcript timestamp actually answers.
+export function fmtClock(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
 export function fmtTok(n) {
   if (!n) return '0';
   if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;

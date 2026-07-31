@@ -10,12 +10,41 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const store = require('../lib/store');
-const { executeAction, suggestionLive, stopCurrent } = require('../lib/manager');
+const { executeAction, heldForApproval, suggestionLive, stopCurrent, SEMI_HELD } = require('../lib/manager');
 
 // --- stopCurrent -------------------------------------------------------
 
 test('stopCurrent: errors cleanly when no Sensei run is in flight', () => {
   assert.deepEqual(stopCurrent(), { error: 'the Sensei is not running' });
+});
+
+// --- autonomy ladder + per-action release ------------------------------
+
+test('autonomy ladder: suggest holds everything, auto holds nothing', () => {
+  const none = { approve_task: false, reject_task: false, followup_task: false, merge_pr: false };
+  for (const type of [...SEMI_HELD, 'create_task', 'run_task']) {
+    assert.equal(heldForApproval(type, { autonomy: 'suggest', autoActions: none }), true, `suggest holds ${type}`);
+    assert.equal(heldForApproval(type, { autonomy: 'auto', autoActions: none }), false, `auto releases ${type}`);
+  }
+});
+
+test('semi holds the four verdicts by default and releases only what is ticked', () => {
+  const none = { approve_task: false, reject_task: false, followup_task: false, merge_pr: false };
+  const semi = (autoActions) => (type) => heldForApproval(type, { autonomy: 'semi', autoActions });
+
+  const classic = semi(none);
+  for (const type of SEMI_HELD) assert.equal(classic(type), true, `${type} held by default`);
+  assert.equal(classic('run_task'), false, 'semi still dispatches work on its own');
+
+  // the case the bundled gate could not express: merge green PRs, ask before approving
+  const mergeOnly = semi({ ...none, merge_pr: true });
+  assert.equal(mergeOnly('merge_pr'), false, 'merge released');
+  assert.equal(mergeOnly('approve_task'), true, 'approve still held');
+  assert.equal(mergeOnly('reject_task'), true, 'reject still held');
+
+  // ticking everything is 'auto' for verdicts, without granting it board-wide
+  const all = semi({ approve_task: true, reject_task: true, followup_task: true, merge_pr: true });
+  for (const type of SEMI_HELD) assert.equal(all(type), false, `${type} released`);
 });
 
 // --- executeAction merge_pr gates --------------------------------------

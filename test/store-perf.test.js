@@ -175,3 +175,21 @@ test('transcript appends batch to disk and readTranscript merges the buffer', as
   store.clearTranscript(id);
   assert.deepEqual(store.readTranscript(id), [], 'clear drops file and buffer');
 });
+
+test('appendTranscript stamps ts once — callers keep an explicit one', () => {
+  const id = 'tr-ts';
+  store.clearTranscript(id);
+  const before = Date.now();
+
+  store.appendTranscript(id, { kind: 'tool', text: 'Bash ls' });
+  store.appendTranscript(id, { kind: 'init', text: 'replayed', ts: '2020-01-02T03:04:05.000Z' });
+  store.flushTranscripts(id);
+
+  const [auto, explicit] = store.readTranscript(id);
+  assert.ok(auto.ts, 'unstamped entries get a clock');
+  const t = new Date(auto.ts).getTime();
+  assert.ok(t >= before && t <= Date.now(), `stamped at write time (got ${auto.ts})`);
+  assert.equal(explicit.ts, '2020-01-02T03:04:05.000Z', 'an explicit ts is left alone');
+
+  store.clearTranscript(id);
+});
