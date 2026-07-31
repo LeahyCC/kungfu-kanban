@@ -14,7 +14,7 @@
  *   slim); a server without that endpoint 404s and we fall back to state. */
 
 import { state, RUNNING_LIKE, COLUMNS, CTX_WINDOW } from './state.js';
-import { $, esc, relTime, fmtTok, nearBottom } from './util.js';
+import { $, esc, relTime, fmtTok, fmtClock, nearBottom } from './util.js';
 import { api, confirmDlg, alertDlg, withBusy, toast } from './api.js';
 import { depsUnmet, isPrUnshipped } from './deps.js';
 import { mdToHtml } from './markdown.js';
@@ -103,6 +103,9 @@ function enforceCap(box) {
 // append + a single bottom-pin check (60px threshold — readers in scrollback
 // are never yanked).
 export function appendTranscriptEntry(entry) {
+  // Call sites that broadcast a fresh literal to SSE skip store.js's stamp;
+  // a live entry's arrival time IS its timestamp, so fill it in here.
+  if (!entry.ts) entry.ts = new Date().toISOString();
   pendingEntries.push(entry);
   if (flushScheduled) return;
   flushScheduled = true;
@@ -488,9 +491,20 @@ function span(cls, text) {
 export function entryEl(e) {
   const div = document.createElement('div');
   div.className = `t-entry ${e.kind}`;
+  // The clock floats into the left gutter (ignored on .tool rows, which are
+  // already flex) — so it leads every entry without re-shaping any of them.
+  const clock = fmtClock(e.ts);
+  if (clock) {
+    const t = span('t-time', clock);
+    t.title = new Date(e.ts).toLocaleString();
+    div.appendChild(t);
+  }
   if (e.kind === 'assistant' || e.kind === 'result') {
     div.classList.add('md');
-    div.innerHTML = mdToHtml(e.text);
+    // into a child, not div.innerHTML — that would wipe the clock span
+    const body = document.createElement('div');
+    body.innerHTML = mdToHtml(e.text);
+    div.appendChild(body);
   } else if (e.kind === 'tool') {
     // "Bash gh api …" → a terminal command line: bright tool name, dim
     // argument clipped to one line (CSS), full text on hover / click.
@@ -499,7 +513,7 @@ export function entryEl(e) {
     div.appendChild(span('t-tool-name', i < 0 ? e.text : e.text.slice(0, i)));
     if (i >= 0) div.appendChild(span('t-tool-args', e.text.slice(i + 1)));
   } else {
-    div.textContent = e.text;
+    div.appendChild(document.createTextNode(e.text));
   }
   return div;
 }

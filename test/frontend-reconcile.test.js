@@ -354,10 +354,39 @@ test('live transcript: rAF batching appends once per frame and enforces the cap 
   const head = box.firstChild;
   assert.ok(head.classList.contains('t-omitted'), 'sticky omitted header present');
   assert.match(head.textContent, /earlier output omitted — 103 entries/, 'drops counted from the top');
-  assert.equal(box.children[box.children.length - 1].textContent, 'flood 599', 'tail kept');
+  // live appends are clock-stamped on arrival, so the row reads "<time>flood 599"
+  assert.match(box.children[box.children.length - 1].textContent, /flood 599$/, 'tail kept');
 });
 
 // ---------- terminal-style tool rows ----------
+
+test('entries carry a clock when stamped, and live appends stamp themselves', () => {
+  resetAll();
+  const box = dom.document.querySelector('#transcript');
+
+  const stamped = drawer.entryEl({ kind: 'init', text: 'launched', ts: '2026-07-30T16:32:07.000Z' });
+  const clock = stamped.children[0];
+  assert.equal(clock.className, 't-time', 'the clock leads the entry');
+  assert.match(clock.textContent, /^\d{2}:\d{2}:\d{2}$/, `HH:MM:SS (got ${clock.textContent})`);
+  assert.ok(stamped.textContent.includes('launched'), 'the text survives alongside it');
+
+  // markdown entries build into a child — innerHTML on the entry would wipe the clock
+  const md = drawer.entryEl({ kind: 'assistant', text: '**done**', ts: '2026-07-30T16:32:07.000Z' });
+  assert.equal(md.children[0].className, 't-time', 'the clock survives the markdown render');
+
+  // an unstamped entry (old transcripts) gets no gutter at all
+  const bare = drawer.entryEl({ kind: 'init', text: 'no clock' });
+  assert.equal(bare.querySelector('.t-time'), null, 'no ts, no clock');
+  assert.equal(bare.textContent, 'no clock');
+
+  // SSE entries arrive without one — the client stamps them on arrival
+  const live = { kind: 'tool', text: 'Bash ls' };
+  drawer.appendTranscriptEntry(live);
+  assert.ok(live.ts, 'live entry stamped');
+  dom.raf.flush();
+  const rendered = box.children[box.children.length - 1];
+  assert.equal(rendered.children[0].className, 't-time', 'and rendered with its clock');
+});
 
 test('tool entries split into name + args and toggle open on click', () => {
   resetAll();
@@ -382,9 +411,9 @@ test('tool entries split into name + args and toggle open on click', () => {
   box.dispatch('click', { target: row });
   assert.ok(!row.classList.contains('open'), 'click again collapses it');
 
-  // non-tool entries keep their plain-text shape
+  // non-tool entries keep their plain-text shape (no name/args split)
   const user = drawer.entryEl({ kind: 'user', text: 'hello there' });
-  assert.equal(user.children.length, 0);
+  assert.equal(user.querySelector('.t-tool-name'), null);
   assert.equal(user.textContent, 'hello there');
 });
 

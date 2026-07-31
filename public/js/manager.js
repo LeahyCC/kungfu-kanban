@@ -76,7 +76,25 @@ $('#attnChipText').setAttribute('aria-atomic', 'true');
 // SSE refreshes rewrite the settings form from server state — but never while
 // the user has unsaved edits mid-form (that silently threw their input away).
 let mgrFormDirty = false;
-$('#mgrForm').addEventListener('input', () => { mgrFormDirty = true; });
+$('#mgrForm').addEventListener('input', () => { mgrFormDirty = true; syncAutoActions(); });
+
+// The four verdicts the Semi rung holds back — each one releasable on its own.
+const AUTO_ACTIONS = ['merge_pr', 'approve_task', 'reject_task', 'followup_task'];
+
+// The per-action switches only mean anything on Semi: Suggest holds everything
+// regardless, Auto releases everything regardless. Rather than let them read as
+// live settings that do nothing, disable them off-Semi and say which it is.
+function syncAutoActions() {
+  const f = $('#mgrForm');
+  const level = f.autonomy.value;
+  const box = $('#autoActions');
+  const semi = level === 'semi';
+  box.classList.toggle('inert', !semi);
+  for (const a of AUTO_ACTIONS) f[`auto_${a}`].disabled = !semi;
+  box.querySelector('.auto-note').textContent = semi ? ''
+    : level === 'auto' ? 'Auto takes every action below without asking.'
+      : 'Suggest queues every action below for your ✓.';
+}
 
 export function setMgrBusy(busy) {
   $('#mgrBusy').classList.toggle('hidden', !busy);
@@ -104,8 +122,10 @@ export function renderManager() {
     f.intervalMin.value = c.triggers.intervalMin || 0;
     f.maxLaunchesPerHour.value = c.maxLaunchesPerHour;
     f.maxRetries.value = c.maxRetries;
+    for (const a of AUTO_ACTIONS) f[`auto_${a}`].checked = !!(c.autoActions || {})[a];
     fillSelect(f.permissionCeiling, state.config.permissionModes, c.permissionCeiling);
   }
+  syncAutoActions();
 
   setMgrBusy(state.mgrState.busy);
 
@@ -210,6 +230,7 @@ $('#mgrForm').addEventListener('submit', async (e) => {
       },
       maxLaunchesPerHour: parseInt(f.maxLaunchesPerHour.value, 10) || 10,
       maxRetries: parseInt(f.maxRetries.value, 10) || 0,
+      autoActions: Object.fromEntries(AUTO_ACTIONS.map((a) => [a, f[`auto_${a}`].checked])),
       permissionCeiling: f.permissionCeiling.value,
     },
   });
