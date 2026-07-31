@@ -293,7 +293,12 @@ export function renderDrawerMeta(t) {
     box.appendChild(bypass);
   }
 
-  const bits = [`cwd: ${t.cwd}`];
+  // Chips carry the short form; the full value lives in the title tooltip. A
+  // drawer full of absolute paths and session UUIDs wrapped to six rows of
+  // shouting mono and buried the two chips that matter (CI, blocked deps).
+  const bits = [];
+  const repo = String(t.cwd || '').replace(/\/+$/, '').split('/').pop();
+  bits.push({ text: `cwd: ${repo || t.cwd}`, title: t.cwd });
   if (t.prChecks) {
     const c = t.prChecks;
     bits.push(`CI: ${c.failing ? `✕ ${c.failing} failing — ${(c.failed || []).join(' · ')}` : c.pending ? `… ${c.pending} running` : c.noCi ? 'none on this repo' : c.passing ? `✓ ${c.passing} green` : '… waiting for checks'}${c.base ? ` · base ${c.base}` : ''}${c.wrongBase ? ` (card wants ${t.prBaseBranch})` : ''}`);
@@ -304,25 +309,44 @@ export function renderDrawerMeta(t) {
   if (unmetD.length) {
     const parts = unmetD.map((d) => isPrUnshipped(d) ? `${d.title} (done, awaiting merge)` : `${d.title} (not done)`);
     bits.push(`⛓ waits for: ${parts.join(' · ')}`);
-  } else if ((t.deps || []).length) bits.push('⛓ all prerequisites done (satisfied)');
+  } else if ((t.deps || []).length) bits.push({ text: '⛓ deps met', title: 'All prerequisites are done' });
   const held = state.tasks.filter((x) => x.status === 'queued' && (x.deps || []).includes(t.id));
   if (held.length && (t.status !== 'done' || isPrUnshipped(t))) bits.push(`🖐 blocks: ${held.map((x) => x.title).join(' · ')}`);
   if ((t.depsUnresolved || []).length) bits.push(`⛓ unresolved: ${t.depsUnresolved.join(' · ')}`);
-  if (t.createdAt) bits.push(`created ${relTime(t.createdAt)}`);
-  if (t.updatedAt && t.updatedAt !== t.createdAt) bits.push(`updated ${relTime(t.updatedAt)}`);
-  if (t.ctxTokens) bits.push(`ctx: ${fmtTok(t.ctxTokens)} (${Math.round((t.ctxTokens / CTX_WINDOW) * 100)}% of ${fmtTok(CTX_WINDOW)})`);
+  // one age chip, not two
+  if (t.createdAt) {
+    const upd = t.updatedAt && t.updatedAt !== t.createdAt ? ` · updated ${relTime(t.updatedAt)}` : '';
+    bits.push(`created ${relTime(t.createdAt)}${upd}`);
+  }
+  if (t.ctxTokens) {
+    bits.push({
+      text: `ctx ${Math.round((t.ctxTokens / CTX_WINDOW) * 100)}%`,
+      title: `${fmtTok(t.ctxTokens)} of the ~${fmtTok(CTX_WINDOW)} context window`,
+    });
+  }
   if (t.modelUsed && t.model !== 'default' && !t.modelUsed.includes(t.model)) bits.unshift(`ran on: ${t.modelUsed}`);
   if (t.skills && t.skills.length) bits.push(`skills: ${t.skills.join(', ')}`);
   if (t.stats) {
-    if (t.stats.turns) bits.push(`${t.stats.turns} turns`);
-    if (t.stats.durationMs) bits.push(`${Math.round(t.stats.durationMs / 1000)}s`);
-    if (t.stats.outputTokens) bits.push(`${t.stats.inputTokens || 0} in / ${t.stats.outputTokens} out tok`);
+    // one run-stats chip: turns · wall clock · tokens (was three)
+    const s = t.stats;
+    const run = [
+      s.turns && `${s.turns} turns`,
+      s.durationMs && `${Math.round(s.durationMs / 1000)}s`,
+      s.outputTokens && `${fmtTok(s.outputTokens)} out`,
+    ].filter(Boolean);
+    if (run.length) {
+      bits.push({
+        text: run.join(' · '),
+        title: `${s.inputTokens || 0} in / ${s.outputTokens || 0} out tokens`,
+      });
+    }
   }
   for (const b of bits) {
+    const { text, title } = typeof b === 'string' ? { text: b, title: b } : b;
     const span = document.createElement('span');
     span.className = 'badge';
-    span.textContent = b;
-    span.title = b; // long values (cwd paths) ellipsize — the tooltip has it all
+    span.textContent = text;
+    span.title = title; // shortened values keep the full string in the tooltip
     box.appendChild(span);
   }
   if (t.sessionId) {
@@ -331,8 +355,9 @@ export function renderDrawerMeta(t) {
     const b = document.createElement('span');
     b.className = 'badge copyable';
     b.title = `Click to copy (sessions are per-directory, so this cd's into the run dir first):\n${cmd}`;
-    b.textContent = `resume: claude -r ${t.sessionId}`;
-    const idle = `resume: claude -r ${t.sessionId}`;
+    // the UUID is unreadable and 60 chars wide — the copy carries it
+    b.textContent = '⧉ resume session';
+    const idle = '⧉ resume session';
     b.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(cmd);
@@ -350,7 +375,10 @@ export function renderDrawerMeta(t) {
     a.href = t.prUrl;
     a.target = '_blank';
     a.rel = 'noopener';
-    a.textContent = `${t.prUrl} ↗`;
+    a.title = t.prUrl;
+    // "PR #159" beats a wrapped 60-char URL; the tooltip and href keep the rest
+    const num = /\/pull\/(\d+)/.exec(t.prUrl);
+    a.textContent = num ? `PR #${num[1]} ↗` : `${t.prUrl} ↗`;
     box.appendChild(a);
   }
 }
