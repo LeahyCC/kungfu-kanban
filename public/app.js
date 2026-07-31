@@ -15,6 +15,7 @@ import { api } from './js/api.js';
 import { render, loadTasks, setFilter } from './js/board.js';
 import { closeDrawer } from './js/drawer.js';
 import { closeTaskModal, closeImportModal, closeSettings, applyTerminalSetting } from './js/modals.js';
+import { closeComposer } from './js/composer.js';
 import { closeErrors, closeAttn, loadErrors, loadManager } from './js/manager.js';
 import { applyCooldown, applyModelBlocks, renderNetChip, setServerOffline, renderHealth, renderUsage, setCliAuth } from './js/chips.js';
 import { closePalette } from './js/palette.js'; // importing also wires the palette + global hotkeys
@@ -39,6 +40,7 @@ document.addEventListener('keydown', (e) => {
     if (document.querySelector('dialog.kk-dialog[open]')) return; // <dialog> closes itself
     if (!$('#paletteBackdrop').classList.contains('hidden')) { e.preventDefault(); closePalette(); }
     else if (!$('#modalBackdrop').classList.contains('hidden')) { e.preventDefault(); closeTaskModal(); }
+    else if (!$('#composerBackdrop').classList.contains('hidden')) { e.preventDefault(); closeComposer(); }
     else if (!$('#importBackdrop').classList.contains('hidden')) { e.preventDefault(); closeImportModal(); }
     else if (!$('#settingsBackdrop').classList.contains('hidden')) { e.preventDefault(); closeSettings(); }
     else if (!$('#errorsBackdrop').classList.contains('hidden')) { e.preventDefault(); closeErrors(); }

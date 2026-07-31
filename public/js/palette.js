@@ -5,14 +5,15 @@ import { state, COLUMNS, RUNNING_LIKE } from './state.js';
 import { $, esc, fuzzyScore } from './util.js';
 import { haystackFor } from './board.js';
 import { openDrawer } from './drawer.js';
-import { openModal, openSettings } from './modals.js';
+import { openImportModal, openSettings } from './modals.js';
+import { openComposer } from './composer.js';
 import { showTab } from './manager.js';
 import { toggleTerminal } from './term.js';
 
 const COMMANDS = [
-  { label: '＋ New card', key: 'n', run: () => openModal(null) },
+  { label: '＋ New cards', key: 'n', run: () => openComposer() },
   { label: '▸_ Terminal', key: 't', run: () => toggleTerminal() },
-  { label: '⇪ Import / draft cards', key: 'i', run: () => $('#importBtn').click() },
+  { label: '⇪ Import / draft cards', key: 'i', run: () => openImportModal() },
   { label: '⌕ Filter cards', key: '/', run: () => { const f = $('#filterInput'); f.focus(); f.select(); } },
   { label: 'Go to Board', key: '1', run: () => showTab('board') },
   { label: 'Go to Sensei', key: '2', run: () => showTab('manager') },
