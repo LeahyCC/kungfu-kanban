@@ -849,6 +849,20 @@ app.delete('/api/tasks/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// Clear the Done column in one shot. Cards go where the daily sweep sends
+// them — data/archive.jsonl — so "clear" stays browsable under Archive instead
+// of being a 42-card delete you cannot take back.
+app.post('/api/tasks/archive-done', (req, res) => {
+  const archived = sweepArchive({ all: true });
+  for (const t of archived) {
+    errlog.resolveTask(t.id); // an archived card's open errors go with it
+    broadcast({ type: 'deleted', taskId: t.id });
+  }
+  // an archived dep counts as met — free anything that was waiting on one
+  if (archived.length) runner.pumpQueue();
+  res.json({ ok: true, archived: archived.length });
+});
+
 app.get('/api/tasks/:id/transcript', (req, res) => {
   if (!/^[0-9a-f-]{36}$/.test(req.params.id)) return res.status(404).json({ error: 'not found' });
   res.json(readTranscript(req.params.id));

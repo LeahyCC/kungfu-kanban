@@ -1,8 +1,12 @@
-/* The empty-board composer: the first thing you see on a quiet dojo. One
- * prompt box with the settings that matter (repo, model, effort, permissions)
- * and three ways out — sharpen the wording, launch it as one card, or hand it
- * to the Sensei to break into several. Everything here is a shortcut to
- * machinery that already exists; nothing new is persisted. */
+/* The composer — what "＋ New cards" opens, and the only way in that isn't the
+ * Sensei or the inbox. One prompt box with the settings that matter (repo,
+ * model, effort, permissions) and three ways out — sharpen the wording, launch
+ * it as one card, or hand it to the Sensei to break into several. Everything
+ * here is a shortcut to machinery that already exists; nothing new is
+ * persisted.
+ *
+ * It builds into #composerSlot exactly once and stays there: the ids below are
+ * global, so a second copy (the old empty-board mount) would shadow this one. */
 
 import { state } from './state.js';
 import { $, fillSelect } from './util.js';
@@ -31,12 +35,37 @@ function currentPrefs() {
   };
 }
 
-// Build once per empty-state mount; board.js hands us the node to fill.
-export function buildComposer() {
+// Build + wire once, into #composerSlot. Everything after that is show/hide,
+// so a half-typed prompt survives closing the modal.
+let built = false;
+let returnFocus = null;
+
+export function openComposer() {
+  if (!built) {
+    built = true;
+    $('#composerSlot').appendChild(buildComposer());
+    mountComposer();
+  }
+  returnFocus = document.activeElement;
+  $('#composerBackdrop').classList.remove('hidden');
+  $('#cmpPrompt').focus();
+}
+
+export function closeComposer() {
+  $('#composerBackdrop').classList.add('hidden');
+  if (returnFocus) { try { returnFocus.focus(); } catch {} returnFocus = null; }
+}
+
+$('#newCardsBtn').addEventListener('click', () => openComposer());
+$('#composerBackdrop').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeComposer();
+});
+
+function buildComposer() {
   const el = document.createElement('div');
   el.className = 'composer';
   el.innerHTML = `
-    <h3>What needs doing?</h3>
+    <h3 id="cmpTitle">What needs doing?</h3>
     <p class="cmp-lead">Describe the work — an agent picks it up with nothing but this text, so be specific.
       Or say <span class="cmp-cli">create a kungfu todo for…</span> in any Claude Code session and cards land here on their own.</p>
     <textarea id="cmpPrompt" rows="5" placeholder="Fix the flaky auth test in the login suite — it fails about one run in five on CI"
@@ -55,6 +84,7 @@ export function buildComposer() {
       <button type="button" id="cmpDraft" class="ghost"
         title="Hand it to the Sensei to break into several cards with dependencies">⇪ Split into cards</button>
       <span class="cmp-spacer"></span>
+      <button type="button" id="cmpCancel" class="ghost" title="Close without creating anything">Cancel</button>
       <button type="button" id="cmpCreate" class="primary" title="Create the card and start it now">▶ Create &amp; run</button>
       <button type="button" id="cmpQueue" class="ghost" title="Create it in Backlog — nothing runs until you launch it">＋ Add to backlog</button>
     </div>
@@ -63,7 +93,7 @@ export function buildComposer() {
 }
 
 // Fill the selects from /api/config once the node is in the document.
-export function mountComposer() {
+function mountComposer() {
   const cfg = state.config || {};
   const prefs = readPrefs();
   const repos = cfg.repos || [];
@@ -98,6 +128,7 @@ export function mountComposer() {
   }
   $('#cmpImprove').addEventListener('click', (e) => withBusy(e.target, improve));
   $('#cmpDraft').addEventListener('click', handOffToImport);
+  $('#cmpCancel').addEventListener('click', () => closeComposer());
   $('#cmpCreate').addEventListener('click', (e) => withBusy(e.target, () => create(true)));
   $('#cmpQueue').addEventListener('click', (e) => withBusy(e.target, () => create(false)));
   // ⌘↵ from the box is the fast path
@@ -166,16 +197,21 @@ async function create(run) {
   }
   $('#cmpPrompt').value = '';
   $('#cmpUndo').classList.add('hidden');
+  closeComposer();
   const { loadTasks } = await import('./board.js');
   await loadTasks();
 }
 
 // The import modal already does multi-card drafting properly — carry the text
-// across rather than reimplementing the flow here.
-function handOffToImport() {
+// across rather than reimplementing the flow here. modals.js is imported late
+// for the same reason board.js is: statically it would drag the whole modal
+// graph (appearance, chips) into anything that merely renders the board.
+async function handOffToImport() {
   const text = $('#cmpPrompt').value.trim();
   const repo = $('#cmpRepo').value;
-  $('#importBtn').click();
+  closeComposer(); // one backdrop at a time
+  const { openImportModal } = await import('./modals.js');
+  openImportModal();
   if (!text) return;
   const req = $('#draftPrompt');
   if (req) { req.value = text; req.focus(); }

@@ -107,10 +107,8 @@
       <input id="filterInput" class="filter" type="search" placeholder="⌕ filter cards…" aria-label="Filter cards by text, repo, model, or skill" title="Filter the board by title, prompt, repo path, model, agent, or skill" />
       <label class="conc" title="How many agent sessions may run at once — extras wait in Queued. Keeps parallel cards from burning your subscription rate limits.">parallel <input id="maxConcurrent" type="number" min="1" max="8" /></label>
       <button id="termToggle" class="ghost" title="A real shell on this Mac — your $SHELL, your ~/.zshrc, your prompt (⌘J)">▸_ Terminal</button>
-      <button id="newTaskBtn" class="ghost" title="Fallback: write a card by hand — nothing runs until you launch it">＋ New card</button>
-      <button id="importBtn" class="primary"
-        title="The main way in: paste a plan, ✨ describe the work and let the Sensei draft the cards, or pull GitHub issues">⇪
-        Import</button>
+      <button id="newCardsBtn" class="primary"
+        title="The way in: describe the work and run it, sharpen the wording, or hand it to the Sensei to split into several cards">＋ New cards</button>
     </div>
   </div>
 
@@ -279,6 +277,14 @@
           <button type="submit" class="primary" title="Save the card to Backlog — does not run it">Save card</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- New cards modal: composer.js builds the body into #composerSlot on first
+       open, so the prompt box and its settings live in exactly one place -->
+  <div id="composerBackdrop" class="backdrop hidden">
+    <div class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="cmpTitle">
+      <div id="composerSlot"></div>
     </div>
   </div>
 
