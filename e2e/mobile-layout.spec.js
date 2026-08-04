@@ -244,6 +244,40 @@ describe('mobile layout (real browser, touch emulation)', () => {
       }
     });
 
+    test(`toolbar chrome stays under budget and update controls stay reachable at ${width}px`, async () => {
+      const context = await browser.newContext({
+        viewport: { width, height: HEIGHT },
+        hasTouch: true,
+        isMobile: true,
+      });
+      const page = await context.newPage();
+      try {
+        await page.goto(base);
+        // #sysStatus's status dots always render once /api/health resolves —
+        // #updateClaudeBtn/#updateBoardBtn only render when the health check
+        // actually finds the claude CLI (absent on CI runners), so gate on
+        // the dot cluster instead of a button that may legitimately not exist.
+        await page.waitForSelector('.sys-summary');
+        const toolbarHeight = await page.evaluate(() => document.querySelector('.toolbar').getBoundingClientRect().height);
+        assert.ok(toolbarHeight <= 64, `toolbar chrome (${toolbarHeight}px) exceeds the ~60px phone budget at ${width}px`);
+        // the status dot cluster must be reachable without expanding anything
+        await assertInViewport(page, '.sys-summary', 'status dot cluster');
+        // whichever update buttons the health check did produce must be
+        // clickable without expanding the collapsed #sysStatus text first —
+        // they're the escape hatch users reach for when the board nags them.
+        const presentUpdateBtnIds = await page.evaluate(() =>
+          ['updateClaudeBtn', 'updateBoardBtn'].filter((id) => document.getElementById(id)));
+        for (const id of presentUpdateBtnIds) {
+          await assertInViewport(page, `#${id}`, `${id} button`);
+          assert.ok(await page.locator(`#${id}`).isVisible(), `#${id} hidden behind the collapsed status detail`);
+        }
+        // the primary CTA floats free of the toolbar row and stays reachable
+        await assertInViewport(page, '#newCardsBtn', 'floating New cards button');
+      } finally {
+        await context.close();
+      }
+    });
+
     test(`buttons, links and text inputs meet the 44x44 CSS px touch target at ${width}px`, async () => {
       const context = await browser.newContext({
         viewport: { width, height: HEIGHT },
