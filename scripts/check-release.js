@@ -5,13 +5,12 @@
 // five merged PRs).
 //
 // What makes a PR a release is the changelog naming the version — "## [1.4.0]
-// — date", which the release card writes. An untagged version whose entries
-// are still under "## [Unreleased]" is the ordinary in-flight state CLAUDE.md
-// prescribes (every change bumps the version, entries accumulate under
-// Unreleased, the release card renames the section). Requiring "## [X.Y.Z]"
-// for any untagged version contradicted that convention and failed every
-// single PR, so the ordinary case only asks that Unreleased isn't empty:
-// you bumped the version, so say what changed.
+// — date". Since releases went automatic (2026-07-29, scripts/cut-release.js
+// on merge to main), CLAUDE.md wants that dated section written in the PR
+// itself: an untagged version whose entries sit under "## [Unreleased]" still
+// passes here (a batch may legitimately let a later card own the bump), but
+// it releases NOTHING on merge — so the "unreleased" verdict below says so
+// out loud instead of implying someone downstream will rename the section.
 const fs = require('fs');
 const { execFileSync } = require('child_process');
 
@@ -68,7 +67,7 @@ function auditRelease({ version, changelog, tags, mergeLogSince, headMergePR }) 
     if (!unreleased.replace(/^#+ .*$/gm, '').trim()) {
       return { ok: false, code: 'empty-unreleased', message: `package.json is ${version} but the "## [Unreleased]" section is empty — describe the change there (or name the section "## [${version}] — <date>" to release it).` };
     }
-    return { ok: true, code: 'unreleased', message: `${version} is in flight — changes are described under "## [Unreleased]"; the release card renames that section.` };
+    return { ok: true, code: 'unreleased', message: `${version} is in flight — changes are under "## [Unreleased]". Heads up: merging like this releases nothing; name the section "## [${version}] — <date>" in this PR to actually cut the release.` };
   }
   if (tagged) {
     return { ok: true, code: 'not-release', message: `v${version} already tagged — not a new release; section present.` };

@@ -7,6 +7,31 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.16.0] — 2026-08-03
+
+### Added
+- **Real-browser verification for UI cards.** Every card prompt now carries a
+  standing convention (`lib/runner.js`): work that touches UI must be proven
+  in headless Chromium before the agent reports done — `npx playwright
+  screenshot` for quick proof, a throwaway `npm i --no-save playwright` script
+  for clicks / console errors / computed styles — static code review alone no
+  longer counts. The Sensei enforces it at review time: a UI
+  diff whose result shows no browser evidence gets a follow-up asking for the
+  check instead of an approval. Playwright is deliberately **not** baked in as
+  a dependency — `npx` caches per-machine, so nothing lands in `npm install`
+  or CI.
+
+### Changed
+- **CLAUDE.md gained a PR protocol** for contributors (human or agent),
+  written down after #128: date the changelog section in the PR itself, no
+  `postinstall` downloads or dep promotions for ambient tooling, no global
+  env/resolution changes (NODE_PATH) for single use cases, UI test plans show
+  browser evidence, no AI attribution footers.
+- `scripts/check-release.js`'s in-flight verdict no longer claims "the
+  release card renames that section" (release cards are gone since automatic
+  releases) — it now warns that merging with notes under `[Unreleased]`
+  releases nothing.
+
 ## [1.15.4] — 2026-08-03
 
 ### Changed
