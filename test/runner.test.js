@@ -53,7 +53,14 @@ test('buildPrompt: skills + skillsAuto combine, skillsAuto wraps outermost', () 
 
 test('buildArgs: minimal task produces just -p/--output-format/--verbose', () => {
   const args = buildArgs({ id: 'abc', prompt: 'hi', model: 'default' }, null);
-  assert.deepEqual(args, ['-p', 'hi', '--output-format', 'stream-json', '--verbose']);
+  assert.deepEqual(args, ['-p', '--', 'hi', '--output-format', 'stream-json', '--verbose']);
+});
+
+test('buildArgs: a hyphen-leading prompt sits after a literal -- so the CLI parser cannot read it as a flag', () => {
+  for (const prompt of ['---', '- something', '--output-format']) {
+    const args = buildArgs({ id: 'a', prompt, model: 'default' }, null);
+    assert.deepEqual(args.slice(0, 3), ['-p', '--', prompt]);
+  }
 });
 
 test('buildArgs: effModel wins over task.model when both are given', () => {
