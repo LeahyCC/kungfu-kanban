@@ -19,6 +19,8 @@ compares your clone against `origin/main` and offers a one-click update.
   cards` becomes a thumb-reachable floating button anchored to the bottom of
   the screen (respecting the safe-area inset) instead of taking its own row,
   and the board reserves space at the bottom so it can't cover the last card.
+  Extends the real-browser layout regression suite added in #125 with a new
+  toolbar-height/reachability check.
 
 ## [1.15.3] — 2026-08-03
 
