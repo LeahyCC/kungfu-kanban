@@ -165,6 +165,16 @@ describe('mobile layout (real browser, touch emulation)', () => {
           document.documentElement.clientWidth,
         ]);
         assert.equal(innerWidth, clientWidth, `layout viewport (${clientWidth}px) drifted from the visual viewport (${innerWidth}px) at ${width}px wide — something is overflowing horizontally`);
+
+        // Flex-wrap keeps the row from overflowing even if .app-brand is left
+        // free to shrink, but an unpinned brand can still shrink below its own
+        // logo+antenna content and let that content paint over the tabs next
+        // to it — no viewport overflow, just visual overlap.
+        const [brandRight, tabsLeft] = await page.evaluate(() => [
+          document.querySelector('.app-brand').getBoundingClientRect().right,
+          document.querySelector('.app-tabs').getBoundingClientRect().left,
+        ]);
+        assert.ok(brandRight <= tabsLeft + 0.5, `.app-brand (right edge ${brandRight}) overlaps .app-tabs (left edge ${tabsLeft}) at ${width}px wide`);
       } finally {
         await context.close();
       }
