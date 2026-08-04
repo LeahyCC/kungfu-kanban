@@ -7,6 +7,16 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.15.1] — 2026-08-03
+
+### Fixed
+- **Prompts starting with a hyphen no longer fail the run.** A card whose
+  prompt opened with a `---` divider, a `- bullet`, or a `--flag-looking`
+  phrase died instantly with `error: unknown option '...'` — the CLI's own
+  argument parser read the value after `-p` as a flag. Every `-p` call site
+  (card launch, follow-up resume, the Sensei, and card drafting/import) now
+  passes a literal `--` before the prompt.
+
 ## [1.15.0] — 2026-07-31
 
 ### Added
