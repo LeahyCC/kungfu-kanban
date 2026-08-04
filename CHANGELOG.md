@@ -29,7 +29,7 @@ compares your clone against `origin/main` and offers a one-click update.
   `acceptEdits` then silently downgraded every hand-made card — and since a
   headless card has no way to answer a Bash approval prompt, it hard-blocked on
   the first command it ran (even a read-only `ls`/`grep`). The board default now
-  wins; the dropdown is still editable per card.
+  wins; the dropdown is still editable per card. (#127)
 
 ## [1.15.3] — 2026-08-03
 
