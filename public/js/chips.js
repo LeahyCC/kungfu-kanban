@@ -161,6 +161,16 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ---------- system status (claude CLI + gh health) ----------
+// On phones the descriptive text collapses behind the dot cluster to save
+// toolbar height (see .sys-text in style.css) — tapping it expands in place.
+// Delegated because renderHealth() replaces #sysStatus's children on every poll.
+$('#sysStatus').addEventListener('click', (e) => {
+  if (!e.target.closest('.sys-summary')) return;
+  const el = $('#sysStatus');
+  const expanded = el.classList.toggle('expanded');
+  const btn = el.querySelector('.sys-summary');
+  if (btn) btn.setAttribute('aria-expanded', String(expanded));
+});
 export async function renderHealth() {
   const el = $('#sysStatus');
   const [h, v] = await Promise.all([api('/api/health'), api('/api/version')]);
@@ -171,19 +181,19 @@ export async function renderHealth() {
     : '';
   // "2.1.212 (Claude Code)" → "claude 2.1.212" — the parenthetical is noise here
   const claudeVer = `claude ${esc((h.claude.out || '').replace(/\s*\(.*\)$/, '') || '?')}`;
-  const boardVer = v && v.version
-    ? `kungfu v${esc(v.version)}${v.updateAvailable
-      ? ` <button id="updateBoardBtn" class="ghost mini warn" title="Your clone is ${v.behind} commit${v.behind > 1 ? 's' : ''} behind origin — pulls fast-forward and restarts the board">⬆ ${v.remoteVersion ? `v${esc(v.remoteVersion)}` : 'update'} available</button>`
-      : ''} · `
+  const boardUpdBtn = v && v.version && v.updateAvailable
+    ? ` <button id="updateBoardBtn" class="ghost mini warn" title="Your clone is ${v.behind} commit${v.behind > 1 ? 's' : ''} behind origin — pulls fast-forward and restarts the board">⬆ ${v.remoteVersion ? `v${esc(v.remoteVersion)}` : 'update'} available</button>`
     : '';
-  if (h.claude.ok && h.gh.ok) {
-    el.innerHTML = `${boardVer}${dot(true)} ${claudeVer}${upBtn} · ${dot(true)} gh`;
-  } else {
-    el.innerHTML = boardVer + [
-      h.claude.ok ? `${dot(true)} ${claudeVer}${upBtn}` : `${dot(false)} claude CLI not working — cards can't run`,
+  const boardVer = v && v.version ? `kungfu v${esc(v.version)}` : '';
+  // dots + update buttons sit outside .sys-text so they're always reachable
+  // on phones — only the descriptive text collapses behind a tap there.
+  const text = h.claude.ok && h.gh.ok
+    ? `${boardVer ? boardVer + ' · ' : ''}${dot(true)} ${claudeVer} · ${dot(true)} gh`
+    : (boardVer ? boardVer + ' · ' : '') + [
+      h.claude.ok ? `${dot(true)} ${claudeVer}` : `${dot(false)} claude CLI not working — cards can't run`,
       h.gh.ok ? `${dot(true)} gh` : `${dot(false)} gh not authed — PR features off`,
     ].join(' · ');
-  }
+  el.innerHTML = `<button type="button" class="sys-summary" aria-expanded="${el.classList.contains('expanded')}" aria-label="System status details">${dot(h.claude.ok)}${dot(h.gh.ok)}</button><span class="sys-text">${text}</span>${boardUpdBtn}${upBtn}`;
   const bb = $('#updateBoardBtn');
   if (bb) bb.addEventListener('click', async () => {
     if (!(await confirmDlg('Update the board to the latest code? It pulls from origin and restarts itself (blocked while cards are running). Under plain `npm start` the server stops instead — restart it after.', { confirmLabel: '⬆ Update' }))) return;

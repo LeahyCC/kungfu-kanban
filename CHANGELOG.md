@@ -7,6 +7,19 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.15.4] — 2026-08-03
+
+### Changed
+- **The phone toolbar shrank from 3 stacked rows (~157px) to one (60px).**
+  `#sysStatus` now collapses to its status dots + the claude-CLI update
+  button, with the descriptive version/gh text behind a tap (still shown in
+  full on wider screens); the `parallel` concurrency stepper moved into
+  ⚙ Settings → Cards, since it's set-once-and-forget and was crowding the
+  row; and the Terminal toggle drops its label to an icon on phones. `＋ New
+  cards` becomes a thumb-reachable floating button anchored to the bottom of
+  the screen (respecting the safe-area inset) instead of taking its own row,
+  and the board reserves space at the bottom so it can't cover the last card.
+
 ## [1.15.3] — 2026-08-03
 
 ### Fixed
