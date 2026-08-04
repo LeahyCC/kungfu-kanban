@@ -115,8 +115,11 @@ function mountComposer() {
 
   fillSelect($('#cmpModel'), cfg.models || ['default'], prefs.model || 'default');
   fillSelect($('#cmpEffort'), cfg.efforts || ['default'], prefs.effort || 'default');
+  // The board's default permission mode wins over the sticky per-browser pref:
+  // a remembered acceptEdits used to silently downgrade every hand-made card,
+  // and headless cards can't approve a Bash prompt, so they hard-blocked.
   fillSelect($('#cmpPerm'), cfg.permissionModes || ['acceptEdits'],
-    prefs.permissionMode || (cfg.settings && cfg.settings.defaultPermissionMode) || 'acceptEdits');
+    (cfg.settings && cfg.settings.defaultPermissionMode) || prefs.permissionMode || 'acceptEdits');
   // mirror the card modal: 'default' says what it will actually resolve to
   const s = cfg.settings || {};
   $('#cmpModel').options[0].text = s.defaultModel ? `default (${s.defaultModel})` : 'default (CLI picks)';
