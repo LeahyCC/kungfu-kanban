@@ -53,13 +53,26 @@ test('buildPrompt: skills + skillsAuto combine, skillsAuto wraps outermost', () 
 
 test('buildArgs: minimal task produces just -p/--output-format/--verbose', () => {
   const args = buildArgs({ id: 'abc', prompt: 'hi', model: 'default' }, null);
-  assert.deepEqual(args, ['-p', '--', 'hi', '--output-format', 'stream-json', '--verbose']);
+  assert.deepEqual(args, ['--output-format', 'stream-json', '--verbose', '-p', '--', 'hi']);
 });
 
-test('buildArgs: a hyphen-leading prompt sits after a literal -- so the CLI parser cannot read it as a flag', () => {
+// `--` ends the CLI's option parsing, so the prompt has to be the LAST thing on
+// argv: anything pushed after it is swallowed as prompt text, not parsed.
+test('buildArgs: a hyphen-leading prompt ends argv behind a literal -- so the CLI parser cannot read it as a flag', () => {
   for (const prompt of ['---', '- something', '--output-format']) {
     const args = buildArgs({ id: 'a', prompt, model: 'default' }, null);
-    assert.deepEqual(args.slice(0, 3), ['-p', '--', prompt]);
+    assert.deepEqual(args.slice(-3), ['-p', '--', prompt]);
+  }
+});
+
+test('buildArgs: every flag lands before the -p -- prompt, never after it', () => {
+  const args = buildArgs(
+    { id: 'abcdef12', prompt: '--- go', model: 'opus', effort: 'high', permissionMode: 'plan', agent: 'explore', worktree: true, cwd: '/repo' },
+    null,
+  );
+  assert.deepEqual(args.slice(-3), ['-p', '--', '--- go']);
+  for (const flag of ['--output-format', '--verbose', '--model', '--effort', '--permission-mode', '--agent', '--worktree', '--add-dir']) {
+    assert.ok(args.indexOf(flag) > -1 && args.indexOf(flag) < args.length - 3, `${flag} must precede -p`);
   }
 });
 
