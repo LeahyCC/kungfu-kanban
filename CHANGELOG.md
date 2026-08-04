@@ -7,6 +7,17 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.15.2] — 2026-08-03
+
+### Fixed
+- **Cards no longer show the same message twice in a row.** A run ending on
+  plain text streamed that text as an `assistant` transcript entry, then
+  unconditionally re-appended the identical text as a separate `result` entry
+  — the transcript rendered the same message back to back. The `result` entry
+  is now skipped when it exactly echoes the last streamed `assistant` text,
+  while `resultText`/`stats`/`error` still persist and broadcast either way.
+  Fixes #122.
+
 ## [1.15.1] — 2026-08-03
 
 ### Fixed
