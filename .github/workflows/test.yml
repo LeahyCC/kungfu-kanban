@@ -17,6 +17,19 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node --test --experimental-test-coverage
+  layout:
+    # Real-browser phone layout check (npm run test:layout) — kept out of the
+    # `suite` job above since it downloads a Chromium build on every run.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:layout
   release-check:
     runs-on: ubuntu-latest
     steps:
@@ -29,7 +42,7 @@ jobs:
           node-version: 22
       - run: node scripts/check-release.js
   test:
-    needs: [suite, release-check]
+    needs: [suite, layout, release-check]
     runs-on: ubuntu-latest
     steps:
       - run: exit 0
