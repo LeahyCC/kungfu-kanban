@@ -590,7 +590,7 @@ input.tiny { width: 60px; }
 .sys-dot.bad { color: var(--error); }
 .sub .mini { padding: 0 7px; font-size: 10.5px; margin-left: 2px; vertical-align: 1px; }
 .sys-summary {
-  display: inline-flex;
+  display: none;
   align-items: center;
   cursor: pointer;
   gap: 3px;
@@ -1785,7 +1785,7 @@ a.err-card:hover { text-decoration: underline; }
   .sys-text { display: none; }
   #sysStatus.expanded .sys-text { display: inline; }
   #sysStatus { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; flex-shrink: 0; white-space: nowrap; }
-  .sys-summary { min-height: 44px; align-items: center; }
+  .sys-summary { display: inline-flex; min-height: 44px; align-items: center; }
   /* icon-only Terminal toggle frees enough width for sysStatus + filter +
      terminal to share a single row instead of stacking */
   #termToggle .btn-label { display: none; }
