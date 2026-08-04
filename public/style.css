@@ -1775,18 +1775,27 @@ a.err-card:hover { text-decoration: underline; }
   .col-body { overflow-y: visible; }
   .usage-chip, .model-chip { display: none; } /* supplementary; counts + cooldown stay */
   .filter { flex: 1; min-width: 100px; }
+  /* .app-status is a nowrap row: several alert chips (⏳ 📡 🔐 ⚠ 🔔) visible at
+     once outgrows even a fairly wide phone header, so let both the header and
+     the status row wrap onto a second line rather than clip past the edge. */
+  .app-header { flex-wrap: wrap; height: auto; min-height: calc(56px + env(safe-area-inset-top)); }
+  .app-status { flex-wrap: wrap; justify-content: flex-end; }
+  /* iOS Safari zooms the whole page on focus for any text field under 16px;
+     !important because every specific field style (textarea.mono, .cwd-row
+     select, …) otherwise wins on specificity alone */
+  input:not([type='checkbox']):not([type='radio']), textarea, select { font-size: 16px !important; }
 }
 @media (max-width: 560px) {
   .app-header { gap: 8px; padding: 0 12px; }
   .wordmark { display: none; } /* logo + antenna carry the brand on phones */
   .app-tab { padding: 6px 8px; }
 }
-/* ~360px and under the header's minimum content width (≈366px) no longer
-   fits: .app-brand (min-width:0) collapses and the logo/antenna paint over
-   the Board tab. Pin the brand, slim everything, and let the row wrap if the
-   occasional chips (⏳ cooldown, ⚠ errors) claim more width than exists. */
-@media (max-width: 360px) {
-  .app-header { flex-wrap: wrap; height: auto; min-height: calc(56px + env(safe-area-inset-top)); }
+/* ~400px and under the header's minimum content width no longer fits even
+   with every optional chip still hidden (a 393px real phone measured the
+   layout viewport widening to 396px from .app-status alone): .app-brand
+   (min-width:0) collapses and the logo/antenna paint over the Board tab.
+   Pin the brand and slim everything down. */
+@media (max-width: 400px) {
   .app-brand { flex: none; }
   .app-brand .antenna { display: none; } /* the Running count dot carries this signal */
   .app-logo { width: 20px; height: 20px; }
@@ -1817,10 +1826,29 @@ a.err-card:hover { text-decoration: underline; }
   .column { max-height: none; }
   .col-body { overflow-y: visible; }
 }
-/* touch: tabs reach the 44px tap target — placed after the ≤560px/≤360px
+/* touch: tabs reach the 44px tap target — placed after the ≤560px/≤400px
    padding overrides so they can't shrink it back down */
 @media (hover: none) {
-  .app-tab { padding-top: 11px; padding-bottom: 11px; }
+  .app-tab { padding-top: 13px; padding-bottom: 13px; }
+  /* buttons/links whose visual size is deliberately small (mini status
+     buttons, the skip link, the Done column's ⌫ Clear) grow their hit strip
+     via an invisible ::after instead of their box — ::after doesn't render
+     on <input>, so form fields get a real min-height a few lines down instead */
+  .skip-link, #termToggle, #newCardsBtn, .col-head .col-clear,
+  #updateBoardBtn, #updateClaudeBtn {
+    position: relative;
+  }
+  .skip-link::after, #termToggle::after, #newCardsBtn::after,
+  .col-head .col-clear::after, #updateBoardBtn::after, #updateClaudeBtn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+  .filter, #maxConcurrent { min-height: 44px; }
 }
 
 /* ---------- hooks for the rendering rework (Frontend_Render_Engineer) ----------

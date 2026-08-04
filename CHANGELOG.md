@@ -7,6 +7,37 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.15.3] — 2026-08-03
+
+### Fixed
+- **The layout viewport widened past the screen at 390–393px wide.** `.app-status`
+  (the header's chip row) is a nowrap flex row; at exactly those widths its
+  natural content outgrew the header before the existing ≤360px wrap rules
+  kicked in, so the browser grew the layout viewport to fit it — and every
+  `position: fixed; right: 0` panel (card drawer, terminal, modal centring)
+  anchored to that wider viewport instead of the real screen. The header and
+  status row now both wrap under the same ≤700px breakpoint the board already
+  stacks columns at, so the row folds onto a second line instead of pushing
+  the viewport wider. With every alert chip visible at once (📡 offline, ⚡
+  reconnecting, 🔐 logged out can genuinely co-occur) the row could still
+  overflow by 100px+ even with the header wrapped; `.app-status` now wraps
+  independently of its parent.
+- **Text fields zoomed the whole page on focus in iOS Safari.** Anything under
+  16px triggers it; most inputs, textareas and selects sat at 14px or smaller.
+  They're pinned to 16px on touch devices now.
+- **Several controls fell short of the 44×44 CSS px touch target** — the tab
+  bar, ⌫ Clear, ↑ update / ⬆ update, the skip-link, and the filter/parallel
+  inputs. The three where growing the visible box would have been fine
+  (filter, parallel-count) got real min-heights; the rest grow an invisible
+  `::after` hit strip instead, so nothing about their look changes.
+- Added `e2e/mobile-layout.spec.js`, a real-Chromium regression test
+  (`npm run test:layout`, touch-emulated at 360/390/393/412/430px) covering all
+  of the above — a resized desktop browser still reports `(hover: hover)` and
+  `(pointer: fine)`, so it can't see the `(hover: none)` rules these fixes
+  depend on, or measure computed layout the way a CSS-text assertion can. It
+  downloads a Chromium build, so it runs as its own `layout` job in CI rather
+  than in `npm test`.
+
 ## [1.15.2] — 2026-08-03
 
 ### Fixed
