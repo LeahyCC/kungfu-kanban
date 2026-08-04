@@ -82,10 +82,10 @@ test('auditRelease PASSES a release that cites every non-dependabot PR', () => {
   assert.equal(r.ok, true, r.message);
 });
 
-// The repo convention (CLAUDE.md): every change bumps package.json and adds a
-// line under [Unreleased]; only the release card renames that section to
-// "## [X.Y.Z] — date". Demanding a version-named section for any untagged
-// version contradicted that and failed 100% of PRs.
+// An in-flight bump with entries still under [Unreleased] stays green (a
+// batch may let a later card own the dated section) — but since releases went
+// automatic it releases nothing on merge, so the verdict's message warns to
+// date the section in the PR (CLAUDE.md's PR protocol).
 test('auditRelease PASSES an in-flight bump whose entries are under [Unreleased]', () => {
   const cl = '# Changelog\n\n## [Unreleased]\n### Added\n- a new thing\n\n## [1.1.0] — x\n- old\n';
   const r = auditRelease({ version: '1.2.0', changelog: cl, tags: ['v1.1.0'], mergeLogSince: () => 'Merge pull request #90 from a/b' });
