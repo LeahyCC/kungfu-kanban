@@ -22,6 +22,15 @@ compares your clone against `origin/main` and offers a one-click update.
   Extends the real-browser layout regression suite added in #125 with a new
   toolbar-height/reachability check.
 
+### Fixed
+- **New cards created from the composer ignored the board's default permission
+  mode.** The composer prefilled its permission dropdown from a sticky
+  per-browser pref, which won over `defaultPermissionMode`. A remembered
+  `acceptEdits` then silently downgraded every hand-made card — and since a
+  headless card has no way to answer a Bash approval prompt, it hard-blocked on
+  the first command it ran (even a read-only `ls`/`grep`). The board default now
+  wins; the dropdown is still editable per card.
+
 ## [1.15.3] — 2026-08-03
 
 ### Fixed
