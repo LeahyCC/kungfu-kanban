@@ -7,6 +7,18 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.17.0] — 2026-08-03
+
+### Added
+- **Clear-cooldown button.** The ⏳ countdown chip now carries a ✕ that lifts
+  the subscription cooldown (`POST /api/cooldown/clear`) after a confirm,
+  pumping the queue immediately. For when the limit no longer applies — you
+  logged the CLI into another account or upgraded your plan; before this, the
+  only way out was editing `settings.json` around a server restart, which the
+  shutdown flush silently clobbers (it rewrites in-memory state over the
+  file). Clearing while the limit still applies is harmless: the next launch
+  re-trips the cooldown.
+
 ## [1.16.0] — 2026-08-03
 
 ### Added
