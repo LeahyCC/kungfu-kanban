@@ -37,6 +37,17 @@ function tickCooldown() {
 }
 setInterval(tickCooldown, 1000);
 
+// Clearing is for when the limit no longer applies (new CLI login, upgraded
+// plan) — otherwise the next launch re-trips the same wall and re-parks.
+$('#cooldownClear').addEventListener('click', async () => {
+  const ok = await confirmDlg(
+    'Clear the cooldown? Only do this if the limit no longer applies (logged into another account or upgraded your plan) — otherwise the next launch just re-trips it. Queued cards launch immediately.'
+  );
+  if (!ok) return;
+  await api('/api/cooldown/clear', { method: 'POST' });
+  // The server broadcasts cooldown:0 over SSE, which hides the chip.
+});
+
 // ---------- theme ----------
 export function paintThemeToggle() {
   const light = document.documentElement.dataset.theme === 'light';
