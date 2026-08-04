@@ -589,19 +589,19 @@ input.tiny { width: 60px; }
 .sys-dot.ok { color: var(--success); }
 .sys-dot.bad { color: var(--error); }
 .sub .mini { padding: 0 7px; font-size: 10.5px; margin-left: 2px; vertical-align: 1px; }
+.sys-summary {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 3px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+.sys-text { margin-left: 6px; }
 .sub .mini.warn { color: var(--warning); border-color: var(--warning); }
 .toolbar-actions { display: flex; align-items: center; gap: 10px; }
-.conc {
-  flex-direction: row !important;
-  align-items: center;
-  gap: 7px;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--ink-400);
-  text-transform: lowercase;
-  letter-spacing: 0.03em;
-}
-.conc input { width: 52px; padding: 5px 8px; font-family: var(--font-mono); }
 
 .board {
   flex: 1;
@@ -1769,12 +1769,38 @@ a.err-card:hover { text-decoration: underline; }
      the width — otherwise empty columns collapse to their header and populated
      ones size to their widest card */
   .board { display: flex; flex-direction: column; align-items: stretch; overflow-x: visible; }
+  /* the FAB below floats over the last card otherwise — reserve its footprint */
+  .board { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   .toolbar-actions { flex-wrap: wrap; justify-content: flex-end; }
   .board.is-empty { display: flex; }
   .column { max-height: none; min-width: 0; }
   .col-body { overflow-y: visible; }
   .usage-chip, .model-chip { display: none; } /* supplementary; counts + cooldown stay */
   .filter { flex: 1; min-width: 100px; }
+  /* #sysStatus is diagnostic, not operational — collapse to just the status
+     dots + any update button; the descriptive text sits behind a tap so the
+     toolbar doesn't burn a whole row (and often two) on it. Force it onto its
+     own full-width flex line so it can't shrink and wrap its own content
+     across two lines while sharing a row with .toolbar-actions. */
+  .sys-text { display: none; }
+  #sysStatus.expanded .sys-text { display: inline; }
+  #sysStatus { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; flex-shrink: 0; white-space: nowrap; }
+  .sys-summary { min-height: 44px; align-items: center; }
+  /* icon-only Terminal toggle frees enough width for sysStatus + filter +
+     terminal to share a single row instead of stacking */
+  #termToggle .btn-label { display: none; }
+  #termToggle { flex-shrink: 0; }
+  /* the primary action moves to a floating, thumb-reachable button so the
+     toolbar doesn't need a whole row just for it */
+  #newCardsBtn {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    z-index: 30;
+    border-radius: 999px;
+    padding: 13px 22px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
   /* .app-status is a nowrap row: several alert chips (⏳ 📡 🔐 ⚠ 🔔) visible at
      once outgrows even a fairly wide phone header, so let both the header and
      the status row wrap onto a second line rather than clip past the edge. */
@@ -1835,11 +1861,12 @@ a.err-card:hover { text-decoration: underline; }
      via an invisible ::after instead of their box — ::after doesn't render
      on <input>, so form fields get a real min-height a few lines down instead */
   .skip-link, #termToggle, #newCardsBtn, .col-head .col-clear,
-  #updateBoardBtn, #updateClaudeBtn {
+  #updateBoardBtn, #updateClaudeBtn, .sys-summary {
     position: relative;
   }
   .skip-link::after, #termToggle::after, #newCardsBtn::after,
-  .col-head .col-clear::after, #updateBoardBtn::after, #updateClaudeBtn::after {
+  .col-head .col-clear::after, #updateBoardBtn::after, #updateClaudeBtn::after,
+  .sys-summary::after {
     content: '';
     position: absolute;
     top: 50%;
@@ -1849,6 +1876,13 @@ a.err-card:hover { text-decoration: underline; }
     transform: translate(-50%, -50%);
   }
   .filter, #maxConcurrent { min-height: 44px; }
+}
+/* the touch-target rule above forces position:relative on every button in
+   its list, including #newCardsBtn — reassert the floating FAB position for
+   the phone width where it applies (its own padding already clears 44px, so
+   it doesn't need the ::after hit-strip growth the rest of that list does) */
+@media (max-width: 700px) and (hover: none) {
+  #newCardsBtn { position: fixed; }
 }
 
 /* ---------- hooks for the rendering rework (Frontend_Render_Engineer) ----------

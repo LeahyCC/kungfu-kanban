@@ -105,8 +105,7 @@
     <span class="sub" id="sysStatus" title="System status: the claude CLI runs your cards (on your subscription); gh opens and merges PRs. Checked every few minutes.">checking status…</span>
     <div class="toolbar-actions">
       <input id="filterInput" class="filter" type="search" placeholder="⌕ filter cards…" aria-label="Filter cards by text, repo, model, or skill" title="Filter the board by title, prompt, repo path, model, agent, or skill" />
-      <label class="conc" title="How many agent sessions may run at once — extras wait in Queued. Keeps parallel cards from burning your subscription rate limits.">parallel <input id="maxConcurrent" type="number" min="1" max="8" /></label>
-      <button id="termToggle" class="ghost" title="A real shell on this Mac — your $SHELL, your ~/.zshrc, your prompt (⌘J)">▸_ Terminal</button>
+      <button id="termToggle" class="ghost" title="A real shell on this Mac — your $SHELL, your ~/.zshrc, your prompt (⌘J)" aria-label="Terminal">▸_<span class="btn-label"> Terminal</span></button>
       <button id="newCardsBtn" class="primary"
         title="The way in: describe the work and run it, sharpen the wording, or hand it to the Sensei to split into several cards">＋ New cards</button>
     </div>
@@ -377,6 +376,9 @@ The prompt: self-contained instructions for the executing agent.
             <input name="archiveDays" type="number" min="0" max="365" class="tiny" />
           </label>
           <p class="hint">Archived cards move to the Archive tab; their transcripts are deleted.</p>
+          <label title="How many agent sessions may run at once — extras wait in Queued. Keeps parallel cards from burning your subscription rate limits.">Run in parallel
+            <input id="maxConcurrent" type="number" min="1" max="8" class="tiny" />
+          </label>
         </div>
 
         <!-- Appearance: per-device, saved in this browser -->

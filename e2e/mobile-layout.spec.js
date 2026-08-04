@@ -244,6 +244,31 @@ describe('mobile layout (real browser, touch emulation)', () => {
       }
     });
 
+    test(`toolbar chrome stays under budget and the update button stays reachable at ${width}px`, async () => {
+      const context = await browser.newContext({
+        viewport: { width, height: HEIGHT },
+        hasTouch: true,
+        isMobile: true,
+      });
+      const page = await context.newPage();
+      try {
+        await page.goto(base);
+        await page.waitForSelector('.toolbar');
+        const toolbarHeight = await page.evaluate(() => document.querySelector('.toolbar').getBoundingClientRect().height);
+        assert.ok(toolbarHeight <= 64, `toolbar chrome (${toolbarHeight}px) exceeds the ~60px phone budget at ${width}px`);
+        // the claude-CLI update button must be clickable without expanding
+        // the collapsed #sysStatus detail first — it's the escape hatch users
+        // reach for when the board nags them to update.
+        const updateBtn = page.locator('#updateClaudeBtn');
+        await assertInViewport(page, '#updateClaudeBtn', 'claude update button');
+        assert.ok(await updateBtn.isVisible(), 'update button hidden behind the collapsed status detail');
+        // the primary CTA floats free of the toolbar row and stays reachable
+        await assertInViewport(page, '#newCardsBtn', 'floating New cards button');
+      } finally {
+        await context.close();
+      }
+    });
+
     test(`buttons, links and text inputs meet the 44x44 CSS px touch target at ${width}px`, async () => {
       const context = await browser.newContext({
         viewport: { width, height: HEIGHT },
