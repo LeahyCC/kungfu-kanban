@@ -44,6 +44,7 @@ triages, dispatches, and reviews cards. Everything persists as JSON files in `da
 - [The board](#the-board)
 - [Importing cards from Markdown](#importing-cards-from-markdown)
 - [Repo cards, real PRs](#repo-cards-real-prs)
+- [Headless browser verification](#headless-browser-verification)
 - [Notifications](#notifications)
 - [Use it from your phone (Tailscale)](#use-it-from-your-phone-tailscale)
 - [The Manager (the Sensei)](#the-manager-the-sensei)
@@ -89,6 +90,7 @@ running. See [CHANGELOG.md](CHANGELOG.md) for what changed.
 | **GitHub CLI (`gh`)**, authed | only for "Open PR when done" | `gh auth status` |
 | **macOS** | desktop notifications (`osascript`); the rest works anywhere | — |
 | **Tailscale** (optional) | use the board from your phone | `tailscale status` |
+| **Chromium** (auto-installed) | headless browser verification for frontend cards, see [below](#headless-browser-verification) | downloads via `postinstall` on `npm install` |
 
 ---
 
@@ -398,6 +400,36 @@ trust, so you can keep either one without the other.
 
 Keep local `main` pushed: agent worktrees branch from the default branch, so an
 unpushed main is how you get avoidable conflicts in the first place.
+
+---
+
+## Headless browser verification
+
+Frontend cards need more than code review to actually confirm a UI works — a
+static file server proves files are reachable, not that the DOM renders
+correctly or that a click handler fires. Playwright + Chromium are installed
+automatically (`postinstall` downloads Chromium on `npm install`, no manual
+setup) specifically so an agent can close that loop itself:
+
+```js
+const { chromium } = require('playwright');
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.goto('http://localhost:8080/index.html');
+// click, read computed styles, check console errors, screenshot — whatever
+// actually confirms the change works, not just that the file exists.
+```
+
+This works from any card's working directory, not just this repo's own —
+`NODE_PATH` is set to include this app's own `node_modules` for every spawned
+`claude` process (`lib/bus.js`'s `subEnv()`), so `require('playwright')`
+resolves regardless of which project the card is actually working in.
+
+Chromium is a real, if usually invisible, chunk of `npm install` — if you
+never touch frontend cards and want to skip it, `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+npm install` skips the download; `require('playwright')` will still resolve,
+it just won't have a browser to launch until you run
+`npx playwright install chromium` yourself.
 
 ---
 

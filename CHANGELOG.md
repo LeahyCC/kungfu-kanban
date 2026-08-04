@@ -7,6 +7,16 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Added
+- **Headless browser verification for cards.** Playwright + Chromium are now
+  a real dependency (Chromium auto-installs via `postinstall`), not something
+  each card has to set up itself. `NODE_PATH` includes this app's own
+  `node_modules` for every spawned `claude` process, so `require('playwright')`
+  resolves from any card's working directory, not just this repo's own —
+  letting frontend cards actually load a page and verify it (click handlers,
+  computed styles, console errors, screenshots) instead of stopping at static
+  code review. See [Headless browser verification](README.md#headless-browser-verification).
+
 ## [1.15.4] — 2026-08-03
 
 ### Changed
