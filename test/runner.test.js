@@ -15,11 +15,14 @@ function withTasks(tasks, fn) {
 
 // --- buildPrompt ---------------------------------------------------------
 
-test('buildPrompt: plain task with no skills returns the prompt unchanged', () => {
-  assert.equal(buildPrompt({ prompt: 'do the thing' }), 'do the thing');
+test('buildPrompt: plain task keeps its prompt first, UI-verify convention appended', () => {
+  const out = buildPrompt({ prompt: 'do the thing' });
+  assert.match(out, /^do the thing\n\n/);
+  assert.match(out, /Standing convention — verifying UI work/);
+  assert.match(out, /npx playwright/);
 });
 
-test('buildPrompt: missing prompt falls back to an empty string', () => {
+test('buildPrompt: missing prompt falls back to an empty string (no orphan convention)', () => {
   assert.equal(buildPrompt({}), '');
 });
 
@@ -28,32 +31,35 @@ test('buildPrompt: skills list is prepended as a "Use the following installed sk
   assert.match(out, /^Use the following installed skill\(s\)/);
   assert.match(out, /- kungfu-todo/);
   assert.match(out, /- ponytail/);
-  assert.match(out, /\n\nbody$/);
+  assert.match(out, /\n\nbody\n\n/);
 });
 
 test('buildPrompt: empty skills array does not add the skills block', () => {
-  assert.equal(buildPrompt({ prompt: 'body', skills: [] }), 'body');
+  assert.match(buildPrompt({ prompt: 'body', skills: [] }), /^body\n\n/);
 });
 
 test('buildPrompt: skillsAuto prepends the "review your installed skills" line', () => {
   const out = buildPrompt({ prompt: 'body', skillsAuto: true });
   assert.match(out, /^Review your installed skills/);
-  assert.match(out, /\n\nbody$/);
+  assert.match(out, /\n\nbody\n\n/);
 });
 
-test('buildPrompt: skills + skillsAuto combine, skillsAuto wraps outermost', () => {
+test('buildPrompt: skills + skillsAuto combine, skillsAuto wraps outermost, convention last', () => {
   const out = buildPrompt({ prompt: 'body', skills: ['x'], skillsAuto: true });
-  const expected =
+  const expectedPrefix =
     'Review your installed skills and use any that are genuinely relevant to this task via the Skill tool.\n\n' +
-    'Use the following installed skill(s) via the Skill tool where relevant to this task:\n- x\n\nbody';
-  assert.equal(out, expected);
+    'Use the following installed skill(s) via the Skill tool where relevant to this task:\n- x\n\nbody\n\n';
+  assert.ok(out.startsWith(expectedPrefix), out.slice(0, 200));
+  assert.match(out, /Standing convention — verifying UI work/);
 });
 
 // --- buildArgs -------------------------------------------------------------
 
 test('buildArgs: minimal task produces just -p/--output-format/--verbose', () => {
   const args = buildArgs({ id: 'abc', prompt: 'hi', model: 'default' }, null);
-  assert.deepEqual(args, ['--output-format', 'stream-json', '--verbose', '-p', '--', 'hi']);
+  assert.deepEqual(args.slice(0, 5), ['--output-format', 'stream-json', '--verbose', '-p', '--']);
+  assert.match(args[5], /^hi\n\n/);
+  assert.equal(args.length, 6);
 });
 
 // `--` ends the CLI's option parsing, so the prompt has to be the LAST thing on
@@ -61,7 +67,8 @@ test('buildArgs: minimal task produces just -p/--output-format/--verbose', () =>
 test('buildArgs: a hyphen-leading prompt ends argv behind a literal -- so the CLI parser cannot read it as a flag', () => {
   for (const prompt of ['---', '- something', '--output-format']) {
     const args = buildArgs({ id: 'a', prompt, model: 'default' }, null);
-    assert.deepEqual(args.slice(-3), ['-p', '--', prompt]);
+    assert.deepEqual(args.slice(-3, -1), ['-p', '--']);
+    assert.ok(args[args.length - 1].startsWith(prompt), args[args.length - 1]);
   }
 });
 
@@ -70,7 +77,8 @@ test('buildArgs: every flag lands before the -p -- prompt, never after it', () =
     { id: 'abcdef12', prompt: '--- go', model: 'opus', effort: 'high', permissionMode: 'plan', agent: 'explore', worktree: true, cwd: '/repo' },
     null,
   );
-  assert.deepEqual(args.slice(-3), ['-p', '--', '--- go']);
+  assert.deepEqual(args.slice(-3, -1), ['-p', '--']);
+  assert.match(args[args.length - 1], /^--- go\n\n/);
   for (const flag of ['--output-format', '--verbose', '--model', '--effort', '--permission-mode', '--agent', '--worktree', '--add-dir']) {
     assert.ok(args.indexOf(flag) > -1 && args.indexOf(flag) < args.length - 3, `${flag} must precede -p`);
   }
