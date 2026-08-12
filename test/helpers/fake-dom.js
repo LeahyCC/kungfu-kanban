@@ -266,6 +266,10 @@ function installFakeDom() {
   };
   globalThis.CSS = globalThis.CSS || { escape: (s) => String(s).replace(/(["\\])/g, '\\$1') };
   globalThis.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+  // There is no cascade here, so every custom property reads back empty and
+  // appearance.js takes its documented fallback path (surface constants for
+  // the accent maths, the dojo hexes for theme-color).
+  globalThis.getComputedStyle = () => ({ getPropertyValue: () => '' });
   globalThis.requestAnimationFrame = (cb) => { raf.queue.push(cb); return raf.queue.length; };
   // chips.js starts module-level intervals; neuter them only during import
   globalThis.setInterval = () => 0;

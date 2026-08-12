@@ -44,8 +44,10 @@ export function paintThemeToggle() {
   btn.textContent = light ? '☾' : '☀';
   btn.title = light ? 'Enter the night dojo' : 'Enter the day dojo';
   btn.setAttribute('aria-pressed', light ? 'true' : 'false');
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = light ? '#F6F2E9' : '#141210';
+  // appearance.js owns theme-color (it has to read the live --paper-0, which a
+  // background tone changes). Lazy import for the same reason as setTheme
+  // below: the two modules are a cycle, so nothing may run at module scope.
+  import('./appearance.js').then((m) => m.paintThemeColor());
 }
 // The header toggle is a shortcut for the Appearance pane's theme setting —
 // both write the same stored look (imported lazily to keep the module cycle
