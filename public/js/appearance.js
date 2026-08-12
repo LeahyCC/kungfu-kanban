@@ -1,15 +1,15 @@
-/* Per-device look & feel: theme, text size, accent colour, rainbow mode,
- * density, reduced motion. Saved in localStorage (a device preference, not
- * board state — the phone and the desktop keep their own), applied by
- * stamping CSS variables and classes on <html>. The pre-paint script in
- * index.html applies the same values before first paint, so there's no flash;
- * this module is the editor for them. */
+/* Per-device look & feel: theme, background tone, text size, accent colour,
+ * rainbow mode, density, reduced motion. Saved in localStorage (a device
+ * preference, not board state — the phone and the desktop keep their own),
+ * applied by stamping CSS variables and classes on <html>. The pre-paint
+ * script in index.html applies the same values before first paint, so there's
+ * no flash; this module is the editor for them. */
 
 import { $ } from './util.js';
 import { paintThemeToggle } from './chips.js';
 
 const KEY = 'kk-look';
-export const DEFAULTS = { theme: 'system', scale: 100, accent: '', rainbow: false, compact: false, still: false };
+export const DEFAULTS = { theme: 'system', bg: '', scale: 100, accent: '', rainbow: false, compact: false, still: false };
 
 // The palette offered as swatches — '' means "the dojo's own vermillion".
 const SWATCHES = [
@@ -20,6 +20,16 @@ const SWATCHES = [
   ['#6FA3D4', 'sky'],
   ['#9B6FD4', 'iris'],
   ['#D46FA3', 'blossom'],
+];
+
+// Background tones. The values live in style.css under [data-bg='…'] — this
+// list only names them, so there is one source of truth for the colours.
+// '' is the dojo's own warm paper (no attribute stamped at all).
+export const TONES = [
+  ['', 'dojo — warm rice paper'],
+  ['graphite', 'graphite — cool neutral'],
+  ['midnight', 'midnight — slate blue'],
+  ['obsidian', 'obsidian — true black'],
 ];
 
 export function readLook() {
@@ -81,6 +91,12 @@ export function applyLook(look) {
   if (light) root.dataset.theme = 'light';
   else delete root.dataset.theme;
 
+  // background tone: re-tunes the paper/ink/slab family in CSS. Stamped before
+  // the accent work below, because that reads --paper-1 back off the computed
+  // style and must see the tone's surface, not the one it is replacing.
+  if (TONES.some(([id]) => id && id === look.bg)) root.dataset.bg = look.bg;
+  else delete root.dataset.bg;
+
   // text size — zoom scales the px-heavy stylesheet too, which a root
   // font-size alone would not (only ~a fifth of the sizes here are rem)
   root.style.zoom = look.scale && look.scale !== 100 ? look.scale / 100 : '';
@@ -99,7 +115,11 @@ export function applyLook(look) {
     root.style.setProperty('--accent-ink', `rgb(${ink.r}, ${ink.g}, ${ink.b})`);
     root.style.setProperty('--accent-wash', `rgba(${c.r}, ${c.g}, ${c.b}, 0.10)`);
     root.style.setProperty('--selection-bg', `rgba(${c.r}, ${c.g}, ${c.b}, 0.30)`);
-    root.style.setProperty('--on-accent', dark ? '#141210' : '#FDFBF5');
+    // Text sitting ON the accent needs an absolute dark or light, not a themed
+    // one — so borrow the slab pair, the only tokens that are dark/light by
+    // definition in both themes. Every tone redefines them, so this tracks the
+    // background choice instead of pinning the dojo's warm brown-black.
+    root.style.setProperty('--on-accent', dark ? 'var(--slab-bg)' : 'var(--slab-text)');
   } else {
     for (const p of ['--accent', '--accent-ink', '--accent-wash', '--selection-bg', '--on-accent']) {
       root.style.removeProperty(p);
@@ -110,8 +130,20 @@ export function applyLook(look) {
   root.classList.toggle('kk-compact', !!look.compact);
   root.classList.toggle('kk-still', !!look.still);
 
+  paintThemeColor();
+}
+
+// The browser chrome (Android address bar, iOS status bar) should match the
+// board it is framing, so read the live --paper-0 rather than assuming the
+// dojo's own paper — a background tone changes it. chips.js repaints the same
+// meta on the header toggle; the logic lives here and is exported rather than
+// copied, but chips imports it lazily to keep the module cycle inert.
+export function paintThemeColor() {
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = light ? '#F6F2E9' : '#141210';
+  if (!meta) return;
+  const light = document.documentElement.dataset.theme === 'light';
+  const paper = getComputedStyle(document.documentElement).getPropertyValue('--paper-0').trim();
+  meta.content = paper || (light ? '#F6F2E9' : '#141210');
 }
 
 // ---------- the Appearance pane ----------
@@ -169,6 +201,35 @@ function syncSwatches() {
   const custom = $('#lookCustom');
   // don't write back into the picker while it's focused — that fights the drag
   if (custom && document.activeElement !== custom) custom.value = look.accent || '#E0524A';
+
+  const bgBox = $('#lookBg');
+  if (!bgBox || !bgBox.dataset.built) return;
+  for (const b of bgBox.querySelectorAll('button.look-bg')) {
+    const on = (b.dataset.tone || '') === (look.bg || '');
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+}
+
+// Background tones. Same build-once rule as the accent swatches, though these
+// have no colour input to protect — it just keeps the two panes symmetrical.
+function paintBgSwatches() {
+  const box = $('#lookBg');
+  if (!box || box.dataset.built) return;
+  box.dataset.built = '1';
+  for (const [id, name] of TONES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'look-sw look-bg';
+    b.dataset.tone = id;
+    b.title = name;
+    b.setAttribute('aria-label', `Background: ${name}`);
+    b.addEventListener('click', () => update({ bg: id }));
+    box.appendChild(b);
+  }
+  // paintSwatches' own sync ran before this row existed, so mark the selected
+  // chip here — otherwise the pane opens with no tone ringed.
+  syncSwatches();
 }
 
 // Fills the pane from the saved look — called when Settings opens.
@@ -182,6 +243,7 @@ export function renderLookPane() {
   $('#lookCompact').checked = !!look.compact;
   $('#lookStill').checked = !!look.still;
   paintSwatches();
+  paintBgSwatches();
 }
 
 // The pane only exists in the real page; the module still loads (and applies

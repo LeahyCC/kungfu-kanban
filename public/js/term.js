@@ -50,6 +50,12 @@ async function loadXterm() {
 // The board's ink slab, wearing a terminal's 16 ANSI colours: the dojo palette
 // (warm paper on dark ink, vermillion accent) rather than a generic green-on-
 // black, so the panel reads as part of the board.
+//
+// The four surface entries are read from the slab tokens at open time, because
+// a background tone redefines them and xterm takes a plain object, not vars —
+// a fixed '#1A1714' here would leave a warm rectangle sitting inside a cool
+// board. The 16 ANSI hues stay literal: they are terminal semantics, and they
+// are already AA-verified against every tone's slab.
 const THEME = {
   background: '#1A1714',
   foreground: '#ECE5D6',
@@ -73,6 +79,21 @@ const THEME = {
   brightCyan: '#8FCAC5',
   brightWhite: '#FFF8EA',
 };
+
+// Resolved at open time, not import time, so a background tone picked in
+// Settings is already on <html> when the terminal reads it.
+const slab = (name, fallback) => {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+};
+const theme = () => ({
+  ...THEME,
+  background: slab('--slab-bg', THEME.background),
+  foreground: slab('--slab-text', THEME.foreground),
+  cursorAccent: slab('--slab-bg', THEME.cursorAccent),
+  black: slab('--slab-bg', THEME.black),
+  white: slab('--slab-text', THEME.white),
+});
 
 // Keystrokes ride one POST each, and concurrent fetches have NO ordering
 // guarantee — type fast enough (or hold a key down, or sit on a tailnet where
@@ -259,7 +280,7 @@ async function ensureTerm(into) {
       lineHeight: 1.2,
       scrollback: 10000,
       macOptionIsMeta: true,
-      theme: THEME,
+      theme: theme(),
     });
     fit = new mods.FitAddon();
     term.loadAddon(fit);

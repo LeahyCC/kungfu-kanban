@@ -83,6 +83,155 @@
   color-scheme: light;
 }
 
+/* ---------- background tones ---------- */
+/* Settings › Appearance › Background stamps `data-bg` on <html>. A tone only
+   re-tunes the NEUTRAL family: paper, ink, rules, shadows, the slab, and the
+   three belts that are browns rather than hues. Accent, semantics, and the
+   hue-bearing belts are untouched, so a custom accent still lands exactly
+   where the picker put it.
+
+   Two structural notes:
+   - The slab tokens sit in a bare `[data-bg]` block because they are
+     theme-invariant (see --slab-bg above) and nothing in the day-dojo block
+     competes with them; a plain attribute selector already out-ranks :root.
+   - The paper/ink blocks carry an explicit :not([data-theme='light']) rather
+     than leaning on source order. A bare `[data-bg='x']` ties on specificity
+     with `[data-theme='light']` and, coming later in the file, would paint
+     night tokens straight onto the day dojo.
+
+   Every value below clears WCAG AA (4.5:1) for ink-400/600/900 on all three
+   papers in both themes, and leaves the slab's hardcoded literals (§ ink slab)
+   at or above the ratios they hold on the dojo slab. */
+
+/* graphite — cool neutral near-black, no warmth at all */
+[data-bg='graphite'] {
+  --slab-bg: #101317;
+  --slab-text: #E7EAEE;
+  --slab-rule: rgba(231, 234, 238, 0.13);
+}
+:root[data-bg='graphite']:not([data-theme='light']) {
+  --paper-0: #0C0E11;
+  --paper-1: #14171B;
+  --paper-2: #08090B;
+  --ink-900: #E7EAEE;
+  --ink-600: #AFB6C0;
+  --ink-400: #8D95A0;
+  --rule: rgba(231, 234, 238, 0.13);
+  --rule-strong: #E7EAEE;
+  --on-accent: #0C0E11;
+  --belt-todo: #7C858F;
+  --belt-queued: #98A2AE;
+  --belt-review: #C6A15E;
+  --belt-done: #E7EAEE;
+  --shadow-hard: rgba(0, 0, 0, 0.85);
+  --scroll-shadow: rgba(0, 0, 0, 0.45);
+  --grain-opacity: 0;
+}
+:root[data-theme='light'][data-bg='graphite'] {
+  --paper-0: #F1F3F6;
+  --paper-1: #FFFFFF;
+  --paper-2: #E4E8ED;
+  --ink-900: #14171B;
+  --ink-600: #464C55;
+  --ink-400: #5B626C;
+  --rule: rgba(20, 23, 27, 0.14);
+  --rule-strong: #14171B;
+  --on-accent: #FFFFFF;
+  --belt-todo: #646B75;
+  --belt-queued: #757D88;
+  --belt-review: #7E5A22;
+  --belt-done: #14171B;
+  --shadow-hard: rgba(20, 23, 27, 0.92);
+  --scroll-shadow: rgba(20, 23, 27, 0.16);
+  --grain-opacity: 0;
+}
+
+/* midnight — deep slate blue */
+[data-bg='midnight'] {
+  --slab-bg: #0F1520;
+  --slab-text: #E4EAF3;
+  --slab-rule: rgba(228, 234, 243, 0.13);
+}
+:root[data-bg='midnight']:not([data-theme='light']) {
+  --paper-0: #0B1019;
+  --paper-1: #131A26;
+  --paper-2: #070B12;
+  --ink-900: #E4EAF3;
+  --ink-600: #AAB4C4;
+  --ink-400: #8A94A6;
+  --rule: rgba(228, 234, 243, 0.13);
+  --rule-strong: #E4EAF3;
+  --on-accent: #0B1019;
+  --belt-todo: #79849A;
+  --belt-queued: #95A0B6;
+  --belt-review: #C6A15E;
+  --belt-done: #E4EAF3;
+  --shadow-hard: rgba(0, 0, 0, 0.85);
+  --scroll-shadow: rgba(0, 0, 0, 0.45);
+  --grain-opacity: 0;
+}
+:root[data-theme='light'][data-bg='midnight'] {
+  --paper-0: #EEF1F6;
+  --paper-1: #FFFFFF;
+  --paper-2: #E1E6EE;
+  --ink-900: #111826;
+  --ink-600: #434B59;
+  --ink-400: #586171;
+  --rule: rgba(17, 24, 38, 0.14);
+  --rule-strong: #111826;
+  --on-accent: #FFFFFF;
+  --belt-todo: #616A7B;
+  --belt-queued: #727C8E;
+  --belt-review: #7E5A22;
+  --belt-done: #111826;
+  --shadow-hard: rgba(17, 24, 38, 0.92);
+  --scroll-shadow: rgba(17, 24, 38, 0.16);
+  --grain-opacity: 0;
+}
+
+/* obsidian — true black, for OLED and for maximum contrast */
+[data-bg='obsidian'] {
+  --slab-bg: #08090A;
+  --slab-text: #F2F3F5;
+  --slab-rule: rgba(242, 243, 245, 0.14);
+}
+:root[data-bg='obsidian']:not([data-theme='light']) {
+  --paper-0: #000000;
+  --paper-1: #0D0E10;
+  --paper-2: #000000;
+  --ink-900: #F2F3F5;
+  --ink-600: #B6B9BE;
+  --ink-400: #8E9298;
+  --rule: rgba(242, 243, 245, 0.14);
+  --rule-strong: #F2F3F5;
+  --on-accent: #000000;
+  --belt-todo: #7E8188;
+  --belt-queued: #9A9DA3;
+  --belt-review: #C6A15E;
+  --belt-done: #F2F3F5;
+  --shadow-hard: rgba(0, 0, 0, 0.9);
+  --scroll-shadow: rgba(0, 0, 0, 0.5);
+  --grain-opacity: 0;
+}
+:root[data-theme='light'][data-bg='obsidian'] {
+  --paper-0: #EFEFF1;
+  --paper-1: #FFFFFF;
+  --paper-2: #E3E3E6;
+  --ink-900: #0D0E10;
+  --ink-600: #494B4F;
+  --ink-400: #5E6166;
+  --rule: rgba(13, 14, 16, 0.14);
+  --rule-strong: #0D0E10;
+  --on-accent: #FFFFFF;
+  --belt-todo: #676A6F;
+  --belt-queued: #787B80;
+  --belt-review: #7E5A22;
+  --belt-done: #0D0E10;
+  --shadow-hard: rgba(13, 14, 16, 0.92);
+  --scroll-shadow: rgba(13, 14, 16, 0.16);
+  --grain-opacity: 0;
+}
+
 /* ---------- base ---------- */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1215,6 +1364,17 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
 }
 .look-sw.active { border-color: var(--rule-strong); box-shadow: 0 0 0 2px var(--paper-1), 0 0 0 4px var(--rule-strong); }
 .look-custom { background: none; }
+
+/* background-tone chips: a diagonal split of the tone's board and card
+   surfaces, so the swatch shows the two colours the choice actually changes.
+   These preview the NIGHT values (the tone blocks up top) whichever theme is
+   on — the tones are named for their dark surface, which is what the picker
+   is choosing between. Literals rather than var(--paper-*), because every chip
+   has to show a DIFFERENT tone than the one currently applied to :root. */
+.look-bg[data-tone=''] { background: linear-gradient(135deg, #141210 50%, #1C1916 50%); }
+.look-bg[data-tone='graphite'] { background: linear-gradient(135deg, #0C0E11 50%, #14171B 50%); }
+.look-bg[data-tone='midnight'] { background: linear-gradient(135deg, #0B1019 50%, #131A26 50%); }
+.look-bg[data-tone='obsidian'] { background: linear-gradient(135deg, #000000 50%, #0D0E10 50%); }
 .set-pane input[type='range'] { width: 100%; accent-color: var(--accent); }
 
 /* 🌈 rainbow mode: every card wears the ring, not just max-effort ones */
