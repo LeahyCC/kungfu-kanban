@@ -17,16 +17,18 @@
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" /></noscript>
   <!-- critical first paint: themed shell + skeleton columns before style.css
-       arrives. Keep colors in sync with style.css tokens. -->
+       arrives. Colors go through the tokens with the dojo's own values as the
+       fallback, so a background tone reaches the shell too and there is no
+       second copy of the palette to keep in sync. -->
   <style>
-    body { margin: 0; background: #141210; color: #ECE5D6; font-family: 'Instrument Sans', -apple-system, sans-serif; }
-    [data-theme='light'] body { background: #F6F2E9; color: #1A1714; }
-    .app-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; height: 56px; padding: 0 20px; border-bottom: 1px solid #ECE5D6; }
-    [data-theme='light'] .app-header { border-bottom-color: #1A1714; }
+    body { margin: 0; background: var(--paper-0, #141210); color: var(--ink-900, #ECE5D6); font-family: 'Instrument Sans', -apple-system, sans-serif; }
+    [data-theme='light'] body { background: var(--paper-0, #F6F2E9); color: var(--ink-900, #1A1714); }
+    .app-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; height: 56px; padding: 0 20px; border-bottom: 1px solid var(--rule-strong, #ECE5D6); }
+    [data-theme='light'] .app-header { border-bottom-color: var(--rule-strong, #1A1714); }
     .app-brand { display: flex; align-items: center; gap: 10px; }
     .board { display: grid; grid-template-columns: repeat(5, minmax(230px, 1fr)); gap: 16px; padding: 16px 20px; }
-    .column.skel { min-height: calc(100dvh - 150px); background: #1C1916; border-radius: 4px; }
-    [data-theme='light'] .column.skel { background: #EDE7D9; }
+    .column.skel { min-height: calc(100dvh - 150px); background: var(--paper-1, #1C1916); border-radius: 4px; }
+    [data-theme='light'] .column.skel { background: var(--paper-1, #EDE7D9); }
     .hidden { display: none !important; }
   </style>
   <link rel="stylesheet" href="style.css" />
@@ -61,6 +63,7 @@
       if (L.theme === 'light' || (L.theme !== 'dark' && matchMedia('(prefers-color-scheme: light)').matches)) {
         r.dataset.theme = 'light';
       }
+      if (/^[a-z]+$/.test(L.bg || '')) r.dataset.bg = L.bg;
       if (L.scale && L.scale !== 100) r.style.zoom = L.scale / 100;
       if (L.rainbow) r.classList.add('kk-rainbow');
       if (L.compact) r.classList.add('kk-compact');
@@ -390,6 +393,8 @@ The prompt: self-contained instructions for the executing agent.
               <option value="system">follow the OS</option>
             </select>
           </label>
+          <label>Background</label>
+          <div id="lookBg" class="look-swatches"></div>
           <label>Text size <span class="hint-inline" id="lookScaleVal">100%</span>
             <input id="lookScale" type="range" min="80" max="140" step="5" />
           </label>
