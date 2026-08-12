@@ -349,6 +349,18 @@ app.post('/api/import', (req, res) => {
   res.json({ created: created.length, ids: created.map((t) => t.id) });
 });
 
+// A cooldown can outlive its cause — a new CLI login or an upgraded plan —
+// and the only remedy used to be editing settings.json around a restart
+// (which the shutdown flush clobbers by rewriting in-memory state over the
+// file). Clearing is explicit human intent, so it also pumps the queue right
+// away instead of waiting for the minute sweep. The confirm lives client-side:
+// clearing while the limit still applies just re-trips it on the next launch.
+app.post('/api/cooldown/clear', (req, res) => {
+  cooldown.clear();
+  runner.pumpQueue();
+  res.json({ ok: true });
+});
+
 importer.watchInbox(triageImported);
 
 // Draft an import document from natural language (runs on the subscription).

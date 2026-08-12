@@ -408,3 +408,47 @@ describe('archive browser (empty)', () => {
     assert.equal(body.stats.tokensOut, 0);
   });
 });
+
+// A cooldown that outlives its cause (new CLI login, upgraded plan) needs a
+// supported exit — before POST /api/cooldown/clear, the only way out was
+// editing settings.json around a restart, which the shutdown flush clobbers.
+describe('cooldown clear', () => {
+  let child, base, dataDir;
+
+  before(async () => {
+    dataDir = mkTempDataDir();
+    // Seed a live cooldown so the clear has something real to lift.
+    fs.writeFileSync(
+      path.join(dataDir, 'settings.json'),
+      JSON.stringify({ cooldownUntil: Date.now() + 3600_000, cooldownReason: 'seeded by test' })
+    );
+    ({ child, base } = await bootServer({ KFK_DATA_DIR: dataDir }));
+    await putJson(base, '/api/manager/config', { enabled: false });
+  });
+
+  after(async () => {
+    await killChild(child);
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+
+  test('POST /api/cooldown/clear — lifts a persisted cooldown', async () => {
+    let cfg = await (await fetch(`${base}/api/config`)).json();
+    assert.ok(cfg.cooldownUntil > Date.now(), 'seeded cooldown should be active after boot');
+
+    const res = await postJson(base, '/api/cooldown/clear', {});
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), { ok: true });
+
+    cfg = await (await fetch(`${base}/api/config`)).json();
+    assert.equal(cfg.cooldownUntil, 0);
+  });
+
+  test('cleared cooldown survives a restart (persisted, not just in-memory)', async () => {
+    // clear() saves through the debounce; give it a beat, then bounce the server.
+    await new Promise((r) => setTimeout(r, 700));
+    await killChild(child);
+    ({ child, base } = await bootServer({ KFK_DATA_DIR: dataDir }));
+    const cfg = await (await fetch(`${base}/api/config`)).json();
+    assert.equal(cfg.cooldownUntil, 0);
+  });
+});
