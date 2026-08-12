@@ -7,7 +7,7 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
-## [1.17.0] — 2026-08-03
+## [1.18.0] — 2026-08-12
 
 ### Added
 - **Clear-cooldown button.** The ⏳ countdown chip now carries a ✕ that lifts
@@ -18,6 +18,34 @@ compares your clone against `origin/main` and offers a one-click update.
   shutdown flush silently clobbers (it rewrites in-memory state over the
   file). Clearing while the limit still applies is harmless: the next launch
   re-trips the cooldown.
+
+## [1.17.0] — 2026-08-12
+
+### Added
+- **Background tone picker in Settings › Appearance.** The accent colour has
+  been choosable for a while; the paper under it has not, and the dojo's warm
+  brown-black was the whole look whether you wanted it or not. Four tones now
+  sit above the text-size slider: **dojo** (the warm rice paper, unchanged and
+  still the default), **graphite** (cool neutral near-black), **midnight**
+  (slate blue) and **obsidian** (true black). Each one re-tunes only the
+  neutral family — paper, ink, rules, shadows, the ink slab, and the three
+  belts that were browns rather than hues — so a custom accent still lands
+  exactly where the picker put it. Like every other Appearance control it is a
+  per-device preference in `localStorage`, applies live with no reload, and is
+  stamped by the pre-paint script so there is no flash. Every tone clears WCAG
+  AA (4.5:1) on all three papers in both themes, and leaves the slab's
+  hardcoded transcript colours at or above the ratios they hold today
+  (`public/style.css`, `public/js/appearance.js`).
+
+### Changed
+- **The browser chrome, the terminal and the first-paint shell follow the
+  tone.** `theme-color` now reads the live `--paper-0` instead of assuming the
+  dojo's paper, the xterm panel resolves its surface from the slab tokens at
+  open time rather than baking `#1A1714` into a JS object, and the critical
+  inline CSS in `index.html` goes through the tokens with the dojo values as
+  fallbacks. That last one also removes the second hand-maintained copy of the
+  palette that the file's own comment warned about
+  (`public/js/chips.js`, `public/js/term.js`, `public/index.html`).
 
 ## [1.16.0] — 2026-08-03
 
