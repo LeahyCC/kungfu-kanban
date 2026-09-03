@@ -7,6 +7,15 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.18.1] — 2026-09-03
+
+### Fixed
+- Run on a card with a pending follow-up resumes its session instead of
+  starting fresh.
+- A done card whose PR has not merged yet is hot-polled while something is
+  queued behind it, so `after:` dependents launch within about a minute of
+  the merge instead of the full watch interval.
+
 ## [1.18.0] — 2026-08-12
 
 ### Added
