@@ -127,3 +127,48 @@ test('sweep: an upstream merge ships the card', async () => {
   assert.equal(t.status, 'done');
   assert.ok(t.prMergedAt);
 });
+
+// A card approved before its PR merged (checks already green — nothing left
+// to wait on but the merge itself) used to drop out of hot-polling the moment
+// it left 'review', leaving a queued after: dependent blind for up to the
+// full watchMinutes() interval (10 min default) instead of the ~60s a review
+// card gets. Only worth the extra gh calls when something is actually queued
+// behind it.
+test('sweep: a done-but-unmerged card with a queued dependent hot-polls instead of waiting the full interval', async () => {
+  const t = card();
+  t.status = 'done';
+  t.prMergedAt = null;
+  store.state.tasks.push({ id: 'dep-1', title: 'Dependent', status: 'queued', deps: [t.id] });
+  gh({ state: 'OPEN', mergeable: 'MERGEABLE', baseRefName: 'main', statusCheckRollup: [CHECK('test', 'SUCCESS')] });
+  const realSetTimeout = global.setTimeout;
+  let hotArmed = false;
+  global.setTimeout = (fn, ms, ...args) => {
+    if (ms === 60_000) { hotArmed = true; return { unref() {} }; }
+    return realSetTimeout(fn, ms, ...args);
+  };
+  try {
+    await prwatch.sweep();
+  } finally {
+    global.setTimeout = realSetTimeout;
+  }
+  assert.equal(hotArmed, true);
+});
+
+test('sweep: a done-but-unmerged card with nothing queued behind it does not hot-poll', async () => {
+  const t = card();
+  t.status = 'done';
+  t.prMergedAt = null;
+  gh({ state: 'OPEN', mergeable: 'MERGEABLE', baseRefName: 'main', statusCheckRollup: [CHECK('test', 'SUCCESS')] });
+  const realSetTimeout = global.setTimeout;
+  let hotArmed = false;
+  global.setTimeout = (fn, ms, ...args) => {
+    if (ms === 60_000) { hotArmed = true; return { unref() {} }; }
+    return realSetTimeout(fn, ms, ...args);
+  };
+  try {
+    await prwatch.sweep();
+  } finally {
+    global.setTimeout = realSetTimeout;
+  }
+  assert.equal(hotArmed, false);
+});
