@@ -33,6 +33,10 @@ const assert = require('node:assert/strict');
 const store = require('../lib/store');
 store.state.settings.notifyMac = false;
 store.state.settings.keepAwake = false;
+// launch() arms a maxRunMinutes watchdog per card. The stubbed child never
+// closes, so that two-hour timer would hold the process open after the
+// tests finish (it did, on CI: the suite hung for an hour). 0 disables it.
+store.state.settings.maxRunMinutes = 0;
 
 const { startTask } = require('../lib/runner');
 
