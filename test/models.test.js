@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { detect, block, blocks, effective, fallbackFor, LADDER } = require('../lib/models');
+const { detect, block, blocks, effective, fallbackFor, rungOf, LADDER } = require('../lib/models');
 const store = require('../lib/store');
 
 function withBlocks(fn) {
@@ -34,6 +34,18 @@ test('detect: overload / 529 phrasings', () => {
   assert.ok(detect('overloaded_error: please retry'));
   assert.ok(detect('status 529'));
   assert.ok(detect('HTTP 529 received'));
+});
+
+// 2026-09-10 batch defect: the CLI's wording for an unknown/inaccessible
+// model id doesn't contain "unavailable"/"not supported"/"no access", so it
+// slipped past detect() and the card landed in review with a raw CLI error
+// instead of falling down the model ladder.
+test('detect: "may not exist" model-id wording (the exact CLI sentence) is caught', () => {
+  assert.ok(detect(
+    "There's an issue with the selected model (cc/claude-sonnet-5). It may not exist or you may not have access to it."
+  ));
+  assert.ok(detect('model claude-opus-9 may not exist'));
+  assert.ok(detect('no such model: claude-haiku-1'));
 });
 
 test('detect: generic subscription/usage limit text is NOT a model-specific failure', () => {
@@ -158,4 +170,52 @@ test('fallbackFor: task.model === "default" still falls back using the failed mo
 
 test('LADDER is the documented fable -> opus -> sonnet -> haiku order', () => {
   assert.deepEqual(LADDER, ['fable', 'opus', 'sonnet', 'haiku']);
+});
+
+// --- full model ids map onto their ladder rung (2026-09-10 batch defect) ----
+// A card set to a full model id like "claude-sonnet-4-5" (settable via
+// PATCH /api/tasks/:id, not just the board's short-alias dropdown) used to
+// never fall back: block()/effective() only recognized the 4 short names.
+
+test('rungOf: maps a full model id onto the ladder rung it names, case-insensitively', () => {
+  assert.equal(rungOf('claude-sonnet-4-5'), 'sonnet');
+  assert.equal(rungOf('claude-3-5-haiku-20241022'), 'haiku');
+  assert.equal(rungOf('CLAUDE-OPUS-4-1'), 'opus');
+  assert.equal(rungOf('fable'), 'fable');
+});
+
+test('rungOf: returns null for "default", falsy, and ids naming no ladder rung', () => {
+  assert.equal(rungOf('default'), null);
+  assert.equal(rungOf(null), null);
+  assert.equal(rungOf(''), null);
+  assert.equal(rungOf('gpt-4'), null);
+});
+
+test('block(): a full model id blocks the rung it names, not the literal id', () => {
+  withBlocks(() => {
+    block('claude-sonnet-4-5', 'capacity limit reached');
+    assert.deepEqual(Object.keys(blocks()), ['sonnet']);
+  });
+});
+
+test('effective(): a full model id keeps its exact value when its rung is not blocked', () => {
+  withBlocks(() => {
+    assert.equal(effective('claude-sonnet-4-5'), 'claude-sonnet-4-5');
+  });
+});
+
+test('effective(): a full model id steps down the ladder when its rung is blocked', () => {
+  withBlocks(() => {
+    store.state.settings.modelBlocks = { sonnet: Date.now() + 60_000 };
+    assert.equal(effective('claude-sonnet-4-5'), 'haiku');
+  });
+});
+
+test('fallbackFor: a card set to a full model id (not just a short alias) falls back down the ladder', () => {
+  withBlocks(() => {
+    const task = { model: 'claude-sonnet-4-5', modelUsed: null };
+    const next = fallbackFor(task, 'sonnet capacity limit reached');
+    assert.equal(next, 'haiku');
+    assert.ok(blocks().sonnet);
+  });
 });
