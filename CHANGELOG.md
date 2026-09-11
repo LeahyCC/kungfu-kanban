@@ -7,6 +7,35 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.19.0] — 2026-09-10
+
+### Fixed
+- Importing a card with an absolute Windows path (`C:\Users\...`) or a UNC
+  share (`\\server\share\...`) as its `cwd` no longer silently drops the
+  override in favor of the board default — both shapes are accepted and
+  normalized to forward slashes. Any `cwd` value that still fails validation
+  now shows up as an import-tracker warning naming the card instead of
+  vanishing without a trace.
+- The CLI's "It may not exist or you may not have access to it" wording for
+  an unknown/inaccessible model is now caught by the model-fallback detector,
+  and a card set to a full model id (e.g. `claude-sonnet-4-5`, settable via
+  `PATCH /api/tasks/:id`) now falls down the ladder like a short alias does.
+- Cards imported into the same group no longer serialize to one running at a
+  time — a batch's cards now share the board's normal `maxConcurrent` slots,
+  the same as ungrouped cards. `after:` chains already order anything that
+  actually needs to run in sequence.
+- A `POST /api/tasks/:id/run` (or delete) landing in the brief window between
+  a launch being committed and its child process actually spawning no longer
+  gets a confusing response — `isRunning()` now covers that window too, so a
+  follow-up resume that's still spinning up can't be raced into a fresh run.
+
+### Added
+- Opening a card's PR prefers the run's own final report over the raw task
+  prompt when that report already fills in the repo's PR template, drops the
+  "Opened by Kungfu Kanban" footer for a repo whose `CONTRIBUTING.md` forbids
+  tool attribution, and adds a board-wide **credit Kungfu Kanban in opened
+  PRs** toggle (Settings › System) to drop it everywhere instead.
+
 ## [1.18.1] — 2026-09-03
 
 ### Fixed
