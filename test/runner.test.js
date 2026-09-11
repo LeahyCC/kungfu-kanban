@@ -166,24 +166,32 @@ test('nextRunnable: higher priority wins over FIFO order', () => {
   });
 });
 
-test('nextRunnable: a busy group (member running) blocks every queued card in that group', () => {
+// 2026-09-10 batch defect: a group used to be a hard lane (at most one
+// running member at a time), so an imported batch's queue:true first wave
+// launched together and then every card after that ran one at a time,
+// including unrelated follow-ups sharing the group. `after:` chains already
+// order anything that must run in sequence, so the lane added nothing but
+// serialization.
+
+test('nextRunnable: a running group member no longer blocks a queued sibling — groups do not serialize', () => {
   const busy = { id: 'g-running', status: 'running', group: 'batch-1' };
   const a = { id: 'g-a', status: 'queued', group: 'batch-1' };
   const b = { id: 'g-b', status: 'queued', group: 'batch-1' };
   withTasks([busy, a, b], () => {
-    assert.equal(nextRunnable(), null);
+    const picked = nextRunnable();
+    assert.ok(picked === a || picked === b, 'a queued sibling is runnable even while another member of the same group runs');
   });
 });
 
-test('nextRunnable: a "stopping" member also counts as occupying the group lane', () => {
+test('nextRunnable: a "stopping" group member also no longer blocks a queued sibling', () => {
   const stopping = { id: 'g-stop', status: 'stopping', group: 'batch-1' };
   const a = { id: 'g-a', status: 'queued', group: 'batch-1' };
   withTasks([stopping, a], () => {
-    assert.equal(nextRunnable(), null);
+    assert.equal(nextRunnable(), a);
   });
 });
 
-test('nextRunnable: once the group lane frees, a queued member becomes runnable', () => {
+test('nextRunnable: every queued member of a group is runnable at once (no per-group cap)', () => {
   const done = { id: 'g-running', status: 'done', group: 'batch-1' };
   const a = { id: 'g-a', status: 'queued', group: 'batch-1' };
   const b = { id: 'g-b', status: 'queued', group: 'batch-1' };
