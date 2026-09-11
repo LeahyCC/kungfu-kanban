@@ -1,8 +1,21 @@
-const { test } = require('node:test');
+const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
 
-const { parseMarkdown, labelFromFilename, resolveDep } = require('../lib/importer');
+const { parseMarkdown, importMarkdown, labelFromFilename, resolveDep } = require('../lib/importer');
 const store = require('../lib/store');
+const errlog = require('../lib/errlog');
+
+// createCards/importMarkdown log a bad cwd override to the shared error
+// tracker (data/errors.json, this worktree's own — see test/errlog.test.js).
+// Clean it up the same way that file does, so this suite leaves no residue.
+const ERRORS_FILE = path.join(__dirname, '..', 'data', 'errors.json');
+after(async () => {
+  await new Promise((r) => setTimeout(r, 300)); // errlog.save() debounces 150ms
+  try { fs.unlinkSync(ERRORS_FILE); } catch {}
+  try { fs.unlinkSync(ERRORS_FILE + '.bak'); } catch {}
+});
 
 // --- frontmatter defaults + per-card overrides, one key/alias at a time -----
 
@@ -76,6 +89,66 @@ test('importer: an unrecognized value on a recognized-key line ends field parsin
   for (const line of cases) {
     const cards = parseMarkdown(`## Title\n${line}\nrest of body`);
     assert.match(cards[0].prompt, new RegExp(line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), line);
+  }
+});
+
+// --- Windows / UNC cwd paths (2026-09-10 batch defect: importer silently
+// dropped `cwd: C:\Users\...` and the card ran against the board default,
+// which then failed --worktree with "not a git repository") -----------------
+
+test('importer: an absolute Windows cwd (backslashes) is accepted and normalized to forward slashes', () => {
+  const cards = parseMarkdown('## Title\ncwd: C:\\Users\\cclea\\projects\\musimo\nbody');
+  assert.equal(cards[0].cwd, 'C:/Users/cclea/projects/musimo');
+});
+
+test('importer: an absolute Windows cwd (forward slashes) is accepted unchanged', () => {
+  const cards = parseMarkdown('## Title\ncwd: C:/Users/cclea/projects/musimo\nbody');
+  assert.equal(cards[0].cwd, 'C:/Users/cclea/projects/musimo');
+});
+
+test('importer: a UNC cwd is accepted and normalized to forward slashes', () => {
+  const cards = parseMarkdown('## Title\ncwd: \\\\server\\share\\project\nbody');
+  assert.equal(cards[0].cwd, '//server/share/project');
+});
+
+test('importer: a Windows cwd set in frontmatter applies as the default for cards with no override', () => {
+  const cards = parseMarkdown('---\ncwd: D:\\repos\\thing\n---\n## One\nbody');
+  assert.equal(cards[0].cwd, 'D:/repos/thing');
+});
+
+test('importer: a cwd value that matches no accepted shape still falls through to prompt text, but is recorded as a warning naming the card', () => {
+  const cards = parseMarkdown('## Musimo import\ncwd: relative/no-prefix\nrest of body');
+  assert.match(cards[0].prompt, /cwd: relative\/no-prefix/); // unchanged fallback behavior
+  assert.deepEqual(cards.cwdWarnings, [{ card: 'Musimo import', value: 'relative/no-prefix' }]);
+});
+
+test('importMarkdown: a Windows cwd override reaches the real created card (not the board default)', () => {
+  const before = store.state.settings.defaultCwd;
+  store.state.settings.defaultCwd = '/board/default';
+  let created;
+  try {
+    created = importMarkdown('## Musimo card\ncwd: C:\\Users\\cclea\\projects\\musimo\ndo the thing');
+    assert.equal(created[0].cwd, 'C:/Users/cclea/projects/musimo');
+  } finally {
+    store.state.settings.defaultCwd = before;
+    if (created) store.state.tasks = store.state.tasks.filter((t) => t.id !== created[0].id);
+  }
+});
+
+test('importMarkdown: an invalid cwd falls back to the board default AND is logged as an import error naming the card', () => {
+  const before = store.state.settings.defaultCwd;
+  store.state.settings.defaultCwd = '/board/default';
+  let created;
+  try {
+    created = importMarkdown('## Bad cwd card\ncwd: relative/no-prefix\ndo the thing');
+    assert.equal(created[0].cwd, '/board/default'); // never silently dropped to nothing — the board default still applies
+    const hit = errlog.list().find((e) => e.kind === 'import' && e.taskId === created[0].id);
+    assert.ok(hit, 'expected an import error entry naming the card');
+    assert.match(hit.text, /relative\/no-prefix/);
+    assert.match(hit.text, /Bad cwd card/);
+  } finally {
+    store.state.settings.defaultCwd = before;
+    if (created) store.state.tasks = store.state.tasks.filter((t) => t.id !== created[0].id);
   }
 });
 
