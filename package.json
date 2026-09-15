@@ -1,6 +1,6 @@
 {
   "name": "kungfu-kanban",
-  "version": "1.18.1",
+  "version": "1.19.0",
   "private": true,
   "description": "Local kanban board that runs tasks through the Claude Code CLI on your subscription",
   "license": "MIT",
@@ -22,6 +22,6 @@
     "express": "^5.2.1"
   },
   "devDependencies": {
-    "playwright": "^1.62.1"
+    "playwright": "^1.63.0"
   }
 }
