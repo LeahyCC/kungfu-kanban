@@ -4,6 +4,12 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+// KFK_DATA_DIR must be set before requiring lib/store: prFooterEnabled reads
+// store.state.settings, and a checkout whose data/settings.json has
+// prFooter: false would otherwise turn the footer off for every test here.
+const DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'kfk-prflow-data-'));
+process.env.KFK_DATA_DIR = DATA_DIR;
+
 const { prBody, parseDuplicatePrUrl, contributingForbidsAttribution, prFooterEnabled, matchesTemplate, headingsOf } = require('../lib/prflow');
 const store = require('../lib/store');
 
@@ -21,7 +27,7 @@ function scratchRepo(files) {
   return dir;
 }
 after(() => {
-  for (const d of scratchDirs) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of [...scratchDirs, DATA_DIR]) fs.rmSync(d, { recursive: true, force: true });
 });
 
 // "Fixes #N" is the load-bearing line: it is what auto-closes an imported
