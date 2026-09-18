@@ -7,6 +7,15 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.20.0] — 2026-09-18
+
+### Added
+- Shadow model routing. With `KFK_TYPESAFE_KEY` set, a card's first run asks
+  TypeSafe's Jev classifier how hard the card is and records the model it would
+  pick (`jevRoute` on the card). It routes nothing; the card still runs on its
+  own model. `npm run jev-report` compares those picks with the model each card
+  actually used, its cost and its outcome.
+
 ## [1.19.0] — 2026-09-10
 
 ### Fixed
