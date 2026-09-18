@@ -5,11 +5,13 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-// lib/skill.js resolves its install destination from os.homedir() (which
-// respects $HOME on POSIX) and its port from process.env.PORT, both read at
-// module-load time. Running it in a child process with a scratch HOME lets
-// us exercise install()/status() for real without ever touching the
-// developer's actual ~/.claude/skills.
+// lib/skill.js resolves its install destination from os.homedir() and its
+// port from process.env.PORT, both read at module-load time. Running it in a
+// child process with a scratch home lets us exercise install()/status() for
+// real without ever touching the developer's actual ~/.claude/skills.
+// os.homedir() reads $HOME on POSIX but %USERPROFILE% on Windows, so both
+// must point at the scratch dir: faking HOME alone let every Windows run
+// install into the real profile.
 const SKILL_PATH = path.join(__dirname, '..', 'lib', 'skill.js');
 
 function runInScratchHome(extraScript, env = {}) {
@@ -20,7 +22,7 @@ function runInScratchHome(extraScript, env = {}) {
   `;
   try {
     const out = execFileSync(process.execPath, ['-e', script], {
-      env: { ...process.env, ...env, HOME: home },
+      env: { ...process.env, ...env, HOME: home, USERPROFILE: home },
       encoding: 'utf8',
     });
     return { home, out: JSON.parse(out.trim()) };
@@ -30,9 +32,10 @@ function runInScratchHome(extraScript, env = {}) {
 }
 
 test('skill.status(): reports not-installed against a fresh HOME', () => {
-  const { out } = runInScratchHome(`console.log(JSON.stringify(skill.status()));`);
+  const { home, out } = runInScratchHome(`console.log(JSON.stringify(skill.status()));`);
   assert.ok(out.length >= 2);
   for (const s of out) {
+    assert.ok(s.path.startsWith(home), `${s.name} must resolve inside the scratch home, not the real one: ${s.path}`);
     assert.equal(s.installed, false);
     assert.equal(s.current, false);
   }
