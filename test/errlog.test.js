@@ -1,25 +1,13 @@
-const { test, after } = require('node:test');
+const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('fs');
-const path = require('path');
+// errlog keeps its `entries` array as module state and debounces writes to
+// errors.json in the data dir. That dir is a per-file temp one (the helper
+// removes it after the suite): this file used to point at the checkout's
+// data/ and unlink errors.json, which from the main checkout is the live
+// board's error tracker.
+require('./helpers/temp-data-dir');
 
 const errlog = require('../lib/errlog');
-
-// errlog keeps its `entries` array as module state and debounces writes to
-// data/errors.json — this worktree's own, gitignored data dir, never the
-// live board's (that runs from a separate install). Always wipe it after
-// this file runs rather than "restore original content": a leftover file
-// from an earlier interrupted run would otherwise get misread as real
-// pre-existing data and preserved forever instead of cleaned up.
-const FILE = path.join(__dirname, '..', 'data', 'errors.json');
-after(async () => {
-  // errlog.save() debounces writes 150ms out — the last test's cleanup calls
-  // can leave one in flight. Wait it out first, or that write lands AFTER
-  // this cleanup and silently recreates a bloated errors.json on disk.
-  await new Promise((r) => setTimeout(r, 300));
-  try { fs.unlinkSync(FILE); } catch {}
-  try { fs.unlinkSync(FILE + '.bak'); } catch {}
-});
 
 function settle() {
   // errlog.save() debounces writes (and prune()) by 150ms; a few ms of slack.

@@ -1,6 +1,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
+// Own temp data dir, before any lib require: see test/helpers/temp-data-dir.js.
+require('./helpers/temp-data-dir');
+
 const { detect } = require('../lib/offline');
 const cooldown = require('../lib/cooldown');
 
