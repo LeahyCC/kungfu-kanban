@@ -1,6 +1,6 @@
 {
   "name": "kungfu-kanban",
-  "version": "1.19.0",
+  "version": "1.20.0",
   "private": true,
   "description": "Local kanban board that runs tasks through the Claude Code CLI on your subscription",
   "license": "MIT",
@@ -14,7 +14,8 @@
     "start": "node server.js",
     "build:site": "node site/build.js",
     "test": "node --test --test-concurrency=1",
-    "test:layout": "node --test e2e/mobile-layout.spec.js"
+    "test:layout": "node --test e2e/mobile-layout.spec.js",
+    "jev-report": "node scripts/jev-report.js"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",

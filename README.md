@@ -518,6 +518,19 @@ Guardrail-blocked actions become suggestions instead of executing.
 The manager's own model/effort (default opus/medium) are configurable; it can also
 be disabled entirely with the checkbox.
 
+### Shadow model routing (optional, Jev)
+
+With `TYPESAFE_API_KEY` in the server's environment, each card's first run also
+asks [TypeSafe](https://docs.typesafe.ai)'s Jev classifier how hard the card is
+and records the model that difficulty would pick (`haiku`, `sonnet` or `opus`) on
+the card as `jevRoute`. **Nothing is routed:** the card still runs on its own
+model. The call is in the background and never delays a launch.
+
+`npm run jev-report` lists Jev's pick next to the model each card actually ran on,
+its cost and its outcome, so you can see whether routing by it would save money
+before switching anything on. The card's title, prompt and acceptance criteria
+are sent to TypeSafe; leave the key unset to keep it off.
+
 ---
 
 ## Run at login (optional)
@@ -571,6 +584,7 @@ to restart it.
 | `KFK_TOKEN` | — | access token (overrides `data/auth-token`) |
 | `KFK_SHELL` | `$SHELL` | shell the built-in terminal launches |
 | `KFK_PYTHON` | `python3` | interpreter for the terminal's pty helper |
+| `TYPESAFE_API_KEY` | — | turns on [shadow model routing](#shadow-model-routing-optional-jev) |
 
 **Files (`data/`, gitignored — this is all app state)**
 
