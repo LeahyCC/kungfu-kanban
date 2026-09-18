@@ -1,21 +1,12 @@
-const { test, after } = require('node:test');
+const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('fs');
-const path = require('path');
+// createCards/importMarkdown log a bad cwd override to the error tracker, so
+// this suite gets its own temp data dir rather than the checkout's data/.
+require('./helpers/temp-data-dir');
 
 const { parseMarkdown, importMarkdown, labelFromFilename, resolveDep } = require('../lib/importer');
 const store = require('../lib/store');
 const errlog = require('../lib/errlog');
-
-// createCards/importMarkdown log a bad cwd override to the shared error
-// tracker (data/errors.json, this worktree's own — see test/errlog.test.js).
-// Clean it up the same way that file does, so this suite leaves no residue.
-const ERRORS_FILE = path.join(__dirname, '..', 'data', 'errors.json');
-after(async () => {
-  await new Promise((r) => setTimeout(r, 300)); // errlog.save() debounces 150ms
-  try { fs.unlinkSync(ERRORS_FILE); } catch {}
-  try { fs.unlinkSync(ERRORS_FILE + '.bak'); } catch {}
-});
 
 // --- frontmatter defaults + per-card overrides, one key/alias at a time -----
 
