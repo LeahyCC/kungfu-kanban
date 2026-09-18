@@ -114,10 +114,17 @@ const WIDTHS = [360, 390, 393, 412, 430];
 const HEIGHT = 844;
 const MIN_HIT = 44;
 
+// finish() throws on a looping animation (no end to jump to). Those exist
+// only some of the time, e.g. the .column.skel breathe while the board is
+// still loading, which made this intermittently fail CI. Cancel them instead
+// so a spinning or pulsing element measures at rest too.
 async function settleAnimations(page) {
   await page.evaluate(() => {
     document.querySelectorAll('*').forEach((el) => {
-      el.getAnimations().forEach((a) => a.finish());
+      el.getAnimations().forEach((a) => {
+        if (a.effect && a.effect.getComputedTiming().endTime === Infinity) a.cancel();
+        else a.finish();
+      });
     });
   });
 }
