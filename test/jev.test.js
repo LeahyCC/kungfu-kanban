@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
 const { shadowRoute, pickModel, buildRequest, MAX_PROMPT_CHARS } = require('../lib/jev');
 
 const realFetch = global.fetch;
-const realKey = process.env.TYPESAFE_API_KEY;
+const realKey = process.env.KFK_TYPESAFE_KEY;
 let calls;
 
 function mockFetch(respond) {
@@ -26,12 +26,12 @@ const ok = (score, confidence = 0.8) => ({
 });
 
 beforeEach(() => {
-  process.env.TYPESAFE_API_KEY = 'test-key';
+  process.env.KFK_TYPESAFE_KEY = 'test-key';
 });
 after(() => {
   global.fetch = realFetch;
-  if (realKey === undefined) delete process.env.TYPESAFE_API_KEY;
-  else process.env.TYPESAFE_API_KEY = realKey;
+  if (realKey === undefined) delete process.env.KFK_TYPESAFE_KEY;
+  else process.env.KFK_TYPESAFE_KEY = realKey;
   fs.rmSync(process.env.KFK_DATA_DIR, { recursive: true, force: true });
 });
 
@@ -44,8 +44,24 @@ test('pickModel: difficulty bands map cheapest to strongest', () => {
   assert.equal(pickModel(2), 'opus');
 });
 
+test('the SDK TYPESAFE_API_KEY alone does not opt a board in', async () => {
+  delete process.env.KFK_TYPESAFE_KEY;
+  const prev = process.env.TYPESAFE_API_KEY;
+  process.env.TYPESAFE_API_KEY = 'someone-elses-key';
+  mockFetch(() => ok(1));
+  const task = { id: 't0', title: 'x', prompt: 'y' };
+  try {
+    await shadowRoute(task);
+  } finally {
+    if (prev === undefined) delete process.env.TYPESAFE_API_KEY;
+    else process.env.TYPESAFE_API_KEY = prev;
+  }
+  assert.equal(calls.length, 0);
+  assert.equal(task.jevRoute, undefined);
+});
+
 test('no API key: no call, card untouched', async () => {
-  delete process.env.TYPESAFE_API_KEY;
+  delete process.env.KFK_TYPESAFE_KEY;
   mockFetch(() => ok(1));
   const task = { id: 't1', title: 'x', prompt: 'y' };
   await shadowRoute(task);

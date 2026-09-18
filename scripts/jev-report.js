@@ -32,7 +32,7 @@ function readCards() {
 function main() {
   const cards = readCards();
   if (!cards.length) {
-    console.log('No cards with a Jev pick yet. Is TYPESAFE_API_KEY set for the board server?');
+    console.log('No cards with a Jev pick yet. Is KFK_TYPESAFE_KEY set for the board server?');
     return;
   }
   let agree = 0, cheaper = 0, pricier = 0, known = 0;
