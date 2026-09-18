@@ -17,6 +17,12 @@ const path = require('node:path');
 const fs = require('node:fs');
 
 process.env.KFK_SHELL = '/bin/sh';
+
+// lib/ptyhost.py is built on Python's pty/termios, which don't exist on
+// Windows: the helper dies on import and the pane shows that traceback, then
+// "[session ended]". Tests that need a live shell can't run there; the ones
+// below that only check session bookkeeping still do.
+const NO_PTY = process.platform === 'win32' && 'the built-in terminal needs a Unix pty (Python pty/termios), which Windows lacks';
 const pty = require('../lib/pty');
 
 // Collect output until `re` matches or we run out of patience.
@@ -42,7 +48,7 @@ function waitFor(id, re, ms = 8000) {
 test.beforeEach(() => pty.killAll());
 test.after(() => pty.killAll());
 
-test('a session runs a real shell: keystrokes in, output back', async () => {
+test('a session runs a real shell: keystrokes in, output back', { skip: NO_PTY }, async () => {
   const { session, error } = pty.create({ cwd: os.tmpdir(), cols: 80, rows: 24 });
   assert.equal(error, undefined, 'session started');
   pty.write(session.id, Buffer.from('echo hello-from-the-dojo\n'));
@@ -51,7 +57,7 @@ test('a session runs a real shell: keystrokes in, output back', async () => {
   pty.kill(session.id);
 });
 
-test('the shell starts in the requested directory; a bogus one falls back to $HOME', async () => {
+test('the shell starts in the requested directory; a bogus one falls back to $HOME', { skip: NO_PTY }, async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kk-term-'));
   const a = pty.create({ cwd: dir, cols: 80, rows: 24 }).session;
   pty.write(a.id, Buffer.from('pwd\n'));
@@ -65,7 +71,7 @@ test('the shell starts in the requested directory; a bogus one falls back to $HO
   pty.kill(b.id);
 });
 
-test('it is a TTY, and resize reaches the shell through the control fd', async () => {
+test('it is a TTY, and resize reaches the shell through the control fd', { skip: NO_PTY }, async () => {
   const { session } = pty.create({ cwd: os.tmpdir(), cols: 100, rows: 30 });
   // `tty` only says "not a tty" over a pipe — this is the check that the pty
   // (and therefore an interactive ~/.zshrc, colors, and TUIs) really exists.
@@ -82,7 +88,7 @@ test('it is a TTY, and resize reaches the shell through the control fd', async (
   pty.kill(session.id);
 });
 
-test('scrollback is kept for a reattaching client and capped', async () => {
+test('scrollback is kept for a reattaching client and capped', { skip: NO_PTY }, async () => {
   const { session } = pty.create({ cwd: os.tmpdir(), cols: 80, rows: 24 });
   pty.write(session.id, Buffer.from('echo marker-one\n'));
   await waitFor(session.id, /marker-one/);

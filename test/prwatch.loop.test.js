@@ -2,7 +2,7 @@
 // piece; the bug this file exists for was the wiring BETWEEN them — a PR
 // opened, checks reported, and nothing ever handed the card back, so green
 // PRs sat unmerged until a human looked. Drives the real sweep() against a
-// fake `gh` on PATH and asserts who gets called at each stage.
+// fake `gh` and asserts who gets called at each stage.
 //
 // Runs in its own process (node --test isolates files), so patching the
 // manager/runner module objects here cannot leak into other suites.
@@ -15,12 +15,20 @@ const { execFileSync } = require('child_process');
 
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'kfk-loop-'));
 const FIXTURE = path.join(TMP, 'pr.json');
-const BIN = path.join(TMP, 'bin');
-fs.mkdirSync(BIN);
-fs.writeFileSync(path.join(BIN, 'gh'), '#!/bin/sh\ncat "$GH_FIXTURE"\n', { mode: 0o755 });
-process.env.GH_FIXTURE = FIXTURE;
-process.env.PATH = `${BIN}:${process.env.PATH}`;
 process.env.KFK_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'kfk-data-'));
+
+// The fake gh answers every call with the fixture. It is swapped in at
+// prflow.run rather than as a `#!/bin/sh` script on PATH: Windows can't exec
+// a shebang script (and splits PATH on ';'), so there the real gh.exe ran
+// against a fake PR URL and every sweep saw nothing. prwatch destructures run
+// at load time, so this must happen before it is required. git still goes
+// through the real run: the CI fixer checks the worktree below exists.
+const prflow = require('../lib/prflow');
+const realRun = prflow.run;
+prflow.run = (cmd, ...rest) =>
+  cmd === 'gh'
+    ? Promise.resolve({ ok: true, out: fs.readFileSync(FIXTURE, 'utf8').trim(), err: '' })
+    : realRun(cmd, ...rest);
 
 const store = require('../lib/store');
 const manager = require('../lib/manager');
@@ -32,6 +40,7 @@ const prwatch = require('../lib/prwatch');
 const REPO = path.join(TMP, 'repo');
 let invokes = [];
 let followUps = [];
+let started = [];
 
 before(() => {
   fs.mkdirSync(REPO);
@@ -49,6 +58,10 @@ before(() => {
   manager.config = () => ({ triggers: { onFinish: true } });
   runner.followUp = (id, msg) => { followUps.push({ id, msg }); return { queued: true }; };
   runner.pumpQueue = () => {};
+  // The conflict test's sweep launches a fix card. Left real, startTask
+  // spawned an actual `claude` run in the fixture worktree on any machine
+  // with the CLI installed, billed to the developer's subscription.
+  runner.startTask = (id) => { started.push(id); return { started: true }; };
 });
 
 after(() => fs.rmSync(TMP, { recursive: true, force: true }));
@@ -61,6 +74,7 @@ function card() {
   store.state.tasks.length = 0;
   invokes = [];
   followUps = [];
+  started = [];
   const t = { id: 'aaaaaaaa-1111', title: 'Loop card', status: 'review', cwd: REPO, sessionId: 'sess-1', prUrl: 'https://github.com/x/y/pull/1' };
   store.state.tasks.push(t);
   return t;
@@ -105,6 +119,7 @@ test('sweep: a conflicting PR is recorded and refused by merge_pr even with gree
   gh({ state: 'OPEN', mergeable: 'CONFLICTING', baseRefName: 'main', statusCheckRollup: [CHECK('test', 'SUCCESS')] });
   await prwatch.sweep();
   assert.equal(t.prChecks.conflicting, true);
+  assert.equal(started.length, 1, 'the conflict fix card is launched');
   const res = manager.executeAction({ type: 'merge_pr', taskId: t.id, reasoning: 'x' });
   assert.equal(res.note, 'PR has merge conflicts with its base — not merging');
 });
