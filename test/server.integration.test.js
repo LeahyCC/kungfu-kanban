@@ -267,6 +267,15 @@ describe('HTTP contract (no auth gate)', () => {
     assert.equal(tooHigh.maxRunMinutes, 45);
   });
 
+  test('PUT /api/settings — prFooter is a plain boolean toggle', async () => {
+    const off = await (await putJson(base, '/api/settings', { prFooter: false })).json();
+    assert.equal(off.prFooter, false);
+    const on = await (await putJson(base, '/api/settings', { prFooter: true })).json();
+    assert.equal(on.prFooter, true);
+    const ignored = await (await putJson(base, '/api/settings', { prFooter: 'nope' })).json();
+    assert.equal(ignored.prFooter, true); // non-boolean is ignored, previous value sticks
+  });
+
   test('PUT /api/manager/config — invalid enum values are ignored', async () => {
     const baseline = await (await putJson(base, '/api/manager/config', { model: 'sonnet', autonomy: 'semi' })).json();
     assert.equal(baseline.model, 'sonnet');

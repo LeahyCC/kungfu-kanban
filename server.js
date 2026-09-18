@@ -284,6 +284,9 @@ app.put('/api/settings', (req, res) => {
   }
   if (typeof prWatchAutoFix === 'boolean') state.settings.prWatchAutoFix = prWatchAutoFix;
   if (typeof req.body.prWatchAutoFixCi === 'boolean') state.settings.prWatchAutoFixCi = req.body.prWatchAutoFixCi;
+  // Board-wide override: false always drops the "Opened by Kungfu Kanban"
+  // footer, even for a repo whose CONTRIBUTING.md has no opinion either way.
+  if (typeof req.body.prFooter === 'boolean') state.settings.prFooter = req.body.prFooter;
   // Turning the built-in terminal off also ends the shells it already opened —
   // a switch that leaves live sessions running isn't a switch.
   const { terminal } = req.body || {};
