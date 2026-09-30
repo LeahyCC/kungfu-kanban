@@ -7,6 +7,12 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.20.1] — 2026-09-29
+
+### Fixed
+- Shadow routing pins Jev to `jev-1.13.0` and stores the version that answered. A score outside 0 to 2 is ignored and asked again on a later run. `npm run jev-report` shows each pick's confidence and Jev version.
+- Tests keep their scratch data to themselves, the layout test no longer waits out a looping animation, and live-shell pty tests are skipped on Windows (#137, #138, #139).
+
 ## [1.20.0] — 2026-09-18
 
 ### Added

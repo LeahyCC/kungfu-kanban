@@ -7,7 +7,8 @@ process.env.KFK_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'kfk-jev-'));
 
 const { test, after, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
-const { shadowRoute, pickModel, buildRequest, MAX_PROMPT_CHARS } = require('../lib/jev');
+const { shadowRoute, pickModel, validScore, buildRequest, MAX_PROMPT_CHARS, MODEL } = require('../lib/jev');
+const { summarize } = require('../scripts/jev-report');
 
 const realFetch = global.fetch;
 const realKey = process.env.KFK_TYPESAFE_KEY;
@@ -20,9 +21,9 @@ function mockFetch(respond) {
     return respond();
   };
 }
-const ok = (score, confidence = 0.8) => ({
+const ok = (score, confidence = 0.8, model = MODEL) => ({
   ok: true,
-  json: async () => ({ answers: { difficulty: { type: 'score', score, confidence } } }),
+  json: async () => ({ model, answers: { difficulty: { type: 'score', score, confidence } } }),
 });
 
 beforeEach(() => {
@@ -79,6 +80,7 @@ test('records the pick with score and confidence, sends a bearer key', async () 
   assert.equal(task.jevRoute.pick, 'opus');
   assert.equal(task.jevRoute.score, 1.8);
   assert.equal(task.jevRoute.confidence, 0.9);
+  assert.equal(task.jevRoute.model, MODEL);
 });
 
 test('asks once per card: a re-run keeps the first pick', async () => {
@@ -103,5 +105,65 @@ test('API error or bad response: card untouched, nothing thrown', async () => {
 test('buildRequest trims a huge prompt to stay under the state limit', () => {
   const req = buildRequest({ title: 't', prompt: 'a'.repeat(MAX_PROMPT_CHARS + 5000) });
   assert.equal(req.state.card.prompt.length, MAX_PROMPT_CHARS);
-  assert.equal(req.model, 'jev-latest');
+  assert.equal(req.model, MODEL);
+});
+
+test('validScore: only a finite score on the 0 to 2 scale counts', () => {
+  assert.equal(validScore(0), true);
+  assert.equal(validScore(2), true);
+  assert.equal(validScore(1.5), true);
+  assert.equal(validScore(-0.01), false);
+  assert.equal(validScore(2.01), false);
+  assert.equal(validScore(Number.NaN), false);
+  assert.equal(validScore(Number.POSITIVE_INFINITY), false);
+  assert.equal(validScore('1'), false);
+});
+
+test('a score outside 0 to 2 leaves the card untouched', async () => {
+  const task = { id: 't5', title: 'x' };
+  for (const score of [5, -1, Number.NaN]) {
+    mockFetch(() => ok(score));
+    await shadowRoute(task);
+    assert.equal(calls.length, 1);
+    assert.equal(task.jevRoute, undefined);
+  }
+});
+
+test('a non-numeric confidence is stored as null, and a missing model too', async () => {
+  mockFetch(() => ({
+    ok: true,
+    json: async () => ({ answers: { difficulty: { type: 'score', score: 0.2, confidence: 'high' } } }),
+  }));
+  const task = { id: 't6', title: 'typo', prompt: 'fix the label' };
+  await shadowRoute(task);
+  assert.equal(task.jevRoute.pick, 'haiku');
+  assert.equal(task.jevRoute.confidence, null);
+  assert.equal(task.jevRoute.model, null);
+});
+
+test('jev-report shows confidence and version, and a bad score does not throw', () => {
+  const { rows, cheaper, agree } = summarize([
+    {
+      title: 'Redesign auth',
+      jevRoute: { pick: 'haiku', score: 0.2, confidence: 0.4, model: 'jev-1.13.0' },
+      modelUsed: 'claude-opus-4-5',
+      stats: { costUsd: 1.5 },
+      status: 'done',
+    },
+    {
+      title: 'Broken score',
+      jevRoute: { pick: 'sonnet', score: 'nope' },
+      modelUsed: 'sonnet',
+      status: 'review',
+    },
+  ]);
+  assert.equal(rows[0].jev, 'haiku (0.20)');
+  assert.equal(rows[0].confidence, '0.40');
+  assert.equal(rows[0].version, 'jev-1.13.0');
+  assert.equal(rows[0].used, 'opus');
+  assert.equal(rows[0].cost, '$1.50');
+  assert.equal(cheaper, 1);
+  assert.equal(rows[1].jev, 'sonnet (?)');
+  assert.equal(rows[1].confidence, '');
+  assert.equal(agree, 1);
 });

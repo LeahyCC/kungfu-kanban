@@ -29,34 +29,51 @@ function readCards() {
   return [...live, ...archived].filter((t) => t.jevRoute);
 }
 
-function main() {
-  const cards = readCards();
-  if (!cards.length) {
-    console.log('No cards with a Jev pick yet. Is KFK_TYPESAFE_KEY set for the board server?');
-    return;
-  }
+function fixedNum(n) {
+  return typeof n === 'number' && Number.isFinite(n) ? n.toFixed(2) : '';
+}
+
+// Pure so a bad stored score cannot crash the report. Old cards have no
+// `model` or `confidence`; those cells stay blank.
+function summarize(cards) {
   let agree = 0, cheaper = 0, pricier = 0, known = 0;
   const rows = cards.map((t) => {
+    const route = t.jevRoute || {};
     const used = rung(t.modelUsed);
-    const pick = t.jevRoute.pick;
-    if (used) {
+    const pick = route.pick;
+    if (used && LADDER.includes(pick)) {
       known++;
       const d = LADDER.indexOf(pick) - LADDER.indexOf(used);
       if (d === 0) agree++;
       else if (d < 0) cheaper++;
       else pricier++;
     }
+    const score = fixedNum(route.score);
     return {
       title: (t.title || '').slice(0, 50),
-      jev: `${pick} (${t.jevRoute.score.toFixed(2)})`,
+      jev: `${pick} (${score || '?'})`,
+      confidence: fixedNum(route.confidence),
+      version: route.model || '',
       used: used || t.modelUsed || '?',
       cost: t.stats?.costUsd != null ? `$${t.stats.costUsd.toFixed(2)}` : '',
       status: t.error ? 'error' : t.status,
     };
   });
-  console.table(rows);
-  console.log(`${cards.length} cards, ${known} with a known model: ` +
-    `Jev agreed ${agree}, picked cheaper ${cheaper}, picked pricier ${pricier}.`);
+  const line = `${cards.length} cards, ${known} with a known model: ` +
+    `Jev agreed ${agree}, picked cheaper ${cheaper}, picked pricier ${pricier}.`;
+  return { rows, line, agree, cheaper, pricier, known };
 }
 
-main();
+function main() {
+  const cards = readCards();
+  if (!cards.length) {
+    console.log('No cards with a Jev pick yet. Is KFK_TYPESAFE_KEY set for the board server?');
+    return;
+  }
+  const { rows, line } = summarize(cards);
+  console.table(rows);
+  console.log(line);
+}
+
+if (require.main === module) main();
+module.exports = { summarize };

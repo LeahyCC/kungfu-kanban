@@ -523,12 +523,16 @@ be disabled entirely with the checkbox.
 With `KFK_TYPESAFE_KEY` in the server's environment, each card's first run also
 asks [TypeSafe](https://docs.typesafe.ai)'s Jev classifier how hard the card is
 and records the model that difficulty would pick (`haiku`, `sonnet` or `opus`) on
-the card as `jevRoute`. **Nothing is routed:** the card still runs on its own
-model. The call is in the background and never delays a launch.
+the card as `jevRoute`, along with the score, Jev's confidence, and the model
+version that answered. The call is pinned to `jev-1.13.0` so the score bands
+stay put. A score outside 0 to 2 is ignored and asked again on a later run.
+**Nothing is routed:** the card still runs on its own model. The call is in
+the background and never delays a launch.
 
-`npm run jev-report` lists Jev's pick next to the model each card actually ran on,
-its cost and its outcome, so you can see whether routing by it would save money
-before switching anything on. The card's title, prompt and acceptance criteria
+`npm run jev-report` lists Jev's pick, confidence, and version next to the
+model each card actually ran on, its cost and its outcome, so you can see
+whether routing by it would save money before switching anything on. The
+card's title, prompt and acceptance criteria
 are sent to TypeSafe; leave the key unset to keep it off. The board reads its own
 `KFK_TYPESAFE_KEY` rather than the SDK's usual `TYPESAFE_API_KEY`, so having a
 TypeSafe key set for other work never turns this on by accident.
