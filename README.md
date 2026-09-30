@@ -7,8 +7,7 @@
 [![License: MIT](https://img.shields.io/github/license/LeahyCC/kungfu-kanban)](LICENSE)
 
 <picture>
-  <source media="(prefers-color-scheme: light)" srcset="docs/board-light.png">
-  <img alt="Kungfu Kanban board — dark theme, five columns, grouped cards with live agent telemetry" src="docs/board.png">
+  <img alt="Kungfu Kanban board — dark theme, five columns, grouped cards with live agent telemetry" src="docs/updated-board.png">
 </picture>
 
 Kungfu Kanban is a local kanban board where Claude Code agents work the cards on your
@@ -81,14 +80,14 @@ running. See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 ## Requirements
 
-| Thing | Why | Check |
-|---|---|---|
-| **Node 20+** | server runtime (uses global `fetch`) | `node -v` |
-| **Claude Code CLI**, logged in on your subscription | runs every card | `claude --version`, then `claude` → `/login` if needed |
-| **git** | worktree isolation for repo cards | `git -v` |
-| **GitHub CLI (`gh`)**, authed | only for "Open PR when done" | `gh auth status` |
-| **macOS** | desktop notifications (`osascript`); the rest works anywhere | — |
-| **Tailscale** (optional) | use the board from your phone | `tailscale status` |
+| Thing                                               | Why                                                          | Check                                                  |
+| --------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------ |
+| **Node 20+**                                        | server runtime (uses global `fetch`)                         | `node -v`                                              |
+| **Claude Code CLI**, logged in on your subscription | runs every card                                              | `claude --version`, then `claude` → `/login` if needed |
+| **git**                                             | worktree isolation for repo cards                            | `git -v`                                               |
+| **GitHub CLI (`gh`)**, authed                       | only for "Open PR when done"                                 | `gh auth status`                                       |
+| **macOS**                                           | desktop notifications (`osascript`); the rest works anywhere | —                                                      |
+| **Tailscale** (optional)                            | use the board from your phone                                | `tailscale status`                                     |
 
 ---
 
@@ -145,15 +144,15 @@ Columns: **Backlog → Queued → Running → Review → Done**
 
 ### Built-in terminal (⌘J)
 
-**▸_ Terminal** in the toolbar (or ⌘J, or `t` in the command palette) opens a real
+**▸\_ Terminal** in the toolbar (or ⌘J, or `t` in the command palette) opens a real
 shell at the bottom of the board — your `$SHELL` started as a login+interactive
 shell, so `~/.zshrc` and `~/.zprofile` load exactly as they do in your own terminal:
 prompt, aliases, plugins, colours. It is a genuine pty, so job control and
 full-screen TUIs (vim, lazygit, `claude -r <session-id>`) work, and resizing the
 panel resizes the shell.
 
-**Each card has its own terminal too.** ▸_ Terminal in a card's drawer opens a shell
-in *that card's* working tree — the git worktree the agent ran in when the card used
+**Each card has its own terminal too.** ▸\_ Terminal in a card's drawer opens a shell
+in _that card's_ working tree — the git worktree the agent ran in when the card used
 one, not the parent repo — so `git diff`, the tests, and `claude -r <session-id>` all
 land where the work happened. The tree's path shows in the panel bar. One shell per
 card: reopening the card reattaches to it, ⏻ kill ends it and gives you a fresh one.
@@ -210,7 +209,7 @@ Manual run clicks during cooldown queue instead of burning against the wall.
 When the timer expires everything queued launches automatically and you get a
 "training resumes" notification.
 
-**Model fallback**: a *model-specific* cap or outage (e.g. an Opus-hours limit
+**Model fallback**: a _model-specific_ cap or outage (e.g. an Opus-hours limit
 while Sonnet still works, or a 529 overload) doesn't pause anything — the failed
 model is blocked temporarily (30 min for caps, 10 for overloads), the card
 requeues, and launches step down the ladder **fable → opus → sonnet → haiku**
@@ -220,21 +219,21 @@ transcript notes every substitution. The Sensei's own runs substitute too.
 
 ### Card fields
 
-| Field | Maps to | Notes |
-|---|---|---|
-| Title | — | shown on the card, PR title, notification text |
-| Prompt | the `claude -p` prompt | what the agent should do |
-| Working directory | process `cwd` | repo dropdown (scans the ⚙ Settings repos directory for git repos) or any path |
-| Model | `--model` | default / fable / opus / sonnet / haiku |
-| Effort | `--effort` | default / low / medium / high / xhigh / max |
-| Permissions | `--permission-mode` | `acceptEdits` (default), `auto`, `plan`, `dontAsk`, `bypassPermissions` — see [Security](#security-notes) |
-| Agent | `--agent` | your custom agents from `~/.claude/agents/*.md` |
-| Git worktree | `--worktree kanban-<id>` | isolates the run on its own branch |
-| Open PR when done | post-run `gh pr create` | requires worktree; see below |
-| Priority | sort order (0–3) | 2+ shows the vermillion square |
-| Acceptance criteria | manager review rubric | the Sensei approves/rejects against this |
-| Repeat | schedule (interval or daily) | `6h` every 6 hours, `14:30` daily — see [Scheduled cards](#scheduled-cards) |
-| Skills | injected into the prompt | pick from installed skills, or **✦ auto-select** to let the agent choose |
+| Field               | Maps to                      | Notes                                                                                                     |
+| ------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Title               | —                            | shown on the card, PR title, notification text                                                            |
+| Prompt              | the `claude -p` prompt       | what the agent should do                                                                                  |
+| Working directory   | process `cwd`                | repo dropdown (scans the ⚙ Settings repos directory for git repos) or any path                            |
+| Model               | `--model`                    | default / fable / opus / sonnet / haiku                                                                   |
+| Effort              | `--effort`                   | default / low / medium / high / xhigh / max                                                               |
+| Permissions         | `--permission-mode`          | `acceptEdits` (default), `auto`, `plan`, `dontAsk`, `bypassPermissions` — see [Security](#security-notes) |
+| Agent               | `--agent`                    | your custom agents from `~/.claude/agents/*.md`                                                           |
+| Git worktree        | `--worktree kanban-<id>`     | isolates the run on its own branch                                                                        |
+| Open PR when done   | post-run `gh pr create`      | requires worktree; see below                                                                              |
+| Priority            | sort order (0–3)             | 2+ shows the vermillion square                                                                            |
+| Acceptance criteria | manager review rubric        | the Sensei approves/rejects against this                                                                  |
+| Repeat              | schedule (interval or daily) | `6h` every 6 hours, `14:30` daily — see [Scheduled cards](#scheduled-cards)                               |
+| Skills              | injected into the prompt     | pick from installed skills, or **✦ auto-select** to let the agent choose                                  |
 
 ### Skills & agents discovery
 
@@ -299,11 +298,13 @@ openPr: true
 ---
 
 ## Fix the flaky login test
+
 model: opus
 priority: 2
 The test in auth.spec.ts fails intermittently because…
 
 ### Acceptance
+
 - passes 10x in a row
 
 ## Update the README badges
@@ -381,14 +382,14 @@ card's PR via `gh`:
 - **Merged** → the card moves to Done ("PR merged") and you get a notification.
 - **Closed without merge** → noted once on the card transcript.
 - **Conflicting** (main moved under the branch) → with auto-fix on (default), the
-  board spawns a **fix card**: a fresh agent run *inside the original worktree*
+  board spawns a **fix card**: a fresh agent run _inside the original worktree_
   that merges the base branch, resolves the conflicts preserving both sides, and
   pushes — updating the PR in place. Max 2 attempts per PR, one active fixer at a
   time; after that you get a "needs you" notification and it stops. Fix cards
   wear an `auto-fix` badge and flow through the normal columns, so the Sensei
   reviews the resolution like any other run.
 - **Red CI** on an otherwise clean PR → with CI auto-fix on (default), the card's
-  *own session* is resumed with the failing logs, so no retry is burned. Max 2
+  _own session_ is resumed with the failing logs, so no retry is burned. Max 2
   attempts. Failures the watcher has verified as infrastructure (billing,
   runners never starting) are never auto-fixed — no code change can fix those.
 
@@ -489,11 +490,11 @@ chat ("plan the auth refactor into cards", "what's blocking?").
 
 **Autonomy ladder** (Manager tab):
 
-| Level | Can do without you |
-|---|---|
-| `suggest` *(default)* | nothing — every action waits for your ✓ |
-| `semi` | create / route / run cards; approve-reject verdicts still wait |
-| `auto` | everything, within guardrails |
+| Level                 | Can do without you                                             |
+| --------------------- | -------------------------------------------------------------- |
+| `suggest` _(default)_ | nothing — every action waits for your ✓                        |
+| `semi`                | create / route / run cards; approve-reject verdicts still wait |
+| `auto`                | everything, within guardrails                                  |
 
 Deleting cards is never available to the manager, at any level.
 
@@ -583,28 +584,28 @@ to restart it.
 
 **Environment variables**
 
-| Var | Default | Meaning |
-|---|---|---|
-| `PORT` | `4747` | listen port |
-| `HOST` | `127.0.0.1` | bind address; anything non-loopback requires a token |
-| `KFK_TOKEN` | — | access token (overrides `data/auth-token`) |
-| `KFK_SHELL` | `$SHELL` | shell the built-in terminal launches |
-| `KFK_PYTHON` | `python3` | interpreter for the terminal's pty helper |
-| `KFK_TYPESAFE_KEY` | — | turns on [shadow model routing](#shadow-model-routing-optional-jev) |
+| Var                | Default     | Meaning                                                             |
+| ------------------ | ----------- | ------------------------------------------------------------------- |
+| `PORT`             | `4747`      | listen port                                                         |
+| `HOST`             | `127.0.0.1` | bind address; anything non-loopback requires a token                |
+| `KFK_TOKEN`        | —           | access token (overrides `data/auth-token`)                          |
+| `KFK_SHELL`        | `$SHELL`    | shell the built-in terminal launches                                |
+| `KFK_PYTHON`       | `python3`   | interpreter for the terminal's pty helper                           |
+| `KFK_TYPESAFE_KEY` | —           | turns on [shadow model routing](#shadow-model-routing-optional-jev) |
 
 **Files (`data/`, gitignored — this is all app state)**
 
-| File | Contents |
-|---|---|
-| `tasks.json` | all cards |
-| `settings.json` | parallel cap, default cwd, ntfy topic, notification toggle, archive-after-days, manager config, `maxRunMinutes` (per-run watchdog, default 120, 0 disables), `terminal` (built-in terminal, default on) |
-| `manager.json` | pending suggestions, chat history, launch timestamps |
-| `manager-log.jsonl` | manager activity log |
-| `errors.json` | error tracker entries (see [Error tracker](#error-tracker)) |
-| `transcripts/<task-id>.jsonl` | per-card transcript |
-| `archive.jsonl` | Done cards swept out after `archiveDays` (append-only) |
-| `inbox/` | watch folder for markdown imports; imported files move to `inbox/imported/` |
-| `auth-token` | access token (create to enable the gate) |
+| File                          | Contents                                                                                                                                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tasks.json`                  | all cards                                                                                                                                                                                               |
+| `settings.json`               | parallel cap, default cwd, ntfy topic, notification toggle, archive-after-days, manager config, `maxRunMinutes` (per-run watchdog, default 120, 0 disables), `terminal` (built-in terminal, default on) |
+| `manager.json`                | pending suggestions, chat history, launch timestamps                                                                                                                                                    |
+| `manager-log.jsonl`           | manager activity log                                                                                                                                                                                    |
+| `errors.json`                 | error tracker entries (see [Error tracker](#error-tracker))                                                                                                                                             |
+| `transcripts/<task-id>.jsonl` | per-card transcript                                                                                                                                                                                     |
+| `archive.jsonl`               | Done cards swept out after `archiveDays` (append-only)                                                                                                                                                  |
+| `inbox/`                      | watch folder for markdown imports; imported files move to `inbox/imported/`                                                                                                                             |
+| `auth-token`                  | access token (create to enable the gate)                                                                                                                                                                |
 
 Back up `data/` to keep your board; delete it to factory-reset. Individual sessions
 can always be reopened in the terminal with `claude -r <session-id>` (shown in each
@@ -666,7 +667,7 @@ This is a personal tool that happens to be public, and it's **open to
 contributions** — bug reports, fixes, focused features (issue-first), docs, and
 tests all land. The scope is deliberately narrow and that's the whole point:
 single-user, local-first, subscription-auth, one runtime dependency, code that
-runs on your own machine. Ideas that keep the board better *within* that identity
+runs on your own machine. Ideas that keep the board better _within_ that identity
 are welcome; ideas that would make it a different tool — multi-tenancy, hosted
 deployment, API-key providers, a database, billing — are out of scope. That
 version existed and was deleted on purpose; for those, a fork is the honest path.
