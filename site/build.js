@@ -8,8 +8,8 @@
  * (public/index.html + public/style.css) and drifted every time the app
  * changed. Now its markup is generated from board.data.json using the app's
  * own card/column classes, and this script FAILS if any of those classes stop
- * existing in public/style.css — so the replica can't silently fall out of
- * sync with the product.
+ * existing in public/style.css or public/console.css — so the replica can't
+ * silently fall out of sync with the product.
  *
  * The site stays fully static: this writes plain HTML into site/index.html
  * (committed), and Vercel deploys site/ as-is with no build step.
@@ -24,7 +24,10 @@ const SITE_DIR = __dirname;
 const REPO_ROOT = path.join(SITE_DIR, '..');
 const DATA_FILE = path.join(SITE_DIR, 'board.data.json');
 const INDEX_FILE = path.join(SITE_DIR, 'index.html');
-const APP_CSS = path.join(REPO_ROOT, 'public', 'style.css');
+const APP_CSS = [
+  path.join(REPO_ROOT, 'public', 'style.css'),
+  path.join(REPO_ROOT, 'public', 'console.css'),
+];
 
 const START = '<!-- build:live-board -->';
 const END = '<!-- /build:live-board -->';
@@ -34,11 +37,16 @@ const END = '<!-- /build:live-board -->';
 // build stops and tells you to update the replica. Classes that are the site's
 // own (`stripes`, `live-board`, …) are deliberately not listed here.
 const SHARED_CLASSES = [
-  'column', 'col-head', 'col-name', 'col-count', 'col-body',
-  'card', 'running-card', 'brush', 'failed-card', 'done-card',
-  'title', 'antenna', 'meta', 'badge', 'model',
-  'prio-high', 'pr-link', 'failword', 'runword', 'seal', 'card-seal',
+  'column', 'col-head', 'col-index', 'col-name', 'col-count', 'col-rule', 'col-body',
+  'card', 'running-card', 'failed-card', 'done-card',
+  'card-kicker', 'card-id', 'card-repo', 'card-elapsed', 'title', 'card-spec',
+  'antenna', 'meta', 'badge', 'dep', 'failword', 'pr-link',
+  'live-box', 'live-line', 'live-meta', 'ctx-bar', 'runword',
+  'done-row', 'done-check', 'done-meta', 'idle-slot',
 ];
+
+const COL_INDEX = { backlog: '01', queued: '02', running: '03', review: '04', done: '05' };
+const EFFORT = ['', 'LOW', 'MED', 'HIGH', 'MAX'];
 
 function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -47,51 +55,81 @@ function escAttr(s) {
   return escHtml(s).replace(/"/g, '&quot;');
 }
 
-function stripes(effort) {
-  const n = Math.max(0, Math.min(4, effort | 0));
-  let pips = '';
-  for (let i = 0; i < 4; i++) pips += i < n ? '<i class="on"></i>' : '<i></i>';
-  return `<span class="stripes" title="effort ${n}/4">${pips}</span>`;
+function specLine(card) {
+  if (card.spec) return card.spec;
+  const effort = EFFORT[card.effort] || '';
+  return [card.model, effort].filter(Boolean).join(' · ').toUpperCase();
 }
 
 function cardHtml(card, indent) {
   const variant = card.variant || '';
   const classes = ['card'];
-  if (variant === 'running') classes.push('running-card', 'brush');
+  if (variant === 'running') classes.push('running-card');
   else if (variant === 'failed') classes.push('failed-card');
   else if (variant === 'done') classes.push('done-card');
 
-  const seal = variant === 'done' ? '<span class="seal card-seal">Shipped</span>' : '';
-  const antenna = variant === 'running' ? '<span class="antenna lit" aria-hidden="true"></span>' : '';
-
-  // meta order mirrors the app: identity (model, effort) first, then the
-  // context chips (schedule, priority, PR, status word).
-  const meta = [`<span class="badge model">${escHtml(card.model)}</span>`, stripes(card.effort)];
-  if (card.schedule) meta.push(`<span class="badge">${escHtml(card.schedule)}</span>`);
-  if (card.priority) meta.push(`<span class="prio-high" title="${escAttr(card.priority)}"></span>`);
-  if (card.pr) meta.push(`<span class="pr-link">${escHtml(card.pr)}</span>`);
-  if (variant === 'failed') meta.push('<span class="failword">failed</span>');
-  if (variant === 'running') meta.push('<span class="runword">running</span>');
-
   const pad = ' '.repeat(indent);
   const inner = ' '.repeat(indent + 2);
-  return [
+
+  if (variant === 'done') {
+    const meta = card.meta || [card.repo, card.pr].filter(Boolean).join(' · ');
+    return [
+      `${pad}<div class="${classes.join(' ')}">`,
+      `${inner}<div class="done-row">`,
+      `${inner}  <span class="done-check" aria-hidden="true">✓</span>`,
+      `${inner}  <div class="title">${escHtml(card.title)}</div>`,
+      `${inner}  <span class="done-meta">${escHtml(meta)}</span>`,
+      `${inner}</div>`,
+      `${pad}</div>`,
+    ].join('\n');
+  }
+
+  const kicker = [`${inner}<div class="card-kicker">`];
+  if (variant === 'running') kicker.push(`${inner}  <span class="antenna lit" aria-hidden="true"></span>`);
+  if (card.id) kicker.push(`${inner}  <span class="card-id">${escHtml(card.id)}</span><span>·</span>`);
+  kicker.push(`${inner}  <span class="card-repo">${escHtml(card.repo || '')}</span>`);
+  if (card.elapsed) kicker.push(`${inner}  <span class="card-elapsed">${escHtml(card.elapsed)}</span>`);
+  kicker.push(`${inner}</div>`);
+
+  const lines = [
     `${pad}<div class="${classes.join(' ')}">`,
-    `${inner}${seal}<div class="title">${antenna}${escHtml(card.title)}</div>`,
-    `${inner}<div class="meta">${meta.join('')}</div>`,
-    `${pad}</div>`,
-  ].join('\n');
+    ...kicker,
+    `${inner}<div class="title">${escHtml(card.title)}</div>`,
+    `${inner}<div class="card-spec">${escHtml(specLine(card))}</div>`,
+  ];
+  const meta = [];
+  if (card.waits) meta.push(`<span class="badge dep">${escHtml(card.waits)}</span>`);
+  if (card.pr) meta.push(`<span class="pr-link">PR ${escHtml(String(card.pr).replace(/^PR\s*/, ''))} ↗</span>`);
+  if (card.failed || variant === 'failed') meta.push(`<span class="failword">✕ ${escHtml(card.failed || 'failed')}</span>`);
+  if (meta.length) lines.push(`${inner}<div class="meta">${meta.join('')}</div>`);
+  if (card.live) {
+    const ctx = Math.max(0, Math.min(100, card.live.ctx | 0));
+    lines.push(
+      `${inner}<div class="live-box">`,
+      `${inner}  <div class="live-line"><span class="runword">training</span></div>`,
+      `${inner}  <div class="live-meta"><span>${escHtml(card.live.out || '0')} OUT</span><span style="flex:1"></span><span>CTX</span><span class="ctx-bar"><span style="width:${ctx}%"></span></span><span>${ctx}%</span></div>`,
+      `${inner}</div>`,
+    );
+  }
+  lines.push(`${pad}</div>`);
+  return lines.join('\n');
 }
 
 function columnHtml(col, indent) {
   const pad = ' '.repeat(indent);
   const inner = ' '.repeat(indent + 2);
   const cards = col.cards.map((c) => cardHtml(c, indent + 4)).join('\n');
+  const idle = [];
+  for (let i = 0; i < (col.idle | 0); i++) {
+    idle.push(`${inner}  <div class="idle-slot">SLOT ${col.cards.length + i + 1} · IDLE</div>`);
+  }
   return [
     `${pad}<div class="column" data-status="${escAttr(col.key)}">`,
-    `${inner}<div class="col-head"><span class="col-name">${escHtml(col.label)}</span><span class="col-count">${col.cards.length}</span></div>`,
+    `${inner}<div class="col-head"><span class="col-index">${COL_INDEX[col.key] || ''}</span><span class="col-name">${escHtml(col.label)}</span><span class="col-count">${col.cards.length}</span></div>`,
+    `${inner}<div class="col-rule"></div>`,
     `${inner}<div class="col-body">`,
     cards,
+    ...idle,
     `${inner}</div>`,
     `${pad}</div>`,
   ].join('\n');
@@ -107,7 +145,7 @@ function assertSharedClasses(cssText) {
   if (missing.length) {
     console.error(
       '\n✗ Board replica drift detected.\n' +
-      '  These classes are used by site/board replica but no longer exist in public/style.css:\n' +
+      '  These classes are used by site/board replica but no longer exist in public/style.css or public/console.css:\n' +
       missing.map((c) => `    .${c}`).join('\n') +
       '\n  The app board changed. Update site/build.js (SHARED_CLASSES + templates) and\n' +
       '  site/style.css to match, then re-run.\n'
@@ -118,7 +156,7 @@ function assertSharedClasses(cssText) {
 
 function main() {
   const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-  const cssText = fs.readFileSync(APP_CSS, 'utf8');
+  const cssText = APP_CSS.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
   assertSharedClasses(cssText);
 
   const html = fs.readFileSync(INDEX_FILE, 'utf8');

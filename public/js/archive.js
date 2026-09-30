@@ -17,13 +17,15 @@ export async function loadArchive() {
 }
 
 function renderStats(s) {
-  const weeks = Object.entries(s.perWeek).sort().slice(-8);
-  const repos = Object.entries(s.perRepo).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  $('#archiveStats').innerHTML =
-    `<b>${s.total}</b> archived · ${fmtTok(s.tokensOut)} tok out` +
-    (s.total ? ` · ~${fmtTok(Math.round(s.tokensOut / s.total))}/card` : '') +
-    (weeks.length ? `<span class="a-weeks">${weeks.map(([w, n]) => `${esc(w.slice(5))}: ${n}`).join(' · ')}</span>` : '') +
-    (repos.length ? `<span class="a-repos">${repos.map(([r, n]) => `${esc(r)} ×${n}`).join(' · ')}</span>` : '');
+  const cells = [
+    ['ARCHIVED', String(s.total)],
+    ['OUTPUT', fmtTok(s.tokensOut)],
+    ['INPUT', fmtTok(s.tokensIn)],
+    ['REPOS', String(Object.keys(s.perRepo || {}).length)],
+    ['WEEKS', String(Object.keys(s.perWeek || {}).length)],
+  ];
+  $('#archiveStats').innerHTML = cells.map(([k, v]) =>
+    `<div class="a-stat"><span class="a-k">${k}</span><span class="a-v">${esc(v)}</span></div>`).join('');
 }
 
 function renderRows() {

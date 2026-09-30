@@ -137,6 +137,23 @@ export async function closeDrawer(force = false) {
   if (drawerReturnFocus) { try { drawerReturnFocus.focus(); } catch {} drawerReturnFocus = null; }
 }
 
+function paintDrawerHead(t) {
+  $('#drawerTitle').textContent = t.title || '';
+  const kick = $('#drawerKicker');
+  if (!kick) return;
+  const repo = String(t.cwd || '').replace(/\\/g, '/').replace(/\/+$/, '').split('/').pop();
+  const id = String(t.id || '');
+  const short = id.length > 10 ? id.slice(0, 8) : id;
+  const status = RUNNING_LIKE[t.status] ? 'Running' : (t.status || '');
+  kick.innerHTML = '';
+  const idEl = document.createElement('span');
+  idEl.textContent = [short, repo].filter(Boolean).join(' · ');
+  const badge = document.createElement('span');
+  badge.className = 'drawer-status';
+  badge.textContent = status.toUpperCase();
+  kick.append(idEl, badge);
+}
+
 export async function openDrawer(id) {
   drawerReturnFocus = document.activeElement;
   state.drawerId = id;
@@ -145,6 +162,7 @@ export async function openDrawer(id) {
 
   // paint instantly from state; the full task + transcript stream in below
   $('#drawerTitle').textContent = t.title;
+  paintDrawerHead(t);
   lastMetaKey = null;
   renderDrawerMeta(t);
   lastDrawerActionsStatus = null; // force rebuild — opening a card is not a status change
@@ -181,6 +199,7 @@ export async function openDrawer(id) {
     const i = state.tasks.findIndex((x) => x.id === id);
     if (i >= 0) state.tasks[i] = { ...state.tasks[i], ...full }; // top up the slim copy
     $('#drawerTitle').textContent = full.title || t.title;
+    paintDrawerHead(full.title ? { ...t, ...full } : t);
     lastMetaKey = null;
     renderDrawerMeta(task);
     lastDrawerActionsStatus = null;
@@ -386,6 +405,26 @@ export function renderDrawerMeta(t) {
   }
 }
 
+async function moveDrawerCard(t, to) {
+  if (!to || to === t.status) return true;
+  if (to === 'done' && !(await confirmDlg(`Mark "${t.title}" as Done? No run happens — the card just ships.`, { confirmLabel: '✓ Ship it' }))) {
+    return false;
+  }
+  const prev = applyOptimistic(t.id, { status: to });
+  const r = to === 'queued'
+    ? notePark(await api(`/api/tasks/${t.id}/run`, { method: 'POST' }))
+    : await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: to } });
+  if (!r || r.error) {
+    rollbackOptimistic(t.id, prev);
+    return false;
+  }
+  t.status = to;
+  lastDrawerActionsStatus = null;
+  renderDrawerActions(t);
+  mergeTaskResponse(r);
+  return true;
+}
+
 export function renderDrawerActions(t) {
   if (t.status === lastDrawerActionsStatus) return; // e.g. Stop mid-click would eat the click
   lastDrawerActionsStatus = t.status;
@@ -453,31 +492,32 @@ export function renderDrawerActions(t) {
     sel.value = t.status;
     sel.addEventListener('change', async () => {
       const to = sel.value;
-      if (to === t.status) return;
-      if (to === 'done' && !(await confirmDlg(`Mark "${t.title}" as Done? No run happens — the card just ships.`, { confirmLabel: '✓ Ship it' }))) {
-        sel.value = t.status;
-        return;
-      }
-      // optimistic: the card moves on the board now; a failure rolls it back
-      // (api already toasted) and the select snaps back
       sel.disabled = true;
-      const prev = applyOptimistic(t.id, { status: to });
-      const r = to === 'queued'
-        ? notePark(await api(`/api/tasks/${t.id}/run`, { method: 'POST' }))
-        : await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { status: to } });
+      const ok = await moveDrawerCard(t, to);
       sel.disabled = false;
-      if (!r || r.error) {
-        rollbackOptimistic(t.id, prev);
-        sel.value = t.status;
-      } else {
-        t.status = to; // the status gate below re-renders actions on next tick
-        lastDrawerActionsStatus = null;
-        renderDrawerActions(t);
-        mergeTaskResponse(r);
-      }
+      if (!ok) sel.value = t.status;
     });
     wrap.appendChild(sel);
     box.appendChild(wrap);
+
+    const row = document.createElement('div');
+    row.className = 'move-row';
+    const lab = document.createElement('span');
+    lab.className = 'move-label';
+    lab.textContent = 'MOVE TO';
+    const btns = document.createElement('div');
+    btns.className = 'move-btns';
+    for (const c of COLUMNS) {
+      if (c.key === 'running') continue;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = c.label;
+      if (c.key === t.status) b.className = 'on';
+      b.addEventListener('click', () => withBusy(b, () => moveDrawerCard(t, c.key)));
+      btns.appendChild(b);
+    }
+    row.append(lab, btns);
+    box.appendChild(row);
   }
 }
 

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Kungfu Kanban</title>
-  <meta name="theme-color" content="#141210" />
+  <meta name="theme-color" content="#0A0C0D" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -14,24 +14,23 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <!-- non-render-blocking webfonts: fetch as print, promote on arrival -->
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-  <noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" /></noscript>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Geist:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Geist:wght@400;500;600&display=swap" rel="stylesheet" /></noscript>
   <!-- critical first paint: themed shell + skeleton columns before style.css
        arrives. Colors go through the tokens with the dojo's own values as the
        fallback, so a background tone reaches the shell too and there is no
        second copy of the palette to keep in sync. -->
   <style>
-    body { margin: 0; background: var(--paper-0, #141210); color: var(--ink-900, #ECE5D6); font-family: 'Instrument Sans', -apple-system, sans-serif; }
-    [data-theme='light'] body { background: var(--paper-0, #F6F2E9); color: var(--ink-900, #1A1714); }
-    .app-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; height: 56px; padding: 0 20px; border-bottom: 1px solid var(--rule-strong, #ECE5D6); }
-    [data-theme='light'] .app-header { border-bottom-color: var(--rule-strong, #1A1714); }
-    .app-brand { display: flex; align-items: center; gap: 10px; }
-    .board { display: grid; grid-template-columns: repeat(5, minmax(230px, 1fr)); gap: 16px; padding: 16px 20px; }
-    .column.skel { min-height: calc(100dvh - 150px); background: var(--paper-1, #1C1916); border-radius: 4px; }
-    [data-theme='light'] .column.skel { background: var(--paper-1, #EDE7D9); }
+    body { margin: 0; background: var(--paper-0, #0A0C0D); color: var(--ink-900, #E4E8EA); font-family: 'Geist', -apple-system, sans-serif; }
+    [data-theme='light'] body { background: var(--paper-0, #F3F5F6); color: var(--ink-900, #12171A); }
+    .app-header { display: flex; align-items: center; gap: 16px; height: 48px; padding: 0 16px; background: var(--paper-2, #0E1112); border-bottom: 1px solid var(--rule, #20262A); }
+    .app-brand { display: flex; align-items: center; gap: 9px; }
+    .board { display: grid; grid-template-columns: repeat(5, minmax(214px, 1fr)); }
+    .column.skel { min-height: calc(100dvh - 120px); background: transparent; }
     .hidden { display: none !important; }
   </style>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="console.css" />
   <!-- break the module discovery waterfall: fetch the whole graph in parallel -->
   <link rel="modulepreload" href="app.js" />
   <link rel="modulepreload" href="js/api.js" />
@@ -69,6 +68,9 @@
       if (L.compact) r.classList.add('kk-compact');
       if (L.still) r.classList.add('kk-still');
       if (/^#[0-9a-f]{6}$/i.test(L.accent || '')) r.style.setProperty('--accent', L.accent);
+      var rail = localStorage.getItem('kk-rail');
+      var wide = matchMedia('(min-width: 1100px)').matches;
+      if (rail === '1' || (rail !== '0' && wide)) r.classList.add('kk-rail-on');
     } catch (e) {}
   </script>
 </head>
@@ -77,7 +79,7 @@
 <div class="app-shell">
   <header class="app-header">
     <div class="app-brand">
-      <img src="/icons/android-icon-96x96.png" alt="" width="24" height="24" class="app-logo" />
+      <img src="/icons/android-icon-96x96.png" alt="" width="20" height="20" class="app-logo" />
       <span class="wordmark">Kungfu Kanban</span>
       <span id="antenna" class="antenna" role="status" aria-label="No agents running"></span>
     </div>
@@ -86,47 +88,100 @@
       <button id="tabManager" class="app-tab" role="tab" aria-selected="false" aria-controls="managerView" tabindex="-1">Sensei <span id="suggCount" class="pill hidden"></span></button>
       <button id="tabArchive" class="app-tab" role="tab" aria-selected="false" aria-controls="archiveView" tabindex="-1">Archive</button>
     </nav>
-    <div class="app-status" aria-label="Board summary">
-      <button id="attnChip" class="cooldown-chip attn-chip hidden" title="Sensei suggestions waiting on your ✓, plus cards stopped on a permission block. Click to review, approve, or reject.">🔔 <span id="attnChipText">0</span></button>
-      <button id="errChip" class="cooldown-chip err-chip hidden" title="Open operational errors & blocks — permission stops, wrong-base PRs, failed launches. Click to review or have the Sensei fix them.">⚠ <span id="errChipText">0</span></button>
-      <span id="usageChip" class="cooldown-chip usage-chip hidden" title="All Claude Code output tokens on this Mac in the rolling 5-hour limit window (board + terminal). Set a budget in ⚙ Settings for a % meter — at 100% auto launches pause and resume as the window slides.">⛽ <span id="usageChipText"></span></span>
-      <span id="cooldownChip" class="cooldown-chip hidden" title="Subscription limits hit — auto flow paused; queued cards launch when it resets">⏳ <span id="cooldownTimer">--:--</span> <button id="cooldownClear" class="chip-clear" title="Clear the cooldown — only if the limit no longer applies (switched account or upgraded plan); queued cards launch immediately">✕</button></span>
-      <span id="modelChip" class="cooldown-chip model-chip hidden" title="Model capped or unavailable — launches use the next model down until it resets">⬇ <span id="modelChipText"></span></span>
-      <span id="netChip" class="cooldown-chip net-chip hidden" role="status" title="No internet connection — cards that die on it requeue automatically and relaunch when it's back">📡 offline</span>
-      <span id="cliAuthChip" class="cooldown-chip err-chip hidden" role="status" title="The Claude CLI on this Mac is logged out — auto launches are paused. Run claude /login in a terminal, then launch any card or send a follow-up to resume.">🔐 logged out</span>
-      <span id="sseChip" class="cooldown-chip hidden" role="status" title="Live connection to the server lost — reconnecting; the board may be stale until it's back">⚡ reconnecting…</span>
-      <span class="status-chip" title="Backlog + Queued"><span class="belt-dot belt-todo"></span><span id="countBacklog" class="status-count">0</span><span class="sr-only">cards in Backlog or Queued</span></span>
-      <span class="status-chip" title="Running"><span class="belt-dot belt-doing"></span><span id="countRunning" class="status-count">0</span><span class="sr-only">cards Running</span></span>
-      <span class="status-chip" title="Review"><span class="belt-dot belt-review"></span><span id="countReview" class="status-count">0</span><span class="sr-only">cards in Review</span></span>
-      <span class="status-chip" title="Done"><span class="belt-dot belt-done"></span><span id="countDone" class="status-count">0</span><span class="sr-only">cards Done</span></span>
+    <div class="app-status telemetry" aria-label="Board summary">
+      <div class="telem telem-agents" title="How many agent sessions are running, out of the parallel cap">
+        <span class="telem-k">AGENTS</span>
+        <span class="telem-v"><span id="countRunning">0</span>/<span id="parallelReadout">2</span></span>
+        <span id="agentSlots" class="agent-slots" aria-hidden="true"></span>
+      </div>
+      <span id="usageChip" class="telem usage-chip hidden" title="All Claude Code output tokens on this Mac in the rolling 5-hour limit window (board + terminal). Set a budget in Settings for a % meter. At 100% auto launches pause and resume as the window slides.">
+        <span class="telem-k">5H WINDOW</span>
+        <span id="usageChipText" class="telem-v"></span>
+        <span class="meter" aria-hidden="true"><span id="usageMeter"></span></span>
+        <span id="usagePct" class="telem-dim hidden"></span>
+      </span>
+      <div class="telem telem-sys">
+        <span class="telem-k">SYS</span>
+        <span class="sub" id="sysStatus" title="The claude CLI runs your cards. gh opens and merges PRs. Checked every few minutes.">checking…</span>
+      </div>
+      <button id="attnChip" class="need-you hidden" title="Sensei suggestions waiting on your check, plus cards stopped on a permission block.">◆ <span id="attnChipText">0</span> need you</button>
+      <button id="errChip" class="cooldown-chip err-chip hidden" title="Open operational errors and blocks. Permission stops, wrong-base PRs, failed launches.">⚠ <span id="errChipText">0</span></button>
+      <span id="cooldownChip" class="cooldown-chip hidden" title="Subscription limits hit. Auto flow paused. Queued cards launch when it resets.">⏳ <span id="cooldownTimer">--:--</span> <button id="cooldownClear" class="chip-clear" title="Clear the cooldown only if the limit no longer applies. Queued cards launch immediately.">✕</button></span>
+      <span id="modelChip" class="cooldown-chip model-chip hidden" title="Model capped or unavailable. Launches use the next model down until it resets.">⬇ <span id="modelChipText"></span></span>
+      <span id="netChip" class="cooldown-chip net-chip hidden" role="status" title="No internet connection. Cards that die on it requeue and relaunch when it is back.">📡 offline</span>
+      <span id="cliAuthChip" class="cooldown-chip err-chip hidden" role="status" title="The Claude CLI on this Mac is logged out. Auto launches are paused. Run claude /login, then launch a card or send a follow-up.">🔐 logged out</span>
+      <span id="sseChip" class="cooldown-chip hidden" role="status" title="Live connection to the server lost. Reconnecting. The board may be stale until it is back.">⚡ reconnecting…</span>
+      <span class="status-chip phone-count" title="Backlog + Queued"><span class="belt-dot belt-todo"></span><span id="countBacklog" class="status-count">0</span><span class="sr-only">cards in Backlog or Queued</span></span>
+      <span class="status-chip phone-count" title="Review"><span class="belt-dot belt-review"></span><span id="countReview" class="status-count">0</span><span class="sr-only">cards in Review</span></span>
+      <span class="status-chip phone-count" title="Done"><span class="belt-dot belt-done"></span><span id="countDone" class="status-count">0</span><span class="sr-only">cards Done</span></span>
+    </div>
+    <div class="header-actions">
+      <button id="paletteBtn" class="icon-btn palette-btn" title="Search or run a command" aria-label="Search or run a command"><span aria-hidden="true">⌕</span><kbd>⌘K</kbd></button>
+      <button id="termToggle" class="icon-btn" title="A real shell on this Mac (⌘J)" aria-label="Terminal">▸_</button>
       <button id="settingsBtn" class="icon-btn" title="Settings" aria-label="Settings">⚙</button>
-      <button id="themeToggle" class="theme-toggle" title="Day / night dojo" aria-label="Toggle theme" aria-pressed="false">◐</button>
+      <button id="themeToggle" class="theme-toggle icon-btn" title="Day / night" aria-label="Toggle theme" aria-pressed="false">◐</button>
+      <button id="newCardsBtn" class="primary" title="Describe the work and run it, sharpen the wording, or hand it to the Sensei to split into cards">＋ New cards <kbd>N</kbd></button>
     </div>
   </header>
 
-  <div class="toolbar" id="boardToolbar">
-    <span class="sub" id="sysStatus" title="System status: the claude CLI runs your cards (on your subscription); gh opens and merges PRs. Checked every few minutes.">checking status…</span>
-    <div class="toolbar-actions">
-      <input id="filterInput" class="filter" type="search" placeholder="⌕ filter cards…" aria-label="Filter cards by text, repo, model, or skill" title="Filter the board by title, prompt, repo path, model, agent, or skill" />
-      <button id="termToggle" class="ghost" title="A real shell on this Mac — your $SHELL, your ~/.zshrc, your prompt (⌘J)" aria-label="Terminal">▸_<span class="btn-label"> Terminal</span></button>
-      <button id="newCardsBtn" class="primary"
-        title="The way in: describe the work and run it, sharpen the wording, or hand it to the Sensei to split into several cards">＋ New cards</button>
-    </div>
-  </div>
+  <div id="boardStage" class="board-stage">
+    <div class="board-main">
+      <div class="toolbar" id="boardToolbar">
+        <nav id="phoneCols" class="phone-cols" aria-label="Columns"></nav>
+        <div class="filter-wrap">
+          <span class="filter-glyph" aria-hidden="true">⌕</span>
+          <input id="filterInput" class="filter" type="search" placeholder="Filter by title, repo, model, skill" aria-label="Filter cards by text, repo, model, or skill" title="Filter the board by title, prompt, repo path, model, agent, or skill" />
+          <kbd class="filter-kbd">/</kbd>
+        </div>
+        <div class="toolbar-spacer"></div>
+        <div class="parallel-step" title="How many agent sessions may run at once. Extras wait in Queued.">
+          <span class="telem-k">PARALLEL</span>
+          <div class="stepper">
+            <button type="button" id="parDown" aria-label="Fewer parallel agents">−</button>
+            <span id="parValue">2</span>
+            <button type="button" id="parUp" aria-label="More parallel agents">+</button>
+          </div>
+        </div>
+        <button type="button" id="railToggle" class="rail-toggle"><span class="sensei-mark">◆</span> <span id="railLabel">Show Sensei</span></button>
+      </div>
 
-  <main id="boardMain">
-    <!-- #board is the tabpanel; the <main> wrapper keeps exactly one main
-         landmark (role=tabpanel would otherwise suppress it) -->
-    <div id="board" class="board" tabindex="-1" role="tabpanel" aria-labelledby="tabBoard">
-      <!-- skeleton columns: first-paint placeholders — board.js's reconciler
-           removes any non-target children of #board on first render -->
-      <div class="column skel" aria-hidden="true"></div>
-      <div class="column skel" aria-hidden="true"></div>
-      <div class="column skel" aria-hidden="true"></div>
-      <div class="column skel" aria-hidden="true"></div>
-      <div class="column skel" aria-hidden="true"></div>
+      <main id="boardMain">
+        <!-- #board is the tabpanel; the <main> wrapper keeps exactly one main
+             landmark (role=tabpanel would otherwise suppress it) -->
+        <div id="board" class="board" data-phone-col="backlog" tabindex="-1" role="tabpanel" aria-labelledby="tabBoard">
+          <!-- skeleton columns: first-paint placeholders — board.js's reconciler
+               removes any non-target children of #board on first render -->
+          <div class="column skel" aria-hidden="true"></div>
+          <div class="column skel" aria-hidden="true"></div>
+          <div class="column skel" aria-hidden="true"></div>
+          <div class="column skel" aria-hidden="true"></div>
+          <div class="column skel" aria-hidden="true"></div>
+        </div>
+      </main>
     </div>
-  </main>
+
+    <aside id="senseiRail" class="sensei-rail" aria-label="Sensei">
+      <div class="rail-head">
+        <span class="rail-mark">◆ SENSEI</span>
+        <span id="railWatch" class="rail-watch">watching</span>
+        <button type="button" id="railHide" aria-label="Hide Sensei rail">⟩</button>
+      </div>
+      <div id="railAutonomy" class="autonomy-seg" role="group" aria-label="Autonomy">
+        <button type="button" data-level="suggest">SUGGEST</button>
+        <button type="button" data-level="semi">SEMI</button>
+        <button type="button" data-level="auto">AUTO</button>
+      </div>
+      <p id="railNote" class="rail-note"></p>
+      <div class="rail-sec"><span>AWAITING YOUR CALL</span><span class="rail-line"></span><span id="railCount">0</span></div>
+      <div id="railList" class="rail-list"></div>
+      <div class="rail-sec"><span>ACTIVITY</span><span class="rail-line"></span><button type="button" id="railAll" class="rail-all">ALL</button></div>
+      <div id="railLog" class="rail-log"></div>
+      <form id="railAsk" class="rail-ask">
+        <input id="railAskInput" name="message" placeholder="Ask the Sensei" autocomplete="off" />
+        <button type="submit" class="sensei-btn">Ask</button>
+      </form>
+    </aside>
+  </div>
 
   <div id="managerView" class="manager-grid hidden" role="tabpanel" aria-labelledby="tabManager" tabindex="-1">
     <section class="mgr-col mgr-settings">
@@ -491,8 +546,9 @@ The prompt: self-contained instructions for the executing agent.
   <!-- Detail drawer -->
   <div id="drawer" class="drawer hidden" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
     <div class="drawer-head">
+      <button id="drawerClose" class="ghost" aria-label="Close"><span class="desk-x">✕</span><span class="phone-back" aria-hidden="true">‹</span></button>
+      <div id="drawerKicker" class="drawer-kicker"></div>
       <h2 id="drawerTitle"></h2>
-      <button id="drawerClose" class="ghost" aria-label="Close">✕</button>
     </div>
     <div id="drawerMeta" class="drawer-meta"></div>
     <div id="drawerActions" class="drawer-actions"></div>

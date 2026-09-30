@@ -1,42 +1,43 @@
 {
-  "_comment": "Content for the marketing site's live-board replica. Edit this, then run `npm run build:site` to regenerate the markup in site/index.html. The card/column classes it emits are the app's own (public/style.css) — build.js fails if any of them stop existing there, so this replica can't silently drift from the real board.",
+  "_comment": "Content for the marketing site's live-board replica. Edit this, then run `npm run build:site` to regenerate the markup in site/index.html. The card/column classes it emits are the app's own (public/style.css and public/console.css) — build.js fails if any of them stop existing there, so this replica can't silently drift from the real board.",
   "columns": [
     {
       "key": "backlog",
       "label": "Backlog",
       "cards": [
-        { "title": "Summarize the week’s PR review comments", "model": "haiku", "effort": 1, "schedule": "⏱ mon 09:00" },
-        { "title": "Draft onboarding email sequence", "model": "sonnet", "effort": 2 }
+        { "id": "a91c", "repo": "notes", "title": "Summarize the week’s PR review comments", "spec": "HAIKU · LOW · MON 09:00" },
+        { "id": "b204", "repo": "site", "title": "Draft onboarding email sequence", "spec": "SONNET · MED" }
       ]
     },
     {
       "key": "queued",
       "label": "Queued",
       "cards": [
-        { "title": "Summarize competitor pricing pages", "model": "haiku", "effort": 1 }
+        { "id": "c118", "repo": "pricing", "title": "Summarize competitor pricing pages", "spec": "HAIKU · LOW", "waits": "⛓ AFTER: WEEKLY DIGEST" }
       ]
     },
     {
       "key": "running",
       "label": "Running",
+      "idle": 2,
       "cards": [
-        { "title": "Fix flaky auth test in CI", "model": "opus", "effort": 3, "variant": "running", "priority": "High priority" }
+        { "id": "e33b", "repo": "auth", "title": "Fix flaky auth test in CI", "variant": "running", "spec": "OPUS · HIGH", "elapsed": "05:51", "live": { "out": "3k", "ctx": 40 } }
       ]
     },
     {
       "key": "review",
       "label": "Review",
       "cards": [
-        { "title": "Add healthcheck endpoint", "model": "sonnet", "effort": 2, "pr": "PR #142" },
-        { "title": "Migrate icons to SVG sprites", "model": "fable", "effort": 2, "variant": "failed" }
+        { "id": "f812", "repo": "api", "title": "Add healthcheck endpoint", "spec": "SONNET · MED · PR", "pr": "#142" },
+        { "id": "d09a", "repo": "icons", "title": "Migrate icons to SVG sprites", "variant": "failed", "spec": "FABLE · MED", "failed": "tests failed" }
       ]
     },
     {
       "key": "done",
       "label": "Done",
       "cards": [
-        { "title": "Refactor webhook retries", "model": "opus", "effort": 4, "variant": "done", "pr": "PR #138" },
-        { "title": "Draft changelog for v0.4", "model": "haiku", "effort": 1, "variant": "done" }
+        { "title": "Refactor webhook retries", "variant": "done", "meta": "api · PR #138" },
+        { "title": "Draft changelog for v0.4", "variant": "done", "meta": "notes" }
       ]
     }
   ]
