@@ -41,6 +41,44 @@ export function setFilter(text) {
   filterText = text;
 }
 
+// Settings that change the chrome (parallel cap, idle slots) are not on the
+// task fingerprint. Null it so the next render actually runs.
+export function invalidateBoard() {
+  lastRenderFingerprint = null;
+  render();
+}
+
+function shortId(id) {
+  const s = String(id || '');
+  return s.length > 10 ? s.slice(0, 8) : s;
+}
+
+function repoOf(t) {
+  const p = String(t.cwd || '').replace(/\\/g, '/').replace(/\/+$/, '');
+  if (!p) return '';
+  return p.split('/').pop() || '';
+}
+
+function specOf(t, isRunning) {
+  const bits = [String(t.model || 'default').toUpperCase()];
+  if (t.effort && t.effort !== 'default') bits.push(String(t.effort).toUpperCase());
+  if (t.worktree) bits.push('WT');
+  if (t.openPr) bits.push('PR');
+  if (!isRunning && t.stats && t.stats.turns) bits.push(`${t.stats.turns} TURNS`);
+  return bits.join(' · ');
+}
+
+function elapsed(ts) {
+  if (!ts) return '';
+  const s = Math.max(0, Math.round((Date.now() - new Date(ts).getTime()) / 1000));
+  if (!Number.isFinite(s)) return '';
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  const pad = (n) => String(n).padStart(2, '0');
+  if (h) return `${h}:${pad(m % 60)}:${pad(s % 60)}`;
+  return `${pad(m)}:${pad(s % 60)}`;
+}
+
 // Lowercase search haystack per task, cached by object identity — SSE and
 // optimistic updates always REPLACE task objects, so a changed task misses the
 // cache automatically and there is nothing to invalidate.
@@ -258,28 +296,33 @@ function columnEl(col) {
   el.setAttribute('role', 'region');
   const head = document.createElement('div');
   head.className = 'col-head';
+  const idx = document.createElement('span');
+  idx.className = 'col-index';
+  idx.textContent = { backlog: '01', queued: '02', running: '03', review: '04', done: '05' }[col.key] || '';
   const name = document.createElement('span');
   name.className = 'col-name';
   name.textContent = col.label;
   const count = document.createElement('span');
   count.className = 'col-count';
-  head.append(name, count);
+  head.append(idx, name, count);
   // Done is the only column that grows without bound — give it a broom. Hidden
   // until there is something to sweep; render() toggles it.
   let clearBtn = null;
   if (col.key === 'done') {
     clearBtn = document.createElement('button');
     clearBtn.className = 'ghost col-clear hidden';
-    clearBtn.textContent = '⌫ Clear';
+    clearBtn.textContent = '⌫ CLEAR';
     clearBtn.title = 'Archive every card in Done — they stay readable under Archive';
     clearBtn.setAttribute('aria-label', 'Clear the Done column');
     clearBtn.addEventListener('click', (e) => withBusy(e.currentTarget, clearDone));
     head.append(clearBtn);
   }
+  const rule = document.createElement('div');
+  rule.className = 'col-rule';
   const body = document.createElement('div');
   body.className = 'col-body';
   body.setAttribute('role', 'list');
-  el.append(head, body);
+  el.append(head, rule, body);
   const empty = document.createElement('div');
   empty.className = 'empty-col';
   empty.setAttribute('role', 'listitem'); // col-body is role="list"
@@ -378,16 +421,15 @@ function patchCardEl(el, t, pass) {
   if (t.createdAt) el.title = `created ${relTime(t.createdAt)}${t.updatedAt ? ` · updated ${relTime(t.updatedAt)}` : ''}`;
 
   const meta = [];
-  if (t.priority >= 2) meta.push(`<span class="prio-high${t.priority >= 3 ? ' prio-urgent' : ''}" title="P${t.priority}"><span class="sr-only">priority P${t.priority}</span></span>`);
+  const prio = t.priority >= 2
+    ? `<span class="card-prio" title="priority P${t.priority}">P${t.priority}</span>`
+    : '';
   if (t.createdBy === 'manager') meta.push('<span class="badge wt">sensei</span>');
   if (t.createdBy === 'import') meta.push('<span class="badge">import</span>');
   if (t.createdBy === 'auto') meta.push('<span class="badge skillauto">auto-fix</span>');
   if (t.createdBy === 'schedule') meta.push('<span class="badge sched">⏱ scheduled run</span>');
-  meta.push(`<span class="badge model">${esc(t.model || 'default')}</span>`);
-  if (t.effort === 'max') meta.push('<span class="badge ultra" title="ultracode — maximum effort">🌈 max</span>');
-  else if (t.effort && t.effort !== 'default') meta.push(`<span class="badge">${esc(t.effort)}</span>`);
+  if (t.effort === 'max') meta.push('<span class="badge ultra" title="ultracode, maximum effort">max</span>');
   if (t.agent) meta.push(`<span class="badge">agent:${esc(t.agent)}</span>`);
-  if (t.worktree) meta.push('<span class="badge wt">worktree</span>');
   if (t.issueNumber) meta.push(`<span class="badge">#${t.issueNumber}</span>`);
   // Dependency badge: amber "waiting on" while prerequisites are unmet (the
   // card sits in Queued until they ship), green chain once they're all done.
@@ -429,14 +471,12 @@ function patchCardEl(el, t, pass) {
     else if (c.passing) meta.push(`<span class="badge dep-met" title="All ${c.passing} checks green">CI ✓</span>`);
     else if (c.noCi) meta.push('<span class="badge" title="No checks reported — this repo has no CI; review judges the diff alone">no CI</span>');
   }
-  if (t.error && t.status !== 'done') meta.push(`<span class="failword">${t.error === 'Stopped by user' ? 'stopped' : 'failed'}</span>`);
-  if (isRunning) {
-    meta.push('<span class="runword">training…</span>');
-    if (t.liveOut) meta.push(`<span class="badge">${fmtTok(t.liveOut)} out</span>`);
-    if (t.ctxTokens) meta.push(`<span class="badge" title="Session context used (of the ~${fmtTok(CTX_WINDOW)} window)">ctx ${Math.round((t.ctxTokens / CTX_WINDOW) * 100)}%</span>`);
-  } else if (t.stats && t.stats.turns) meta.push(`<span class="badge">${t.stats.turns} turns</span>`);
+  if (t.error && t.status !== 'done') {
+    const fail = t.error === 'Stopped by user' ? 'stopped' : String(t.error).slice(0, 80);
+    meta.push(`<span class="failword">${esc(fail)}</span>`);
+  }
 
-  const antenna = isRunning ? '<span class="antenna lit"></span>' : '';
+  const pulse = isRunning ? '<span class="antenna lit" aria-hidden="true"></span>' : '';
   let seal = '';
   if (t.status === 'done') {
     const fresh = !stampedSeals.has(t.id);
@@ -453,7 +493,26 @@ function patchCardEl(el, t, pass) {
   else if (t.status === 'queued') quick = '<button class="card-run card-unq" data-act="unqueue" title="Pull back to Backlog (unqueue)" aria-label="Unqueue">⏸</button>';
   else if (t.status === 'review') quick = '<button class="card-run card-ok" data-act="approve" title="Approve — stamp it Done" aria-label="Approve">✓</button>';
   else if (t.status === 'done') quick = '<button class="card-run card-del" data-act="delete" title="Delete card" aria-label="Delete card">✕</button>';
-  el.innerHTML = `${seal}<div class="card-top"><div class="title">${antenna}${esc(t.title)}</div>${quick}</div><div class="meta">${meta.join('')}</div>`;
+
+  if (t.status === 'done') {
+    const bits = [repoOf(t)];
+    if (t.prUrl) bits.push('PR');
+    el.innerHTML = `${seal}<div class="done-row"><span class="done-check" aria-hidden="true">✓</span><div class="title">${esc(t.title)}</div><span class="done-meta">${esc(bits.filter(Boolean).join(' · '))}</span>${quick}</div>`;
+    return;
+  }
+
+  const repo = repoOf(t);
+  const clock = isRunning ? elapsed(t.startedAt) : '';
+  let live = '';
+  if (isRunning) {
+    const ctx = t.ctxTokens ? Math.min(100, Math.round((t.ctxTokens / CTX_WINDOW) * 100)) : 0;
+    const out = fmtTok(t.liveOut || 0);
+    live = `<div class="live-box"><div class="live-line"><span class="runword">training</span></div><div class="live-meta"><span>${out} OUT</span><span class="live-gap"></span><span>CTX</span><span class="ctx-bar"><span style="width:${ctx}%"></span></span><span>${ctx}%</span></div></div>`;
+  }
+  const extra = meta.length ? `<div class="meta">${meta.join('')}</div>` : '';
+  const phoneStop = isRunning ? '<button type="button" class="phone-stop" data-act="stop">■ Stop</button>' : '';
+  const phoneActs = `<div class="phone-acts"><button type="button" data-act="open">Open</button>${phoneStop}</div>`;
+  el.innerHTML = `<div class="card-kicker">${pulse}<span class="card-id" title="${esc(t.id)}">${esc(shortId(t.id))}</span><span class="kdot">·</span><span class="card-repo">${esc(repo || '—')}</span>${prio}${clock ? `<span class="card-elapsed">${esc(clock)}</span>` : ''}${quick}</div><div class="title">${esc(t.title)}</div><div class="card-spec">${esc(specOf(t, isRunning))}</div>${extra}${live}${phoneActs}`;
 }
 
 // ---------- groups ----------
@@ -619,6 +678,11 @@ function quickAction(btn, id, act) {
   const t = state.tasks.find((x) => x.id === id);
   if (!t) return;
   withBusy(btn, async () => {
+    if (act === 'open') { openDrawer(id); return; }
+    if (act === 'stop') {
+      await api(`/api/tasks/${id}/stop`, { method: 'POST' });
+      return;
+    }
     if (act === 'run') {
       const prev = applyOptimistic(id, { status: 'queued' });
       const r = await api(`/api/tasks/${id}/run`, { method: 'POST' });
@@ -788,6 +852,73 @@ function recordPerf(t0) {
   if (host.__kkPerf.renders.length > 500) host.__kkPerf.renders.splice(0, host.__kkPerf.renders.length - 500);
 }
 
+function idleSlotEls(rec, runningCount, free) {
+  if (!rec.slots) rec.slots = [];
+  while (rec.slots.length < free) {
+    const d = document.createElement('div');
+    d.className = 'idle-slot';
+    d.setAttribute('role', 'listitem');
+    rec.slots.push(d);
+  }
+  const out = [];
+  for (let i = 0; i < free; i++) {
+    rec.slots[i].textContent = `SLOT ${runningCount + i + 1} · IDLE`;
+    out.push(rec.slots[i]);
+  }
+  return out;
+}
+
+let phoneCol = 'backlog';
+try { phoneCol = localStorage.getItem('kk-phone-col') || 'backlog'; } catch {}
+let phoneColsWired = false;
+
+function syncPhoneCols() {
+  const nav = $('#phoneCols');
+  const board = $('#board');
+  if (!nav || !board) return;
+  if (!COLUMNS.some((c) => c.key === phoneCol)) phoneCol = 'backlog';
+  board.dataset.phoneCol = phoneCol;
+  if (!phoneColsWired) {
+    phoneColsWired = true;
+    nav.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-col]');
+      if (!b || !nav.contains(b)) return;
+      phoneCol = b.dataset.col;
+      try { localStorage.setItem('kk-phone-col', phoneCol); } catch {}
+      board.dataset.phoneCol = phoneCol;
+      for (const x of nav.querySelectorAll('[data-col]')) {
+        const on = x.dataset.col === phoneCol;
+        x.classList.toggle('on', on);
+        x.setAttribute('aria-pressed', String(on));
+      }
+    });
+  }
+  const counts = {};
+  for (const c of COLUMNS) {
+    counts[c.key] = state.tasks.filter(matchesFilter).filter((t) => (
+      c.key === 'running' ? RUNNING_LIKE[t.status] : t.status === c.key
+    )).length;
+  }
+  const sig = COLUMNS.map((c) => `${c.key}:${counts[c.key]}`).join('|');
+  if (nav.dataset.sig === sig) return;
+  nav.dataset.sig = sig;
+  nav.innerHTML = '';
+  for (const c of COLUMNS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'phone-col' + (c.key === phoneCol ? ' on' : '');
+    b.dataset.col = c.key;
+    b.setAttribute('aria-pressed', String(c.key === phoneCol));
+    const name = document.createElement('span');
+    name.textContent = c.label;
+    const n = document.createElement('span');
+    n.className = 'phone-col-n';
+    n.textContent = String(counts[c.key] || 0);
+    b.append(name, n);
+    nav.appendChild(b);
+  }
+}
+
 export function render() {
   if (draggingNow) { renderQueued = true; return; }
   const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
@@ -803,6 +934,7 @@ export function render() {
   const focusInfo = captureFocus(board);
 
   updateHeaderStatus();
+  syncPhoneCols();
   board.classList.toggle('is-empty', !state.tasks.length);
 
   if (!state.tasks.length) {
@@ -826,7 +958,12 @@ export function render() {
       .filter(matchesFilter)
       .filter((t) => (col.key === 'running' ? RUNNING_LIKE[t.status] : t.status === col.key))
       .sort((a, b) => pass.depth(a) - pass.depth(b) || (b.priority || 0) - (a.priority || 0));
-    rec.countEl.textContent = colTasks.length;
+    const parallel = (state.config.settings && state.config.settings.maxConcurrent) || 2;
+    if (col.key === 'running') {
+      rec.countEl.innerHTML = `${colTasks.length}<span class="count-dim">/${parallel}</span>`;
+    } else {
+      rec.countEl.textContent = String(colTasks.length);
+    }
     // the broom sweeps every Done card, not just the ones the filter shows —
     // so it keys off the real count, not colTasks
     if (rec.clearBtn) rec.clearBtn.classList.toggle('hidden', !state.tasks.some((t) => t.status === 'done'));
@@ -858,6 +995,14 @@ export function render() {
           return getCardEl(m, pass, born);
         });
         jobs.push({ container: grec.cardsBox, targets: memberEls });
+      }
+    }
+    if (col.key === 'running') {
+      const free = Math.max(0, parallel - colTasks.length);
+      const slots = idleSlotEls(rec, colTasks.length, free);
+      if (slots.length) {
+        if (!colTasks.length && targets[0] === rec.emptyEl) targets.shift();
+        targets.push(...slots);
       }
     }
     jobs.push({ container: rec.body, targets });
@@ -903,10 +1048,10 @@ function emptyStateEl() {
   emptyEl = document.createElement('div');
   emptyEl.className = 'dojo-empty';
   const h = document.createElement('h3');
-  h.textContent = 'A quiet dojo';
+  h.textContent = 'Nothing on the board';
   const p = document.createElement('p');
-  p.textContent = 'Nothing on the board. Describe what needs doing and an agent picks it up — '
-    + 'or say “create a kungfu todo for…” in any Claude Code session and cards land here on their own.';
+  p.textContent = 'Describe what needs doing and an agent picks it up. '
+    + 'Or say “create a kungfu todo for…” in any Claude Code session and cards land here.';
   const actions = document.createElement('div');
   actions.className = 'empty-actions';
   const btn = document.createElement('button');
@@ -926,6 +1071,21 @@ function updateHeaderStatus() {
   $('#countRunning').textContent = running;
   $('#countReview').textContent = counts.review;
   $('#countDone').textContent = counts.done;
+  const parallel = (state.config.settings && state.config.settings.maxConcurrent) || 2;
+  const readout = $('#parallelReadout');
+  if (readout) readout.textContent = parallel;
+  const parValue = $('#parValue');
+  if (parValue) parValue.textContent = parallel;
+  const slots = $('#agentSlots');
+  if (slots) {
+    slots.innerHTML = '';
+    const n = Math.max(1, Math.min(8, parallel));
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement('span');
+      s.className = i < running ? 'on' : '';
+      slots.appendChild(s);
+    }
+  }
   const antenna = $('#antenna');
   antenna.classList.toggle('lit', running > 0);
   antenna.setAttribute('aria-label', running > 0 ? `${running} agent${running > 1 ? 's' : ''} running` : 'No agents running');

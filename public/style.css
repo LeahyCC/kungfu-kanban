@@ -1,85 +1,84 @@
 /* ============================================================
-   KUNGFU KANBAN — "INK & TAPE" design system (local edition)
-   Rice paper, sumi ink, one vermillion. Printed rules, hard
-   shadows, hanko seals. The antenna light breathes while
-   agents run; shipping earns the master's seal.
+   KUNGFU KANBAN — console
+   Charcoal ground, Geist, one amber for action. Column rules
+   carry the status colour. The Sensei is violet.
    ============================================================ */
 
 /* ---------- tokens ---------- */
 :root {
-  /* the night dojo — DEFAULT */
-  --paper-0: #141210;
-  --paper-1: #1C1916;
-  --paper-2: #0E0D0B;
-  --ink-900: #ECE5D6;
-  --ink-600: #BDB4A3;
-  --ink-400: #978F80;
-  --rule: rgba(236, 229, 214, 0.14);
-  --rule-strong: #ECE5D6;
-  --accent: #E0524A;
-  --accent-ink: #E8776F;
-  --accent-wash: rgba(224, 82, 74, 0.10);
-  --selection-bg: rgba(224, 82, 74, 0.32);
-  --on-accent: #141210;
-  /* the ink slab: agent output is always dark, both themes */
-  --slab-bg: #1A1714;
-  --slab-text: #ECE5D6;
-  --slab-rule: rgba(236, 229, 214, 0.14);
-  /* belt ranks */
-  --belt-todo: #8A8271;
-  --belt-queued: #A89B7E;
-  --belt-doing: #6FA3D4;
-  --belt-review: #C79A6B;
-  --belt-done: #ECE5D6;
+  /* night console — DEFAULT */
+  --paper-0: #0A0C0D;
+  --paper-1: #14181A;
+  --paper-2: #0E1112;
+  --paper-hover: #192023;
+  --ink-900: #E4E8EA;
+  --ink-600: #A2ACB1;
+  --ink-400: #7A858B;
+  --rule: #20262A;
+  --rule-strong: #2C3439;
+  --accent: oklch(0.80 0.14 75);
+  --accent-ink: oklch(0.85 0.12 75);
+  --accent-wash: oklch(0.80 0.14 75 / 0.12);
+  --selection-bg: oklch(0.80 0.14 75 / 0.30);
+  --on-accent: #0A0C0D;
+  --sensei: oklch(0.76 0.12 295);
+  --sensei-wash: oklch(0.76 0.12 295 / 0.12);
+  /* agent output stays on the same ground */
+  --slab-bg: #0A0C0D;
+  --slab-text: #E4E8EA;
+  --slab-rule: #20262A;
+  /* column rules */
+  --belt-todo: #3A4349;
+  --belt-queued: oklch(0.78 0.11 240);
+  --belt-doing: oklch(0.80 0.14 75);
+  --belt-review: oklch(0.76 0.12 295);
+  --belt-done: oklch(0.78 0.12 155);
   /* semantic */
-  --success: #7FB08D;
-  --error: #E06C5F;
-  --warning: #D2A24C;
-  --info: #6FA3D4;
-  --shadow-hard: rgba(0, 0, 0, 0.85);
-  --grain-opacity: 0.02;
-  /* no mix-blend (it forces a full-viewport re-blend on every repaint):
-     brighten the noise tile instead so it reads as lighten on the night dojo */
-  --grain-filter: brightness(1.75);
-  --scroll-shadow: rgba(0, 0, 0, 0.35);
+  --success: oklch(0.78 0.12 155);
+  --error: oklch(0.72 0.15 25);
+  --warning: oklch(0.80 0.14 75);
+  --info: oklch(0.78 0.11 240);
+  --shadow-hard: rgba(0, 0, 0, 0.45);
+  --grain-opacity: 0;
+  --grain-filter: none;
+  --scroll-shadow: rgba(0, 0, 0, 0.45);
 
-  --font-display: 'Bricolage Grotesque', sans-serif;
-  --font-body: 'Instrument Sans', -apple-system, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-display: 'Geist', -apple-system, sans-serif;
+  --font-body: 'Geist', -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   color-scheme: dark;
 }
 
 [data-theme='light'] {
-  /* rice paper — the day dojo (opt-in) */
-  --paper-0: #F6F2E9;
-  --paper-1: #FDFBF5;
-  --paper-2: #EDE7D9;
-  --ink-900: #1A1714;
-  --ink-600: #4A443C;
-  --ink-400: #5F594F;
-  --rule: rgba(26, 23, 20, 0.16);
-  --rule-strong: #1A1714;
-  --accent: #C1272D;
-  --accent-ink: #A31F24;
-  --accent-wash: rgba(193, 39, 45, 0.08);
-  --selection-bg: rgba(193, 39, 45, 0.22);
-  --on-accent: #FDFBF5;
-  /* the two unqueued belts need re-tuning for cream too (dark values fail on paper) */
-  --belt-todo: #6E6656;
-  --belt-queued: #7A6E52;
-  --belt-doing: #2E5E8C;
-  --belt-review: #7A5230;
-  --belt-done: #1A1714;
-  --success: #3E6B4A;
-  --error: #8F1D1D;
-  --warning: #8A6116;
-  --info: #2E5E8C;
-  --shadow-hard: rgba(26, 23, 20, 0.92);
-  --grain-opacity: 0.025;
-  /* darkened noise reads as multiply on rice paper */
-  --grain-filter: brightness(0.5);
-  --scroll-shadow: rgba(26, 23, 20, 0.18);
+  --paper-0: #F3F5F6;
+  --paper-1: #FFFFFF;
+  --paper-2: #E7EBED;
+  --paper-hover: #EEF1F3;
+  --ink-900: #12171A;
+  --ink-600: #3C474D;
+  --ink-400: #5A656C;
+  --rule: #D7DEE2;
+  --rule-strong: #C3CCD1;
+  --accent: oklch(0.68 0.14 75);
+  --accent-ink: oklch(0.46 0.12 75);
+  --accent-wash: oklch(0.68 0.14 75 / 0.14);
+  --selection-bg: oklch(0.68 0.14 75 / 0.28);
+  --on-accent: #14120C;
+  --sensei: oklch(0.48 0.14 295);
+  --sensei-wash: oklch(0.48 0.14 295 / 0.10);
+  --belt-todo: #8B969C;
+  --belt-queued: oklch(0.50 0.12 240);
+  --belt-doing: oklch(0.58 0.14 75);
+  --belt-review: oklch(0.48 0.12 295);
+  --belt-done: oklch(0.46 0.12 155);
+  --success: oklch(0.42 0.12 155);
+  --error: oklch(0.50 0.16 25);
+  --warning: oklch(0.52 0.12 75);
+  --info: oklch(0.48 0.12 240);
+  --shadow-hard: rgba(18, 23, 26, 0.16);
+  --grain-opacity: 0;
+  --scroll-shadow: rgba(18, 23, 26, 0.12);
   color-scheme: light;
 }
 
@@ -1381,7 +1380,7 @@ input[type='file'] { border: none; background: none; padding: 4px 0; color: var(
    on — the tones are named for their dark surface, which is what the picker
    is choosing between. Literals rather than var(--paper-*), because every chip
    has to show a DIFFERENT tone than the one currently applied to :root. */
-.look-bg[data-tone=''] { background: linear-gradient(135deg, #141210 50%, #1C1916 50%); }
+.look-bg[data-tone=''] { background: linear-gradient(135deg, #0A0C0D 50%, #14181A 50%); }
 .look-bg[data-tone='graphite'] { background: linear-gradient(135deg, #0C0E11 50%, #14171B 50%); }
 .look-bg[data-tone='midnight'] { background: linear-gradient(135deg, #0B1019 50%, #131A26 50%); }
 .look-bg[data-tone='obsidian'] { background: linear-gradient(135deg, #000000 50%, #0D0E10 50%); }

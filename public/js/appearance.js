@@ -13,7 +13,7 @@ export const DEFAULTS = { theme: 'system', bg: '', scale: 100, accent: '', rainb
 
 // The palette offered as swatches — '' means "the dojo's own vermillion".
 const SWATCHES = [
-  ['', 'dojo vermillion'],
+  ['', 'console amber'],
   ['#E0524A', 'ember'],
   ['#D2A24C', 'gold'],
   ['#7FB08D', 'jade'],
@@ -26,7 +26,7 @@ const SWATCHES = [
 // list only names them, so there is one source of truth for the colours.
 // '' is the dojo's own warm paper (no attribute stamped at all).
 export const TONES = [
-  ['', 'dojo — warm rice paper'],
+  ['', 'console — the board default'],
   ['graphite', 'graphite — cool neutral'],
   ['midnight', 'midnight — slate blue'],
   ['obsidian', 'obsidian — true black'],
@@ -109,7 +109,7 @@ export function applyLook(look) {
     // read the card surface from the token so this can't drift from the theme
     // (the data-theme swap above already landed, so this is the right one)
     const surface = rgb(getComputedStyle(root).getPropertyValue('--paper-1').trim())
-      || (light ? { r: 253, g: 251, b: 245 } : { r: 28, g: 25, b: 22 });
+      || (light ? { r: 255, g: 255, b: 255 } : { r: 20, g: 24, b: 26 });
     const ink = readableInk(c, surface, light);
     root.style.setProperty('--accent', look.accent);
     root.style.setProperty('--accent-ink', `rgb(${ink.r}, ${ink.g}, ${ink.b})`);
@@ -143,7 +143,7 @@ export function paintThemeColor() {
   if (!meta) return;
   const light = document.documentElement.dataset.theme === 'light';
   const paper = getComputedStyle(document.documentElement).getPropertyValue('--paper-0').trim();
-  meta.content = paper || (light ? '#F6F2E9' : '#141210');
+  meta.content = paper || (light ? '#F3F5F6' : '#0A0C0D');
 }
 
 // ---------- the Appearance pane ----------
@@ -200,7 +200,7 @@ function syncSwatches() {
   }
   const custom = $('#lookCustom');
   // don't write back into the picker while it's focused — that fights the drag
-  if (custom && document.activeElement !== custom) custom.value = look.accent || '#E0524A';
+  if (custom && document.activeElement !== custom) custom.value = look.accent || '#D9A441';
 
   const bgBox = $('#lookBg');
   if (!bgBox || !bgBox.dataset.built) return;

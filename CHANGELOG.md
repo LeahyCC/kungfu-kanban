@@ -7,6 +7,13 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.21.0] — 2026-09-29
+
+### Changed
+- The board is a console. Charcoal ground, Geist, amber for actions, and a colour rule per column (grey, blue, amber, violet, green). The header carries agents, the 5-hour window, and system status. Done is a compact list. A Sensei rail sits on the board.
+- Archive scrolls inside the locked shell. The homepage follows the site design, including the phone layout: sections stack, and the board preview scrolls sideways.
+- On a phone the board shows one column at a time. A card opens as a full-screen sheet with move buttons, and the Sensei inbox covers the screen.
+
 ## [1.20.1] — 2026-09-29
 
 ### Fixed

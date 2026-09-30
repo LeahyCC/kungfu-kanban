@@ -97,19 +97,31 @@ export async function renderUsage() {
   if (!u || u.output === undefined) return;
   const chip = $('#usageChip');
   const txt = $('#usageChipText');
+  const meter = $('#usageMeter');
+  const pctEl = $('#usagePct');
+  const paintMeter = (pct) => {
+    if (meter) meter.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+    if (pctEl) {
+      pctEl.textContent = `${pct}%`;
+      pctEl.classList.remove('hidden');
+    }
+  };
   if (u.blocked) {
-    txt.textContent = '5h budget spent · paused';
+    txt.textContent = 'paused';
     chip.classList.remove('warn');
     chip.classList.add('bad');
+    paintMeter(100);
   } else if (u.budgetTokens > 0) {
-    const left = Math.max(0, u.budgetTokens - u.output);
     const pct = Math.round((u.output / u.budgetTokens) * 100);
-    txt.textContent = `5h ${fmtTok(left)} left`;
+    txt.textContent = fmtTok(u.output);
     chip.classList.toggle('warn', pct >= 70 && pct < 90);
     chip.classList.toggle('bad', pct >= 90);
+    paintMeter(pct);
   } else {
-    txt.textContent = `5h ${fmtTok(u.output)}`;
+    txt.textContent = fmtTok(u.output);
     chip.classList.remove('warn', 'bad');
+    if (meter) meter.style.width = '0';
+    if (pctEl) pctEl.classList.add('hidden');
   }
   chip.classList.remove('hidden');
   const bd = $('#usageBreakdown');
@@ -206,7 +218,9 @@ export async function renderHealth() {
       h.claude.ok ? `${dot(true)} ${claudeVer}` : `${dot(false)} claude CLI not working — cards can't run`,
       h.gh.ok ? `${dot(true)} gh` : `${dot(false)} gh not authed — PR features off`,
     ].join(' · ');
-  el.innerHTML = `<button type="button" class="sys-summary" aria-expanded="${el.classList.contains('expanded')}" aria-label="System status details">${dot(h.claude.ok)}${dot(h.gh.ok)}</button><span class="sys-text">${text}</span>${boardUpdBtn}${upBtn}`;
+  el.innerHTML = `<button type="button" class="sys-summary" aria-expanded="${el.classList.contains('expanded')}" aria-label="System status details">${dot(h.claude.ok)}<span class="sys-name">cli</span>${dot(h.gh.ok)}<span class="sys-name">gh</span></button><span class="sys-text">${text}</span>${boardUpdBtn}${upBtn}`;
+  const gear = $('#settingsBtn');
+  if (gear) gear.classList.toggle('has-update', !!(v && v.version && v.updateAvailable));
   const bb = $('#updateBoardBtn');
   if (bb) bb.addEventListener('click', async () => {
     if (!(await confirmDlg('Update the board to the latest code? It pulls from origin and restarts itself (blocked while cards are running). Under plain `npm start` the server stops instead — restart it after.', { confirmLabel: '⬆ Update' }))) return;

@@ -108,6 +108,8 @@ $('#paletteList').addEventListener('click', (e) => {
 $('#paletteBackdrop').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closePalette();
 });
+const paletteBtn = $('#paletteBtn');
+if (paletteBtn) paletteBtn.addEventListener('click', () => openPalette());
 
 // ---------- global hotkeys ----------
 document.addEventListener('keydown', (e) => {

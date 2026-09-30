@@ -17,6 +17,8 @@ const TABS = [
 ];
 export function showTab(which) {
   $('#boardToolbar').classList.toggle('hidden', which !== 'board');
+  const stage = $('#boardStage');
+  if (stage) stage.classList.toggle('hidden', which !== 'board');
   for (const [tabSel, key, panelSel] of TABS) {
     $(panelSel).classList.toggle('hidden', which !== key);
     const tab = $(tabSel);
@@ -160,7 +162,61 @@ export function renderManager() {
     logBox.appendChild(div);
   }
 
+  syncRail(c);
   renderAttn();
+}
+
+const AUTONOMY_NOTE = {
+  suggest: 'Holding every action for your check.',
+  semi: 'Routes and runs on its own. Approvals and retries wait for you.',
+  auto: 'Acting within the guardrails you set.',
+};
+
+export function railOn() {
+  return document.documentElement.classList.contains('kk-rail-on');
+}
+
+export function setRail(on) {
+  document.documentElement.classList.toggle('kk-rail-on', !!on);
+  const label = $('#railLabel');
+  if (label) label.textContent = on ? 'Hide Sensei' : 'Show Sensei';
+  try { localStorage.setItem('kk-rail', on ? '1' : '0'); } catch {}
+  if (on) syncRail(state.mgrState && state.mgrState.config);
+}
+
+function syncRail(c) {
+  if (!railOn()) return;
+  const sugg = (state.mgrState && state.mgrState.suggestions) || [];
+  const blocked = attnBlocked();
+  const count = sugg.length + blocked.length;
+  const rc = $('#railCount');
+  if (rc) rc.textContent = String(count);
+  if (c) {
+    const watch = $('#railWatch');
+    if (watch) watch.textContent = `watching · ${c.model || 'default'}/${c.effort || 'default'}`;
+    const note = $('#railNote');
+    if (note) note.textContent = AUTONOMY_NOTE[c.autonomy] || '';
+    for (const b of document.querySelectorAll('#railAutonomy button')) {
+      b.classList.toggle('active', b.dataset.level === c.autonomy);
+    }
+  }
+  fillAttn($('#railList'), sugg, blocked, count);
+  const logBox = $('#railLog');
+  if (logBox && state.mgrState) {
+    logBox.innerHTML = '';
+    for (const e of (state.mgrState.log || []).slice(0, 8)) {
+      const row = document.createElement('div');
+      row.className = 'rail-act';
+      const t = document.createElement('span');
+      t.textContent = fmtLogTs(e.ts);
+      const x = document.createElement('span');
+      const verb = document.createElement('b');
+      verb.textContent = e.kind || '';
+      x.append(verb, document.createTextNode(e.text ? ` ${e.text}` : ''));
+      row.append(t, x);
+      logBox.appendChild(row);
+    }
+  }
 }
 
 // shared by the "Pending suggestions" panel and the attention popup
@@ -459,26 +515,28 @@ export function renderAttn() {
   $('#attnChipText').textContent = count;
   $('#attnChip').classList.toggle('hidden', !count);
 
-  // The list DOM is rebuilt only while the popup is open — task events arrive
-  // every ~2s per running card and used to rebuild it even when hidden.
-  if (!$('#attnBackdrop').classList.contains('hidden')) renderAttnList(sugg, blocked, count);
+  // Rebuild the lists only while something is showing them. Task events
+  // arrive every ~2s per running card.
+  if (!$('#attnBackdrop').classList.contains('hidden')) fillAttn($('#attnList'), sugg, blocked, count);
+  if (railOn()) fillAttn($('#railList'), sugg, blocked, count);
+  const rc = $('#railCount');
+  if (rc) rc.textContent = String(count);
 
   if (count > 0 && attnPrevCount === 0 && !attnDismissed) {
-    // never steal focus out of a text field (e.g. mid-typing in the filter) —
-    // announce through the live region instead of opening
+    // never steal focus out of a text field (e.g. mid-typing in the filter)
     const ae = document.activeElement;
     const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable);
     if (typing) announce(`${count} item${count > 1 ? 's' : ''} need your attention`);
-    else openAttn();
+    else setRail(true);
   }
   if (count === 0) attnDismissed = false;
   attnPrevCount = count;
 }
 
-function renderAttnList(sugg, blocked, count) {
-  const box = $('#attnList');
+function fillAttn(box, sugg, blocked, count) {
+  if (!box) return;
   box.innerHTML = '';
-  if (!count) box.innerHTML = '<div class="empty-col">nothing needs you — the dojo is at peace 🧘</div>';
+  if (!count) box.innerHTML = '<div class="empty-col">Nothing waits on you.</div>';
   else {
     if (sugg.some((s) => s.guard === 'hourly launch cap reached')) box.appendChild(capNotice());
     for (const s of sugg) box.appendChild(suggestionCard(s));
@@ -490,7 +548,7 @@ function openAttn() {
   attnReturnFocus = document.activeElement;
   const sugg = (state.mgrState && state.mgrState.suggestions) || [];
   const blocked = attnBlocked();
-  renderAttnList(sugg, blocked, sugg.length + blocked.length);
+  fillAttn($('#attnList'), sugg, blocked, sugg.length + blocked.length);
   $('#attnBackdrop').classList.remove('hidden');
   // move focus into the popup (auto-open used to appear silently behind it)
   const first = $('#attnList').querySelector('button') || $('#attnCloseBtn');
@@ -507,7 +565,37 @@ $('#mgrStopBtn').addEventListener('click', (e) => withBusy(e.target, async () =>
   if (!r.error) toast('Sensei run stopped — nothing was applied.', 'status');
 }));
 
-$('#attnChip').addEventListener('click', openAttn);
+function toggleRail() {
+  if (railOn()) { setRail(false); attnDismissed = true; }
+  else { attnDismissed = false; setRail(true); }
+}
+$('#attnChip').addEventListener('click', () => { showTab('board'); toggleRail(); });
+$('#railToggle').addEventListener('click', toggleRail);
+$('#railHide').addEventListener('click', () => { setRail(false); attnDismissed = true; });
+$('#railAll').addEventListener('click', openAttn);
+for (const b of document.querySelectorAll('#railAutonomy button')) {
+  b.addEventListener('click', () => {
+    const f = $('#mgrForm');
+    if (!state.mgrState || !f || !f.autonomy) return;
+    f.autonomy.value = b.dataset.level;
+    f.requestSubmit();
+  });
+}
+if (railOn()) {
+  const label = $('#railLabel');
+  if (label) label.textContent = 'Hide Sensei';
+}
+$('#railAsk').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const msg = $('#railAskInput').value.trim();
+  if (!msg) return;
+  $('#railAskInput').value = '';
+  showTab('manager');
+  const chat = document.querySelector('#mgrChatForm [name=message]');
+  if (!chat) return;
+  chat.value = msg;
+  $('#mgrChatForm').requestSubmit();
+});
 $('#attnCloseBtn').addEventListener('click', closeAttn);
 $('#attnBackdrop').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closeAttn();

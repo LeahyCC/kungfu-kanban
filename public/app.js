@@ -12,7 +12,7 @@
 import { state } from './js/state.js';
 import { $, debounce } from './js/util.js';
 import { api } from './js/api.js';
-import { render, loadTasks, setFilter } from './js/board.js';
+import { render, loadTasks, setFilter, invalidateBoard } from './js/board.js';
 import { closeDrawer } from './js/drawer.js';
 import { closeTaskModal, closeImportModal, closeSettings, applyTerminalSetting } from './js/modals.js';
 import { closeComposer } from './js/composer.js';
@@ -77,18 +77,30 @@ const applyFilter = debounce((v) => {
 $('#filterInput').addEventListener('input', (e) => applyFilter(e.target.value.trim().toLowerCase()));
 
 // ---------- inline settings ----------
-$('#maxConcurrent').addEventListener('change', async (e) => {
+async function saveParallel(n) {
   const prev = state.config.settings.maxConcurrent || 2;
-  const r = await api('/api/settings', { method: 'PUT', body: { maxConcurrent: parseInt(e.target.value, 10) } });
-  if (!r || r.error) { e.target.value = prev; return; } // don't leave the input out of sync with state
+  n = Math.max(1, Math.min(8, parseInt(n, 10) || prev));
+  $('#maxConcurrent').value = n;
+  const shown = $('#parValue');
+  if (shown) shown.textContent = n;
+  const r = await api('/api/settings', { method: 'PUT', body: { maxConcurrent: n } });
+  if (!r || r.error) {
+    $('#maxConcurrent').value = prev;
+    if (shown) shown.textContent = prev;
+    return;
+  }
   state.config.settings = r;
-});
+  invalidateBoard();
+}
+$('#maxConcurrent').addEventListener('change', (e) => saveParallel(e.target.value));
+$('#parDown').addEventListener('click', () => saveParallel((state.config.settings.maxConcurrent || 2) - 1));
+$('#parUp').addEventListener('click', () => saveParallel((state.config.settings.maxConcurrent || 2) + 1));
 
 // ---------- boot: visible loading + a real error state ----------
 function bootError(msg) {
   $('#board').innerHTML = `
     <div class="dojo-empty boot-state">
-      <h3>Can't reach the dojo</h3>
+      <h3>Can't reach the board</h3>
       <p class="boot-err"></p>
       <div class="empty-actions"><button class="primary" onclick="location.reload()">↻ Retry</button></div>
     </div>`;
@@ -97,7 +109,7 @@ function bootError(msg) {
 }
 
 (async () => {
-  $('#board').innerHTML = '<div class="dojo-empty boot-state"><p class="boot-msg">contacting the dojo…</p></div>';
+  $('#board').innerHTML = '<div class="dojo-empty boot-state"><p class="boot-msg">contacting the board…</p></div>';
   $('#board').classList.add('is-empty');
   let cfg;
   try {
@@ -112,6 +124,9 @@ function bootError(msg) {
   state.config = cfg;
   $('#board').classList.remove('is-empty');
   $('#maxConcurrent').value = state.config.settings.maxConcurrent || 2;
+  const parShown = state.config.settings.maxConcurrent || 2;
+  $('#parValue').textContent = parShown;
+  $('#parallelReadout').textContent = parShown;
   applyCooldown(state.config.cooldownUntil || 0);
   setServerOffline(!!state.config.offline);
   setCliAuth(!!state.config.cliLoggedOut);

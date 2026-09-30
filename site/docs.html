@@ -12,7 +12,7 @@
   <link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32">
   <link rel="icon" href="/icons/favicon-16x16.png" type="image/png" sizes="16x16">
   <link rel="apple-touch-icon" href="/icons/apple-icon-180x180.png">
-  <meta name="theme-color" content="#141210">
+  <meta name="theme-color" content="#0A0C0D">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Kungfu Kanban">
   <meta property="og:url" content="https://kungfu-kanban.com/docs">
@@ -46,7 +46,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Geist:wght@400;500;600;700&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <script>try { if (localStorage.getItem('kk-theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) { }</script>
@@ -67,24 +67,23 @@
 
     <header class="masthead">
       <div class="mkt-inner">
-        <a href="/#main" class="wordmark">Kungfu Kanban <span class="antenna" aria-hidden="true"></span></a>
+        <a href="/" class="wordmark"><img src="/logo.png" alt="" width="22" height="22" class="mast-logo">Kungfu Kanban</a>
         <nav aria-label="Site">
-          <a href="/#forms">The four forms</a>
-          <a href="/#manual">The manual</a>
+          <a href="/#forms">How it works</a>
+          <a href="/#features">Features</a>
+          <a href="/#manual">Manual</a>
           <a href="/docs" aria-current="page">Docs</a>
           <a href="/compare">Compare</a>
-          <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer">GitHub</a>
-          <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to day dojo"
-            aria-pressed="false" title="Day / night dojo">☀</button>
-          <a href="/#manual" class="btn ink">Build the dojo</a>
         </nav>
+        <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer" class="btn ghost gh-btn">GitHub <span>MIT</span></a>
+        <a href="/#manual" class="btn primary mast-install">Install</a>
       </div>
-      <div class="scroll-progress" aria-hidden="true"><i id="scroll-progress-bar"></i></div>
     </header>
 
     <main id="main">
       <section class="manual-section section-pad" id="docs">
         <div class="mkt-inner">
+          <p class="sec-kicker">§ DOCS</p>
           <h2 class="section-title">Docs.</h2>
           <p class="manual-sub">
             Four reference sections, each linkable on its own. For full setup — requirements, install,
@@ -283,6 +282,7 @@ after: Fix the flaky login test</code></pre>
   <script>
     (function () {
       var btn = document.getElementById('theme-toggle');
+      if (!btn) return;
       var themeMeta = document.querySelector('meta[name="theme-color"]');
       function render() {
         var light = document.documentElement.dataset.theme === 'light';

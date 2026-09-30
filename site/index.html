@@ -12,7 +12,7 @@
   <link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32">
   <link rel="icon" href="/icons/favicon-16x16.png" type="image/png" sizes="16x16">
   <link rel="apple-touch-icon" href="/icons/apple-icon-180x180.png">
-  <meta name="theme-color" content="#141210">
+  <meta name="theme-color" content="#0A0C0D">
   <!-- Social cards -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Kungfu Kanban">
@@ -119,7 +119,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Geist:wght@400;500;600;700&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <script>try { if (localStorage.getItem('kk-theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) { }</script>
@@ -147,91 +147,83 @@
 
     <header class="masthead">
       <div class="mkt-inner">
-        <a href="#main" class="wordmark">Kungfu Kanban <span class="antenna" aria-hidden="true"></span></a>
+        <a href="#main" class="wordmark"><img src="/logo.png" alt="" width="22" height="22" class="mast-logo">Kungfu Kanban</a>
         <nav aria-label="Site">
-          <a href="#forms">The four forms</a>
-          <a href="#manual">The manual</a>
+          <a href="#forms">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#manual">Manual</a>
           <a href="/docs">Docs</a>
           <a href="/compare">Compare</a>
-          <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer">GitHub</a>
-          <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to day dojo"
-            aria-pressed="false" title="Day / night dojo">☀</button>
-          <a href="#manual" class="btn ink">Build the dojo</a>
         </nav>
+        <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer" class="btn ghost gh-btn">GitHub <span>MIT</span></a>
+        <a href="#manual" class="btn primary mast-install">Install</a>
       </div>
-      <div class="scroll-progress" aria-hidden="true"><i id="scroll-progress-bar"></i></div>
     </header>
 
     <main id="main">
       <!-- HERO -->
       <section class="hero">
         <div class="mkt-inner hero-grid">
-          <div>
-            <h1>
-              <span class="line"><span style="--i:0">Every card</span></span>
-              <span class="line"><span style="--i:1">is a fighter.</span></span>
-              <span class="line"><span style="--i:2">The master</span></span>
-              <span class="line">
-                <span style="--i:3">
-                  works for you.
-                  <span class="seal hero-seal">Local‑first</span>
-                </span>
-              </span>
-            </h1>
+          <div class="hero-copy">
+            <p class="hero-kicker"><span class="pulse" aria-hidden="true"></span>LOCAL-FIRST · RUNS ON YOUR CLAUDE SUBSCRIPTION</p>
+            <h1>Every card is a fighter. <span class="muted">The master works for you.</span></h1>
             <p class="hero-sub">
-              Kungfu Kanban is a kanban board that runs on your machine, where each card is a
-              Claude Code agent on your subscription login — no API keys, no token billing,
-              no cloud. Cards create, route, run, and review themselves on full auto;
-              your only job is the merge button.
+              A kanban board that runs on your machine, where each card is a Claude Code agent on your subscription login. No API keys, no token billing, no cloud. Cards create, route, run and review themselves. Your only job is the merge button.
             </p>
+            <div class="install-box">
+              <pre><span class="prompt">$ </span>git clone https://github.com/LeahyCC/kungfu-kanban.git
+<span class="prompt">$ </span>cd kungfu-kanban &amp;&amp; npm install &amp;&amp; npm start</pre>
+              <button type="button" id="copyInstall">COPY</button>
+            </div>
+            <p class="install-note">→ http://localhost:4747 · binds 127.0.0.1 only</p>
             <div class="hero-ctas">
               <a href="#manual" class="btn primary">Set it up — it&rsquo;s yours</a>
-              <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer" class="btn ghost">Read
-                the source</a>
+              <a href="https://github.com/LeahyCC/kungfu-kanban" target="_blank" rel="noreferrer" class="btn ghost">Read the source</a>
             </div>
           </div>
           <figure class="hero-figure">
-            <img src="/logo.png" alt="The Kungfu Kanban master — a cardboard box robot held together with duct tape"
+            <span class="fig-tag">FIG. 1</span>
+            <span class="fig-size">462 × 471</span>
+            <img src="/logo.png" alt="The Kungfu Kanban master, a cardboard box robot held together with duct tape"
               width="462" height="471" fetchpriority="high">
-            <figcaption class="fig-caption">fig. 1 — the master. cardboard, tape, runs the dojo.</figcaption>
+            <figcaption class="fig-caption"><span>the master. cardboard, tape, runs the dojo.</span><span class="online">● ONLINE</span></figcaption>
           </figure>
+        </div>
+        <div class="mkt-inner">
+          <dl class="facts">
+            <div><dt>0</dt><dd>API KEYS</dd></div>
+            <div><dt>1</dt><dd>NPM DEPENDENCY</dd></div>
+            <div><dt>127.0.0.1</dt><dd>BINDS BY DEFAULT</dd></div>
+            <div><dt>data/*.json</dt><dd>ALL APP STATE</dd></div>
+          </dl>
         </div>
       </section>
 
       <!-- THE FOUR FORMS -->
       <section class="forms-section section-pad" id="forms">
         <div class="mkt-inner">
+          <p class="sec-kicker">§ HOW IT WORKS</p>
           <h2 class="section-title">The four forms.</h2>
-          <div class="form-band">
-            <div class="form-num" aria-hidden="true" data-n="01"></div>
-            <div class="form-body">
+          <div class="form-grid">
+            <div class="form-cell">
+              <div class="form-top"><span>01</span><span>BACKLOG</span></div>
               <h3>Say the work exists</h3>
-              <p>&ldquo;Create a kungfu todo&rdquo; in any terminal session. A pasted plan. Your open GitHub issues.
-                Cards write themselves — acceptance criteria included.</p>
+              <p>&ldquo;Create a kungfu todo&rdquo; in any terminal session. A pasted plan. Your open GitHub issues. Cards write themselves, acceptance criteria included.</p>
             </div>
-          </div>
-          <div class="form-band">
-            <div class="form-num" aria-hidden="true" data-n="02"></div>
-            <div class="form-body">
+            <div class="form-cell">
+              <div class="form-top"><span>02</span><span>QUEUED</span></div>
               <h3>The Sensei routes</h3>
-              <p>Model, effort, priority, skills — triaged per card, automatically. Haiku for drills, Fable for the
-                tournament.</p>
+              <p>Model, effort, priority, skills: triaged per card, automatically. Haiku for drills, Fable for the tournament.</p>
             </div>
-          </div>
-          <div class="form-band">
-            <div class="form-num" aria-hidden="true" data-n="03"></div>
-            <div class="form-body">
+            <div class="form-cell">
+              <div class="form-top"><span>03</span><span>RUNNING</span></div>
               <h3>The dojo runs itself</h3>
-              <p>Cards launch, retry with feedback, step down models, and absorb rate limits — unattended, inside your
-                guardrails.</p>
+              <p>Cards launch, retry with feedback, step down models and absorb rate limits, unattended, inside your guardrails.</p>
             </div>
-          </div>
-          <div class="form-band">
-            <div class="form-num" aria-hidden="true" data-n="04"></div>
-            <div class="form-body">
+            <div class="form-cell">
+              <div class="form-top"><span>04</span><span>DONE</span></div>
               <h3>PRs arrive, shipped</h3>
-              <p>Repo cards open real pull requests on their own; merged ones file themselves into Done. You hold the
-                merge button — that&rsquo;s the whole job.</p>
+              <p>Repo cards open real pull requests on their own; merged ones file themselves into Done. You hold the merge button. That&rsquo;s the whole job.</p>
             </div>
           </div>
         </div>
@@ -240,67 +232,123 @@
       <!-- LIVE BOARD REPLICA -->
       <section class="live-band">
         <div class="mkt-inner">
-          <h2>It is a kanban board.<br>The cards do the work.</h2>
+          <h2>It is a kanban board.<br><span class="muted">The cards do the work.</span></h2>
+          <div class="live-stage">
+          <div class="live-chrome" aria-hidden="true">
+            <span class="live-name">Kungfu Kanban</span>
+            <span>AGENTS <b>1/2</b></span>
+            <span>5H WINDOW <b>38%</b></span>
+            <span class="live-need">◆ 1 NEEDS YOU</span>
+          </div>
+          <div class="live-scroll">
           <div class="live-board" aria-label="Product preview: the kanban board">
             <!-- build:live-board -->
             <div class="column" data-status="backlog">
-              <div class="col-head"><span class="col-name">Backlog</span><span class="col-count">2</span></div>
+              <div class="col-head"><span class="col-index">01</span><span class="col-name">Backlog</span><span class="col-count">2</span></div>
+              <div class="col-rule"></div>
               <div class="col-body">
                 <div class="card">
+                  <div class="card-kicker">
+                    <span class="card-id">a91c</span><span>·</span>
+                    <span class="card-repo">notes</span>
+                  </div>
                   <div class="title">Summarize the week’s PR review comments</div>
-                  <div class="meta"><span class="badge model">haiku</span><span class="stripes" title="effort 1/4"><i class="on"></i><i></i><i></i><i></i></span><span class="badge">⏱ mon 09:00</span></div>
+                  <div class="card-spec">HAIKU · LOW · MON 09:00</div>
                 </div>
                 <div class="card">
+                  <div class="card-kicker">
+                    <span class="card-id">b204</span><span>·</span>
+                    <span class="card-repo">site</span>
+                  </div>
                   <div class="title">Draft onboarding email sequence</div>
-                  <div class="meta"><span class="badge model">sonnet</span><span class="stripes" title="effort 2/4"><i class="on"></i><i class="on"></i><i></i><i></i></span></div>
+                  <div class="card-spec">SONNET · MED</div>
                 </div>
               </div>
             </div>
             <div class="column" data-status="queued">
-              <div class="col-head"><span class="col-name">Queued</span><span class="col-count">1</span></div>
+              <div class="col-head"><span class="col-index">02</span><span class="col-name">Queued</span><span class="col-count">1</span></div>
+              <div class="col-rule"></div>
               <div class="col-body">
                 <div class="card">
+                  <div class="card-kicker">
+                    <span class="card-id">c118</span><span>·</span>
+                    <span class="card-repo">pricing</span>
+                  </div>
                   <div class="title">Summarize competitor pricing pages</div>
-                  <div class="meta"><span class="badge model">haiku</span><span class="stripes" title="effort 1/4"><i class="on"></i><i></i><i></i><i></i></span></div>
+                  <div class="card-spec">HAIKU · LOW</div>
+                  <div class="meta"><span class="badge dep">⛓ AFTER: WEEKLY DIGEST</span></div>
                 </div>
               </div>
             </div>
             <div class="column" data-status="running">
-              <div class="col-head"><span class="col-name">Running</span><span class="col-count">1</span></div>
+              <div class="col-head"><span class="col-index">03</span><span class="col-name">Running</span><span class="col-count">1</span></div>
+              <div class="col-rule"></div>
               <div class="col-body">
-                <div class="card running-card brush">
-                  <div class="title"><span class="antenna lit" aria-hidden="true"></span>Fix flaky auth test in CI</div>
-                  <div class="meta"><span class="badge model">opus</span><span class="stripes" title="effort 3/4"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="prio-high" title="High priority"></span><span class="runword">running</span></div>
+                <div class="card running-card">
+                  <div class="card-kicker">
+                    <span class="antenna lit" aria-hidden="true"></span>
+                    <span class="card-id">e33b</span><span>·</span>
+                    <span class="card-repo">auth</span>
+                    <span class="card-elapsed">05:51</span>
+                  </div>
+                  <div class="title">Fix flaky auth test in CI</div>
+                  <div class="card-spec">OPUS · HIGH</div>
+                  <div class="live-box">
+                    <div class="live-line"><span class="runword">training</span></div>
+                    <div class="live-meta"><span>3k OUT</span><span style="flex:1"></span><span>CTX</span><span class="ctx-bar"><span style="width:40%"></span></span><span>40%</span></div>
+                  </div>
                 </div>
+                <div class="idle-slot">SLOT 2 · IDLE</div>
+                <div class="idle-slot">SLOT 3 · IDLE</div>
               </div>
             </div>
             <div class="column" data-status="review">
-              <div class="col-head"><span class="col-name">Review</span><span class="col-count">2</span></div>
+              <div class="col-head"><span class="col-index">04</span><span class="col-name">Review</span><span class="col-count">2</span></div>
+              <div class="col-rule"></div>
               <div class="col-body">
                 <div class="card">
+                  <div class="card-kicker">
+                    <span class="card-id">f812</span><span>·</span>
+                    <span class="card-repo">api</span>
+                  </div>
                   <div class="title">Add healthcheck endpoint</div>
-                  <div class="meta"><span class="badge model">sonnet</span><span class="stripes" title="effort 2/4"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="pr-link">PR #142</span></div>
+                  <div class="card-spec">SONNET · MED · PR</div>
+                  <div class="meta"><span class="pr-link">PR #142 ↗</span></div>
                 </div>
                 <div class="card failed-card">
+                  <div class="card-kicker">
+                    <span class="card-id">d09a</span><span>·</span>
+                    <span class="card-repo">icons</span>
+                  </div>
                   <div class="title">Migrate icons to SVG sprites</div>
-                  <div class="meta"><span class="badge model">fable</span><span class="stripes" title="effort 2/4"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="failword">failed</span></div>
+                  <div class="card-spec">FABLE · MED</div>
+                  <div class="meta"><span class="failword">✕ tests failed</span></div>
                 </div>
               </div>
             </div>
             <div class="column" data-status="done">
-              <div class="col-head"><span class="col-name">Done</span><span class="col-count">2</span></div>
+              <div class="col-head"><span class="col-index">05</span><span class="col-name">Done</span><span class="col-count">2</span></div>
+              <div class="col-rule"></div>
               <div class="col-body">
                 <div class="card done-card">
-                  <span class="seal card-seal">Shipped</span><div class="title">Refactor webhook retries</div>
-                  <div class="meta"><span class="badge model">opus</span><span class="stripes" title="effort 4/4"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="pr-link">PR #138</span></div>
+                  <div class="done-row">
+                    <span class="done-check" aria-hidden="true">✓</span>
+                    <div class="title">Refactor webhook retries</div>
+                    <span class="done-meta">api · PR #138</span>
+                  </div>
                 </div>
                 <div class="card done-card">
-                  <span class="seal card-seal">Shipped</span><div class="title">Draft changelog for v0.4</div>
-                  <div class="meta"><span class="badge model">haiku</span><span class="stripes" title="effort 1/4"><i class="on"></i><i></i><i></i><i></i></span></div>
+                  <div class="done-row">
+                    <span class="done-check" aria-hidden="true">✓</span>
+                    <div class="title">Draft changelog for v0.4</div>
+                    <span class="done-meta">notes</span>
+                  </div>
                 </div>
               </div>
             </div>
             <!-- /build:live-board -->
+          </div>
+          </div>
           </div>
         </div>
       </section>
@@ -1116,7 +1164,7 @@ launchctl unload ~/Library/LaunchAgents/com.kungfu-kanban.plist <span class="c">
           <div class="colophon-bow">
             <img src="/icons/android-icon-48x48.png" alt="" width="48" height="48">
             <p>
-              Set in Bricolage Grotesque, Instrument Sans &amp; IBM Plex Mono.
+              Set in Geist and Geist Mono.
               Ink, paper, and one cardboard master. No stock photos. No accounts. No billing.
             </p>
           </div>
@@ -1129,6 +1177,7 @@ launchctl unload ~/Library/LaunchAgents/com.kungfu-kanban.plist <span class="c">
     // Night dojo (dark) is the default; light is the stored override.
     (function () {
       var btn = document.getElementById('theme-toggle');
+      if (!btn) return;
       var themeMeta = document.querySelector('meta[name="theme-color"]');
       function render() {
         var light = document.documentElement.dataset.theme === 'light';
@@ -1146,6 +1195,17 @@ launchctl unload ~/Library/LaunchAgents/com.kungfu-kanban.plist <span class="c">
         render();
       });
       render();
+    })();
+
+    (function () {
+      var btn = document.getElementById('copyInstall');
+      if (!btn) return;
+      var cmd = 'git clone https://github.com/LeahyCC/kungfu-kanban.git\ncd kungfu-kanban && npm install && npm start';
+      btn.addEventListener('click', function () {
+        var done = function () { btn.textContent = 'COPIED'; setTimeout(function () { btn.textContent = 'COPY'; }, 1600); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(cmd).then(done, done);
+        else done();
+      });
     })();
 
     // Reading progress — the vermillion stroke under the masthead rule.
