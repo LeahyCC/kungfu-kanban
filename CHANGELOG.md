@@ -7,6 +7,14 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.21.1] — 2026-10-11
+
+### Fixed
+- The ⬆ Update button fast-forwards when local `CHANGELOG.md` and `package.json` edits are a version bump origin/main already contains, or generated formatting / a version field origin has already moved past. An edit origin does not have, and any other local file the merge would overwrite, is left in place and the update still aborts.
+
+### Changed
+- README screenshots match the console board (#142).
+
 ## [1.21.0] — 2026-09-29
 
 ### Changed
