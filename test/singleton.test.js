@@ -80,3 +80,103 @@ test('claim: a lock created by another server in the meantime is respected', () 
   assert.equal(readHolder(), 4242);
   reset();
 });
+
+// In-memory fs with a hook that fires on every read of the lock, so a test can
+// run a second server's whole claim() at the exact moment the first one is
+// between "looked" and "acted".
+function fakeFs(initial, onRead) {
+  const files = new Map(Object.entries(initial));
+  const err = (code) => Object.assign(new Error(code), { code });
+  return {
+    files,
+    readFileSync(p) {
+      if (onRead) onRead(p);
+      if (!files.has(p)) throw err('ENOENT');
+      return files.get(p);
+    },
+    writeFileSync(p, data, opts) {
+      if (opts && opts.flag === 'wx' && files.has(p)) throw err('EEXIST');
+      files.set(p, String(data));
+    },
+    renameSync(from, to) {
+      if (!files.has(from)) throw err('ENOENT');
+      files.set(to, files.get(from));
+      files.delete(from);
+    },
+    linkSync(from, to) {
+      if (files.has(to)) throw err('EEXIST');
+      files.set(to, files.get(from));
+    },
+    unlinkSync(p) {
+      if (!files.has(p)) throw err('ENOENT');
+      files.delete(p);
+    },
+  };
+}
+
+// Run `other` once, the first time the lock is read.
+function raceOnFirstRead(initial, other) {
+  let fired = false;
+  let result = null;
+  const fx = fakeFs(initial, (p) => {
+    if (fired || p !== LOCK) return;
+    fired = true;
+    result = other(fx);
+  });
+  return { fx, result: () => result };
+}
+
+const A = 1111;
+const B = 2222;
+const alive = (pid) => pid === A || pid === B; // 4242 is the dead holder
+
+test('claim: two servers starting on an empty data dir cannot both win', () => {
+  // A has read "no lock". Before it acts, B runs its whole claim and wins.
+  const { fx, result } = raceOnFirstRead({}, (f) => claim(alive, noSleep, f, B));
+  const a = claim(alive, noSleep, fx, A);
+  assert.equal(result(), null, 'B finished first, so it holds the lock');
+  assert.equal(a, B, 'A must lose and name B, not delete B\'s lock and also win');
+  assert.equal(fx.files.get(LOCK), String(B), 'B\'s lock is intact');
+});
+
+test('claim: two servers racing for one stale lock cannot both win', () => {
+  // A has read the stale 4242. B clears it and takes the lock before A's rename.
+  const { fx, result } = raceOnFirstRead({ [LOCK]: '4242' }, (f) => claim(alive, noSleep, f, B));
+  const a = claim(alive, noSleep, fx, A);
+  assert.equal(result(), null);
+  assert.equal(a, B, 'A moved B\'s fresh lock aside by mistake, so it must put it back and defer');
+  assert.equal(fx.files.get(LOCK), String(B));
+  assert.deepEqual([...fx.files.keys()], [LOCK], 'no stale.* leftovers');
+});
+
+test('claim: clearing a stale lock leaves no stale.* files behind', () => {
+  const fx = fakeFs({ [LOCK]: '4242' });
+  assert.equal(claim(() => false, noSleep, fx, A), null);
+  assert.deepEqual([...fx.files.keys()], [LOCK]);
+  assert.equal(fx.files.get(LOCK), String(A));
+});
+
+test('claim: a rename briefly held by antivirus (EBUSY) is retried, not skipped', () => {
+  const fx = fakeFs({ [LOCK]: '4242' });
+  const rename = fx.renameSync;
+  let fails = 2;
+  let sleeps = 0;
+  fx.renameSync = (from, to) => {
+    if (fails-- > 0) throw Object.assign(new Error('EBUSY'), { code: 'EBUSY' });
+    return rename(from, to);
+  };
+  assert.equal(claim(() => false, () => { sleeps++; }, fx, A), null);
+  assert.equal(sleeps, 2, 'it backed off between attempts');
+  assert.deepEqual([...fx.files.keys()], [LOCK]);
+  assert.equal(fx.files.get(LOCK), String(A), 'and ends up holding the lock');
+});
+
+test('claim: an unwritable dir does not block startup', () => {
+  const denied = () => { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }); };
+  const stale = fakeFs({ [LOCK]: '4242' });
+  stale.renameSync = denied;
+  assert.equal(claim(() => false, noSleep, stale, A), null);
+  const empty = fakeFs({});
+  empty.writeFileSync = denied;
+  assert.equal(claim(() => false, noSleep, empty, A), null);
+});
