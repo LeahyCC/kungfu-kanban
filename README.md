@@ -196,6 +196,19 @@ re-enters the original worktree, so a follow-up push updates the existing PR.
 Follow-ups respect the parallel cap and queue like any run; the follow-up text is
 appended to the card's prompt so Sensei reviews and retries see it.
 
+### Standing conventions in every card prompt
+
+`lib/runner.js` appends these to each card's prompt (after the card's own text):
+
+- **UI verification**: UI changes must be proven in a real headless browser
+  (`npx playwright`), not code review alone.
+- **Foreground commands**: builds and tests run in the foreground with a
+  600000 ms timeout. Nothing is left running in the background, since the
+  session ends when the turn does. A command that can't finish in 10 minutes
+  is not run and is reported instead.
+- **No python on Windows**: the Windows build adds a line telling agents not
+  to call `python` or `python3`.
+
 ### Subscription limits, automatic cooldown
 
 When a run dies on a usage/rate limit, the board:
