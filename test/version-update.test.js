@@ -104,7 +104,9 @@ async function withRepo(fn) {
     git(pub, ['add', '-A']);
     git(pub, ['commit', '-qm', 'v1']);
     git(pub, ['push', '-q', 'origin', 'main']);
-    execFileSync('git', ['clone', '-q', bare, local]);
+    execFileSync('git', ['clone', '-q', '-c', 'core.autocrlf=false', bare, local]);
+    git(pub, ['config', 'core.autocrlf', 'false']);
+    git(local, ['config', 'core.autocrlf', 'false']);
     await fn({ pub, local });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
