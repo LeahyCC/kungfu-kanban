@@ -846,7 +846,6 @@ app.patch('/api/tasks/:id', (req, res) => {
     else task[f] = req.body[f];
   }
   if ('schedule' in req.body) task.schedule = parseSchedule(req.body.schedule);
-  if (!STATUSES.includes(task.status)) task.status = 'backlog';
   save();
   broadcast({ type: 'task', task });
   // Shipping a card (or loosening deps) can free queued dependents.

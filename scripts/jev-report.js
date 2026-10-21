@@ -5,6 +5,7 @@
 // orphan transcripts and would be a surprising side effect for a report.
 const fs = require('fs');
 const path = require('path');
+const { readArchiveFile } = require('../lib/archive-file');
 
 const DATA_DIR = process.env.KFK_DATA_DIR || path.join(__dirname, '..', 'data');
 const LADDER = ['haiku', 'sonnet', 'opus', 'fable']; // cheapest first
@@ -19,13 +20,7 @@ function readCards() {
   try {
     live = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'tasks.json'), 'utf8'));
   } catch {}
-  let archived = [];
-  try {
-    archived = fs.readFileSync(path.join(DATA_DIR, 'archive.jsonl'), 'utf8')
-      .split('\n').filter(Boolean)
-      .map((l) => { try { return JSON.parse(l); } catch { return null; } })
-      .filter(Boolean);
-  } catch {}
+  const archived = readArchiveFile(path.join(DATA_DIR, 'archive.jsonl'));
   return [...live, ...archived].filter((t) => t.jevRoute);
 }
 

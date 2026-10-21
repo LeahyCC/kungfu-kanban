@@ -7,6 +7,7 @@
 // stay blank rather than guessing.
 const fs = require('fs');
 const path = require('path');
+const { readArchiveFile } = require('../lib/archive-file');
 
 const DATA_DIR = process.env.KFK_DATA_DIR || path.join(__dirname, '..', 'data');
 
@@ -15,13 +16,7 @@ function readCards() {
   try {
     live = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'tasks.json'), 'utf8'));
   } catch {}
-  let archived = [];
-  try {
-    archived = fs.readFileSync(path.join(DATA_DIR, 'archive.jsonl'), 'utf8')
-      .split('\n').filter(Boolean)
-      .map((l) => { try { return JSON.parse(l); } catch { return null; } })
-      .filter(Boolean);
-  } catch {}
+  const archived = readArchiveFile(path.join(DATA_DIR, 'archive.jsonl'));
   const seen = new Set();
   return [...live, ...archived].filter((t) => {
     if (!t || typeof t !== 'object' || seen.has(t.id)) return false;
@@ -62,23 +57,28 @@ const isCount = (n) => Number.isInteger(n) && n >= 0;
 // Pure: cards in, display rows and totals out. `waitMs` / `mergeMs` ride along
 // on each row so callers (and tests) can read the raw numbers.
 function summarize(cards) {
-  const have = { queuedAt: 0, doneAt: 0, followUps: 0, sendBacks: 0, deps: 0 };
+  const have = { firstQueuedAt: 0, firstStartedAt: 0, doneAt: 0, followUps: 0, sendBacks: 0, deps: 0 };
   const waits = [];
   const merges = [];
   const rows = cards.map((t) => {
-    if (t.queuedAt) have.queuedAt++;
+    if (t.firstQueuedAt) have.firstQueuedAt++;
+    if (t.firstStartedAt) have.firstStartedAt++;
     if (t.doneAt) have.doneAt++;
     if (isCount(t.followUps)) have.followUps++;
     if (isCount(t.sendBacks)) have.sendBacks++;
     const hadDeps = Array.isArray(t.deps) ? t.deps.length > 0 : null;
     if (hadDeps) have.deps++;
-    const waitMs = gap(t.queuedAt, t.startedAt);
+    // First queue entry to first start: queuedAt/startedAt are per lap, so a
+    // re-park or a re-run from Review would make them describe the wrong wait.
+    const waitMs = gap(t.firstQueuedAt, t.firstStartedAt);
     const mergeMs = gap(t.doneAt, t.prMergedAt);
     if (waitMs != null) waits.push(waitMs);
     if (mergeMs != null) merges.push(mergeMs);
     return {
       title: String(t.title || '').slice(0, 50),
-      status: t.error ? 'error' : (t.status || '?'),
+      // t.error lingers after a card is approved or merged, so only a card
+      // still waiting in Review is really "in error".
+      status: t.error && t.status === 'review' ? 'error' : (t.status || '?'),
       queuedWait: fmtDuration(waitMs),
       deps: hadDeps == null ? '?' : hadDeps ? 'yes' : 'no',
       followUps: isCount(t.followUps) ? t.followUps : '',
@@ -97,7 +97,7 @@ function summarize(cards) {
     mergeCount: merges.length,
   };
   const med = (ms, n) => (n ? `${fmtDuration(ms)} (${n} cards)` : 'n/a');
-  const line = `${totals.cards} cards. With queuedAt ${have.queuedAt}, doneAt ${have.doneAt}, ` +
+  const line = `${totals.cards} cards. With firstQueuedAt ${have.firstQueuedAt}, firstStartedAt ${have.firstStartedAt}, doneAt ${have.doneAt}, ` +
     `followUps ${have.followUps}, sendBacks ${have.sendBacks}, deps ${have.deps}. ` +
     `Median queued wait ${med(totals.medianWaitMs, totals.waitCount)}; ` +
     `median done to merged ${med(totals.medianMergeMs, totals.mergeCount)}.`;

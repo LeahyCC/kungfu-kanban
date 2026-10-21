@@ -59,7 +59,7 @@ before(() => {
   store.state.settings.cleanupOnMerge = false;
   manager.invoke = (trigger) => invokes.push(trigger);
   manager.config = () => ({ triggers: { onFinish: true } });
-  runner.followUp = (id, msg) => { followUps.push({ id, msg }); return { queued: true }; };
+  runner.followUp = (id, msg, opts) => { followUps.push({ id, msg, opts }); return { queued: true }; };
   runner.pumpQueue = () => {};
   // The conflict test's sweep launches a fix card. Left real, startTask
   // spawned an actual `claude` run in the fixture worktree on any machine
@@ -110,6 +110,7 @@ test('sweep: red CI auto-fixes in the card\'s own session before any Sensei verd
     await prwatch.sweep();
     assert.equal(followUps.length, 1);
     assert.match(followUps[0].msg, /--log-failed/);
+    assert.equal(followUps[0].opts.count, false, 'the board\'s own CI fix is not a follow-up from a person');
     assert.equal(t.ciFixes, 1);
     assert.equal(invokes.length, 0, 'no verdict while the auto-fix is in flight');
   } finally {
@@ -143,6 +144,17 @@ test('sweep: an upstream merge ships the card', async () => {
   gh({ state: 'MERGED', baseRefName: 'main', statusCheckRollup: [] });
   await prwatch.sweep();
   assert.equal(t.status, 'done');
+  assert.ok(t.prMergedAt);
+  assert.equal(t.doneAt, undefined, 'the merge moved it to done; nobody approved it, so doneAt stays unset');
+});
+
+test('sweep: a card approved before its PR merged keeps the approval time as doneAt', async () => {
+  const t = card();
+  t.status = 'done';
+  t.doneAt = '2026-10-01T10:00:00.000Z';
+  gh({ state: 'MERGED', baseRefName: 'main', statusCheckRollup: [] });
+  await prwatch.sweep();
+  assert.equal(t.doneAt, '2026-10-01T10:00:00.000Z');
   assert.ok(t.prMergedAt);
 });
 
