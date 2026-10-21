@@ -38,8 +38,15 @@ if (heldBy) {
 const PORT = process.env.PORT || 4747;
 const HOST = process.env.HOST || '127.0.0.1';
 const app = express();
-app.use(express.json({ limit: '1mb' }));
+const jsonBody = express.json({ limit: '1mb' });
+// A contract may be 1 MB of text, which JSON escaping can inflate several-fold,
+// so POST /api/contracts gets a wider parser. It is mounted after the token
+// gate below, so only an authenticated caller can make the server buffer that much.
+const contractBody = express.json({ limit: '8mb' });
+const isContractPost = (req) => req.method === 'POST' && req.path === '/api/contracts';
+app.use((req, res, next) => (isContractPost(req) ? next() : jsonBody(req, res, next)));
 auth.install(app); // token gate (only active when a token is configured) — must precede static
+app.use((req, res, next) => (isContractPost(req) ? contractBody(req, res, next) : next()));
 
 // --- gzip: stream-compress (never buffer) text-ish GET responses >= 1 KB
 // when the client accepts it. /api/events is excluded — SSE must never be
@@ -995,6 +1002,26 @@ app.post('/api/manager/clear', (req, res) => {
   if (b.log) manager.clearLog();
   res.json({ ok: true });
 });
+
+// --- Contracts: named, versioned text files cards publish for each other ---
+const contracts = require('./lib/contracts');
+function contractReply(res, fn) {
+  try {
+    res.json(fn());
+  } catch (e) {
+    if (e instanceof contracts.ContractError) return res.status(e.status).json({ error: e.message });
+    res.status(500).json({ error: String(e.message || e).slice(0, 300) });
+  }
+}
+
+app.post('/api/contracts', (req, res) =>
+  contractReply(res, () => contracts.publish(req.body && typeof req.body === 'object' ? req.body : {}))
+);
+app.get('/api/contracts', (req, res) => contractReply(res, () => ({ contracts: contracts.list() })));
+app.get('/api/contracts/:name', (req, res) => contractReply(res, () => contracts.get(req.params.name)));
+app.get('/api/contracts/:name/:version', (req, res) =>
+  contractReply(res, () => contracts.get(req.params.name, req.params.version))
+);
 
 // --- Scheduled cards ---
 // Scheduled cards live in Backlog and never move columns themselves. Once a

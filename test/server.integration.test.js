@@ -485,3 +485,116 @@ describe('cooldown clear', () => {
     assert.equal(cfg.cooldownUntil, 0);
   });
 });
+
+describe('contracts API', () => {
+  let child, base, dataDir;
+  const auth = { Authorization: `Bearer ${TEST_TOKEN}` };
+  const get = (p) => fetch(`${base}${p}`, { headers: auth });
+  const post = (body) =>
+    fetch(`${base}/api/contracts`, { method: 'POST', headers: { ...JSON_HEADERS, ...auth }, body: JSON.stringify(body) });
+
+  before(async () => {
+    dataDir = mkTempDataDir();
+    fs.writeFileSync(path.join(dataDir, 'auth-token'), TEST_TOKEN);
+    ({ child, base } = await bootServer({ KFK_DATA_DIR: dataDir }));
+  });
+
+  after(async () => {
+    await killChild(child);
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+
+  test('the token gate covers every contracts route', async () => {
+    assert.equal((await fetch(`${base}/api/contracts`)).status, 401);
+    assert.equal((await fetch(`${base}/api/contracts/x`)).status, 401);
+    assert.equal((await fetch(`${base}/api/contracts/x/1`)).status, 401);
+    const res = await postJson(base, '/api/contracts', { name: 'x', content: 'y' });
+    assert.equal(res.status, 401);
+  });
+
+  test('POST publishes v1, then v2, and a repeat body is created:false', async () => {
+    let res = await post({ name: 'schema', content: '{"a":1}', ext: 'json', taskId: 't1' });
+    assert.equal(res.status, 200);
+    let body = await res.json();
+    assert.equal(body.created, true);
+    assert.equal(body.contract.version, 1);
+    assert.equal(body.contract.ext, 'json');
+    assert.equal(body.contract.taskId, 't1');
+
+    res = await post({ name: 'schema', content: '{"a":1}', ext: 'json' });
+    body = await res.json();
+    assert.equal(body.created, false);
+    assert.equal(body.contract.version, 1);
+
+    body = await (await post({ name: 'schema', content: '{"a":2}', ext: 'json' })).json();
+    assert.equal(body.created, true);
+    assert.equal(body.contract.version, 2);
+  });
+
+  test('GET /api/contracts lists latest metadata without content', async () => {
+    const res = await get('/api/contracts');
+    assert.equal(res.status, 200);
+    const { contracts } = await res.json();
+    const row = contracts.find((c) => c.name === 'schema');
+    assert.equal(row.version, 2);
+    assert.ok(!('content' in row));
+  });
+
+  test('GET /api/contracts/:name returns the latest with content', async () => {
+    const body = await (await get('/api/contracts/schema')).json();
+    assert.equal(body.contract.version, 2);
+    assert.equal(body.content, '{"a":2}');
+  });
+
+  test('GET /api/contracts/:name/:version returns that version', async () => {
+    const body = await (await get('/api/contracts/schema/1')).json();
+    assert.equal(body.contract.version, 1);
+    assert.equal(body.content, '{"a":1}');
+  });
+
+  test('404 for an unknown name or version', async () => {
+    assert.equal((await get('/api/contracts/missing')).status, 404);
+    assert.equal((await get('/api/contracts/schema/9')).status, 404);
+    assert.equal((await get('/api/contracts/missing/1')).status, 404);
+  });
+
+  test('400 for invalid input, with a JSON error body', async () => {
+    for (const bad of [
+      { name: '../etc', content: 'x' },
+      { name: 'ok', content: 'a\0b' },
+      { name: 'ok', content: 'x', ext: '.exe' },
+      { name: 'ok' },
+      { content: 'x' },
+    ]) {
+      const res = await post(bad);
+      assert.equal(res.status, 400, JSON.stringify(bad).slice(0, 60));
+      assert.equal(typeof (await res.json()).error, 'string');
+    }
+    assert.equal((await get('/api/contracts/schema/abc')).status, 400);
+    assert.equal((await get('/api/contracts/schema/0')).status, 400);
+    assert.equal((await get('/api/contracts/Bad_Name')).status, 400);
+    // URL-encoded traversal reaches the handler as a decoded param and is refused there.
+    assert.equal((await get('/api/contracts/..%2F..%2Ftasks')).status, 400);
+    const res = await fetch(`${base}/api/contracts`, { method: 'POST', headers: { ...JSON_HEADERS, ...auth }, body: '[1]' });
+    assert.equal(res.status, 400);
+  });
+
+  test('a 1 MB body of characters JSON escapes is accepted; one byte over is 400', async () => {
+    const max = 1024 * 1024;
+    // Newlines escape to two bytes each, so the request body is over 2 MB.
+    let res = await post({ name: 'huge', content: '\n'.repeat(max) });
+    assert.equal(res.status, 200);
+    const back = await (await get('/api/contracts/huge')).json();
+    assert.equal(back.content.length, max);
+    res = await post({ name: 'huge2', content: 'a'.repeat(max + 1) });
+    assert.equal(res.status, 400);
+  });
+
+  test('contracts survive a server restart', async () => {
+    await killChild(child);
+    ({ child, base } = await bootServer({ KFK_DATA_DIR: dataDir }));
+    const body = await (await get('/api/contracts/schema')).json();
+    assert.equal(body.contract.version, 2);
+    assert.equal(body.content, '{"a":2}');
+  });
+});
