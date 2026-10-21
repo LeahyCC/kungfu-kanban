@@ -208,6 +208,36 @@ describe('publishTask against a real worktree', () => {
   });
 });
 
+describe('Windows 8.3 names', () => {
+  // Regression: the CI runner's temp dir is C:\Users\RUNNER~1\..., so a link
+  // target built from it was stored in short form while git reported the root
+  // long, and a link staying inside the worktree was refused as an escape. A
+  // junction needs no privilege, so this runs here too.
+  test('a link inside the worktree whose target is spelled with 8.3 names still publishes', async (t) => {
+    if (process.platform !== 'win32') return t.skip('Windows only');
+    const id = 'a1b2c3d4-0009';
+    const { repo, wt } = makeRepo(id);
+    write(wt, 'a-rather-long-directory-name/real-file-with-a-long-name.txt', 'inside');
+    const longDir = path.join(wt, 'a-rather-long-directory-name');
+    let short;
+    try {
+      short = execFileSync('powershell', ['-NoProfile', '-Command',
+        `(New-Object -ComObject Scripting.FileSystemObject).GetFolder('${longDir}').ShortPath`], { encoding: 'utf8' }).trim();
+    } catch (e) {
+      return t.skip(`cannot read the 8.3 name: ${e.message}`);
+    }
+    if (short.toLowerCase() === longDir.toLowerCase()) return t.skip('8.3 names are disabled on this volume');
+    fs.symlinkSync(short, path.join(wt, 'alias-dir'), 'junction');
+
+    const task = makeTask(id, repo, {
+      publishes: [{ name: 'short-name-link', path: 'alias-dir/real-file-with-a-long-name.txt' }],
+    });
+    const r = await publish.publishTask(task);
+    assert.deepEqual(r.problems, []);
+    assert.equal(contracts.get('short-name-link').content, 'inside');
+  });
+});
+
 describe('finish-time publish (runner.finalize)', () => {
   test('a clean worktree card publishes at finish', async () => {
     const id = 'b1b2c3d4-0001';
