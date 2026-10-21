@@ -285,6 +285,30 @@ ids, reusing the importer's title resolver — unresolvable entries surface as
 `⛓ unresolved dep` instead of silently dropping the chain. Import markdown sets
 the same thing with the `after` key (see [Importing cards](#importing-cards-from-markdown)).
 
+### Contracts
+
+A contract is a named, versioned text file one card publishes so other cards can
+read it. The HTTP API stores and serves them; card publishing, the UI and
+dependencies on contracts come later. Content is any text (the board never
+parses it), up to 1 MB, with no NUL bytes. Files live in `data/contracts/<name>/<version>.<ext>`
+and the metadata in `data/contracts/index.json`.
+
+A contract's metadata is `{ name, version, sha256, taskId, publishedAt, ext, bytes }`.
+`version` starts at 1 and goes up by one each time a name gets new content;
+publishing the same content as the latest version changes nothing and returns
+that version. `name` must match `^[a-z0-9][a-z0-9._-]{0,63}$` (no `..`, no trailing
+`.`, no Windows device names like `con`), and `ext` (default `txt`) must match `^[a-z0-9]{1,10}$`.
+
+| Request | Response |
+|---|---|
+| `POST /api/contracts` `{ name, content, ext?, taskId? }` | `{ contract, created }`; `created` is `false` when the content matched the latest version |
+| `GET /api/contracts` | `{ contracts: [...] }`, the latest metadata per name, no content |
+| `GET /api/contracts/:name` | `{ contract, content }` for the latest version |
+| `GET /api/contracts/:name/:version` | `{ contract, content }` for that version |
+
+Invalid input gets a `400` and an unknown name or version a `404`, both as `{ error }`.
+Like the rest of `/api`, these routes sit behind the token gate.
+
 ---
 
 ## Importing cards from Markdown
