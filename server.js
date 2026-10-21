@@ -778,6 +778,7 @@ function makeTask(b, createdBy = 'user') {
     acceptanceCriteria: b.acceptanceCriteria || '',
     group: typeof b.group === 'string' && b.group.trim() ? b.group.trim().slice(0, 60) : null,
     deps: depsLib.sanitize(b.deps, null),
+    uses: Array.isArray(b.uses) ? b.uses : [], // validated by the route before this runs
     schedule: parseSchedule(b.schedule),
     issueNumber: Number.isInteger(b.issueNumber) ? b.issueNumber : null,
     publishes: Array.isArray(b.publishes) ? b.publishes : [], // validated by the route before this runs
@@ -811,12 +812,11 @@ app.get('/api/tasks/:id', (req, res) => {
 
 app.post('/api/tasks', (req, res) => {
   const body = req.body || {};
-  if ('publishes' in body) {
-    try {
-      body.publishes = publishLib.normalize(body.publishes);
-    } catch (e) {
-      return res.status(400).json({ error: e.message });
-    }
+  try {
+    if ('publishes' in body) body.publishes = publishLib.normalize(body.publishes);
+    if ('uses' in body) body.uses = depsLib.normalizeUses(body.uses);
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
   }
   const task = makeTask(body);
   state.tasks.unshift(task);
@@ -838,13 +838,15 @@ app.patch('/api/tasks/:id', (req, res) => {
   if ('status' in req.body && (req.body.status === 'running' || req.body.status === 'stopping')) {
     return res.status(400).json({ error: 'status cannot be set directly to running/stopping' });
   }
-  if ('publishes' in req.body) {
-    try {
-      req.body.publishes = publishLib.normalize(req.body.publishes);
-    } catch (e) {
-      return res.status(400).json({ error: e.message });
-    }
+  let uses;
+  try {
+    if ('publishes' in req.body) req.body.publishes = publishLib.normalize(req.body.publishes);
+    if ('uses' in req.body) uses = depsLib.normalizeUses(req.body.uses);
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
   }
+  // uses names contracts, not cards, so it needs no cycle check (see deps.wouldCycle).
+  if (uses) task.uses = uses;
   if ('deps' in req.body) {
     const clean = depsLib.sanitize(req.body.deps, task.id);
     if (depsLib.wouldCycle(task.id, clean)) {
@@ -873,7 +875,7 @@ app.patch('/api/tasks/:id', (req, res) => {
   save();
   broadcast({ type: 'task', task });
   // Shipping a card (or loosening deps) can free queued dependents.
-  if (task.status === 'done' || 'deps' in req.body) runner.pumpQueue();
+  if (task.status === 'done' || 'deps' in req.body || 'uses' in req.body) runner.pumpQueue();
   res.json(task);
 });
 
@@ -1056,7 +1058,11 @@ app.post('/api/contracts', (req, res) =>
   contractReply(res, () => {
     const result = contracts.publish(req.body && typeof req.body === 'object' ? req.body : {});
     // The Contracts tab lists by name, so only a new version changes what it shows.
-    if (result.created) broadcast({ type: 'contracts' });
+    // A new version may also be what a queued card's `uses:` waits on.
+    if (result.created) {
+      broadcast({ type: 'contracts' });
+      runner.pumpQueue();
+    }
     return result;
   })
 );

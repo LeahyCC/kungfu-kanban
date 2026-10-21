@@ -14,7 +14,7 @@
 import { state, COLUMNS, RUNNING_LIKE, CTX_WINDOW, optimistic, latestPublished } from './state.js';
 import { $, esc, relTime, fmtTok, scheduleLabel } from './util.js';
 import { api, toast, confirmDlg, withBusy } from './api.js';
-import { isPrUnshipped, depPass } from './deps.js';
+import { isPrUnshipped, depPass, useLabel } from './deps.js';
 import { openDrawer } from './drawer.js';
 import { openComposer } from './composer.js';
 
@@ -143,18 +143,24 @@ function cardRevKey(t, pass) {
       return `${id}:${dv}:${isPrUnshipped(d) ? 1 : 0}`;
     }).join(',');
   }
+  // A contract appearing changes the badge without touching the card's own v.
+  if ((t.uses || []).length) key += '|u:' + pass.unmetUses(t).map(useLabel).join(',');
   if (t.status === 'review' || isPrUnshipped(t)) {
     key += '|h:' + pass.held(t.id).map((x) => `${x.id}:${x.v !== undefined ? 'v' + x.v : x.title || ''}`).join(',');
   }
   return key;
 }
 
+// name:version of every contract: a new version can release a `uses:` card.
+const contractsSig = () => state.contracts.map((c) => `${c.name}:${c.version}`).join(',');
+
 // Cheap board-level gate: when every task carries v, the fingerprint is the
 // id:v list instead of a full JSON stringify of the payload.
 function boardFingerprint() {
-  let cheap = `${filterText}|`;
+  const contracts = contractsSig();
+  let cheap = `${filterText}|${contracts}|`;
   for (const t of state.tasks) {
-    if (t.v === undefined) return `${JSON.stringify(state.tasks)}|${filterText}`;
+    if (t.v === undefined) return `${JSON.stringify(state.tasks)}|${filterText}|${contracts}`;
     cheap += `${t.id}:${t.v};${t._optRev || ''};`;
   }
   return cheap;
@@ -445,6 +451,16 @@ function patchCardEl(el, t, pass) {
     meta.push(`<span class="badge dep" title="${esc(title)}">${label} ${esc(String(first || '').slice(0, 30))}${first && first.length > 30 ? '…' : ''}${more}</span>`);
   } else if ((t.deps || []).length) {
     meta.push(`<span class="badge dep-met" title="All prerequisites are done">⛓ deps met</span>`);
+  }
+  // uses: waits for a contract to be published (not for code to merge).
+  const unmetUses = pass.unmetUses(t);
+  if (unmetUses.length) {
+    // Short like "⛓ after:"; the tooltip spells it out.
+    const u0 = unmetUses[0];
+    const first = `${u0.name}${u0.version ? ` v${u0.version}` : ''}`;
+    const more = unmetUses.length > 1 ? ` +${unmetUses.length - 1}` : '';
+    const title = `Waits until published: ${unmetUses.map(useLabel).join(' · ')}`;
+    meta.push(`<span class="badge dep" title="${esc(title)}">⛓ uses: ${esc(first.slice(0, 24))}${first.length > 24 ? '…' : ''}${more}</span>`);
   }
   if ((t.depsUnresolved || []).length) {
     meta.push(`<span class="badge err" title="Unresolved after: ${esc(t.depsUnresolved.join(' · '))} — edit the card or let the Sensei fix the link">⛓ unresolved dep</span>`);

@@ -35,14 +35,14 @@ export function connectSSE() {
       sseWasDown = false;
       loadTasks();
       if (managerVisible()) loadManager();
-      if (contractsVisible()) loadContracts();
+      loadContracts(); // always: uses: badges read the list too
     }
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       loadTasks();
       if (managerVisible()) loadManager();
-      if (contractsVisible()) loadContracts();
+      loadContracts();
     }
   });
 
@@ -95,7 +95,7 @@ export function connectSSE() {
       return;
     }
     if (evt.type === 'contracts') {
-      if (contractsVisible()) loadContracts();
+      loadContracts(); // a new version can release a card waiting on uses:
       return;
     }
     if (evt.type === 'errors') {

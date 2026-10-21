@@ -348,6 +348,29 @@ done whose worktree still exists, and returns `{ published, unchanged, problems 
 It answers `404` when the worktree is gone, `409` when the card is not in review
 or done, and `400` when the card is not a worktree card or declares no `publishes`.
 
+#### Waiting on a contract
+
+A card can wait for a contract instead of a card, with a repeatable `uses` line:
+
+```markdown
+## Build the client
+uses: api-shape          # any version
+uses: error-codes@2      # exactly version 2
+```
+
+The task stores them as `uses: [{ name, version }]`, with `version` null when
+not pinned. `POST /api/tasks` and `PATCH /api/tasks/:id` accept the same list,
+or strings like `"api-shape@2"`; a bad entry is a `400`. A bad import line is
+skipped with an import warning, like a bad `publishes` line.
+
+A queued card launches once every `after:` prerequisite is done **and** every
+`uses` entry exists: any version of the name, or the pinned version. This is
+weaker than `after:`: it means the contract was published, not that the
+publishing card's code merged. Every new contract version (finish-time publish,
+`POST /api/tasks/:id/publish`, `POST /api/contracts`) starts waiting cards right
+away. Contracts are never deleted, so a met entry stays met. The card shows
+`⛓ uses: <name>` while it waits, and its drawer says what it waits for.
+
 #### The Contracts tab
 
 **Contracts** sits next to Archive in the header (palette command *Go to Contracts*,
