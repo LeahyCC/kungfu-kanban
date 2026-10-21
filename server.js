@@ -14,6 +14,7 @@ const cooldown = require('./lib/cooldown');
 const offline = require('./lib/offline');
 const models = require('./lib/models');
 const depsLib = require('./lib/deps');
+const { setStatus } = require('./lib/transitions');
 const errlog = require('./lib/errlog');
 const bus = require('./lib/bus');
 const prflow = require('./lib/prflow');
@@ -841,6 +842,7 @@ app.patch('/api/tasks/:id', (req, res) => {
         require('./lib/errlog').resolveTask(task.id, ['permission']);
       }
     }
+    else if (f === 'status') setStatus(task, STATUSES.includes(req.body.status) ? req.body.status : 'backlog');
     else task[f] = req.body[f];
   }
   if ('schedule' in req.body) task.schedule = parseSchedule(req.body.schedule);

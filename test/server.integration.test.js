@@ -209,6 +209,30 @@ describe('HTTP contract (no auth gate)', () => {
     }
   });
 
+  test('PATCH /api/tasks/:id — status moves stamp queuedAt / doneAt, and a drag back counts a send-back', async () => {
+    const created = await (await postJson(base, '/api/tasks', { title: 'flow target' })).json();
+    assert.equal(created.queuedAt, undefined);
+    const done = await (await patchJson(base, `/api/tasks/${created.id}`, { status: 'done' })).json();
+    assert.ok(done.doneAt);
+    assert.equal(done.sendBacks, undefined, 'backlog to done is not a send-back');
+    const back = await (await patchJson(base, `/api/tasks/${created.id}`, { status: 'queued' })).json();
+    assert.ok(back.queuedAt);
+    assert.equal(back.sendBacks, 1);
+    // A PATCH that leaves the status alone must not re-stamp it.
+    const same = await (await patchJson(base, `/api/tasks/${created.id}`, { title: 'renamed' })).json();
+    assert.equal(same.queuedAt, back.queuedAt);
+    assert.equal(same.sendBacks, 1);
+  });
+
+  test('POST /api/tasks/:id/followup — a refused follow-up (no session) counts nothing', async () => {
+    const created = await (await postJson(base, '/api/tasks', { title: 'follow-up target' })).json();
+    // No session yet, so the route refuses and nothing is counted.
+    const refused = await postJson(base, `/api/tasks/${created.id}/followup`, { message: 'more' });
+    assert.equal(refused.status, 409);
+    const after = await (await fetch(`${base}/api/tasks/${created.id}`)).json();
+    assert.equal(after.followUps, undefined);
+  });
+
   test('PATCH /api/tasks/:id — a dependency cycle is rejected', async () => {
     const a = await (await postJson(base, '/api/tasks', { title: 'A' })).json();
     const b = await (await postJson(base, '/api/tasks', { title: 'B' })).json();
