@@ -66,3 +66,17 @@ test('release: leaves another server lock alone', () => {
   assert.equal(readHolder(), 4242, 'only the holder may release');
   reset();
 });
+
+test('holderIsLive: checks liveness without ps (Windows has none)', () => {
+  const { holderIsLive } = require('../lib/singleton');
+  assert.equal(typeof holderIsLive(process.pid), 'boolean');
+  assert.equal(holderIsLive(2147483000), false, 'a pid that does not exist is not live');
+});
+
+test('claim: a lock created by another server in the meantime is respected', () => {
+  reset();
+  fs.writeFileSync(LOCK, '4242');
+  assert.equal(claim(() => true, noSleep), 4242);
+  assert.equal(readHolder(), 4242);
+  reset();
+});
