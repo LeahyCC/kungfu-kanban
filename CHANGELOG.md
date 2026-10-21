@@ -7,6 +7,12 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.23.0] - 2026-10-20
+
+### Added
+- Cards now record when they were last queued and last done, how many follow-ups they got, and how many times they were sent back from review. Every status change goes through one place (`lib/transitions.js`) so the stamps are the same whoever moves the card (#159).
+- `npm run flow-report` prints a table of queued wait, follow-ups, send-backs and done-to-merged time per card, with medians. Cards from before this release show blanks (#159).
+
 ## [1.22.1] - 2026-10-20
 
 ### Fixed
