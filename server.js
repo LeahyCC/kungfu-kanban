@@ -1034,15 +1034,43 @@ if (HOST !== '127.0.0.1' && HOST !== 'localhost' && !auth.getToken()) {
 // children orphaned, and the debounced save could lose the final write. Now
 // we stop every running child, mark its card honestly, and flush synchronously
 // before exiting — a restart is safe even with cards in flight.
-function shutdown() {
+function shutdown(code = 0) {
   runner.stopAll();
   ptylib.killAll(); // no orphan shells across a kickstart
   flush();
   singleton.release(); // the next start must not have to wait out our stale lock
-  process.exit(0);
+  process.exit(code);
 }
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+process.on('SIGTERM', () => shutdown());
+process.on('SIGINT', () => shutdown());
+
+// Last line of defence. A stray rejection (on 2026-10-20 a synchronous spawn
+// ENAMETOOLONG inside an async function) used to take the whole board down
+// with every card running. Log it and keep serving.
+function describeError(e) {
+  return e instanceof Error ? (e.stack || e.message) : String(e);
+}
+process.on('unhandledRejection', (reason) => {
+  console.error('unhandledRejection:', reason);
+  try {
+    errlog.capture('server', { text: `unhandled rejection: ${describeError(reason).split('\n')[0]}`, detail: describeError(reason) });
+  } catch {}
+});
+// An uncaught exception leaves the process in an unknown state, so it is not
+// swallowed: log it, then run the normal shutdown (which marks running cards
+// honestly and flushes state) and exit non-zero so launchd restarts us.
+process.on('uncaughtException', (err) => {
+  console.error('uncaughtException:', err);
+  try {
+    errlog.capture('server', { text: `uncaught exception: ${describeError(err).split('\n')[0]}`, detail: describeError(err) });
+    errlog.flush();
+  } catch {}
+  try {
+    shutdown(1);
+  } catch {
+    process.exit(1);
+  }
+});
 
 app.listen(PORT, HOST, () => {
   console.log(`kungfu-kanban running at http://localhost:${PORT}`);

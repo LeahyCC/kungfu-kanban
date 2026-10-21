@@ -60,30 +60,27 @@ test('buildPrompt: skills + skillsAuto combine, skillsAuto wraps outermost, conv
 
 test('buildArgs: minimal task produces just -p/--output-format/--verbose', () => {
   const args = buildArgs({ id: 'abc', prompt: 'hi', model: 'default' }, null);
-  assert.deepEqual(args.slice(0, 5), ['--output-format', 'stream-json', '--verbose', '-p', '--']);
-  assert.match(args[5], /^hi\n\n/);
-  assert.equal(args.length, 6);
+  assert.deepEqual(args, ['--output-format', 'stream-json', '--verbose', '-p']);
 });
 
-// `--` ends the CLI's option parsing, so the prompt has to be the LAST thing on
-// argv: anything pushed after it is swallowed as prompt text, not parsed.
-test('buildArgs: a hyphen-leading prompt ends argv behind a literal -- so the CLI parser cannot read it as a flag', () => {
-  for (const prompt of ['---', '- something', '--output-format']) {
+// The prompt travels on stdin (claude-spawn.js), never argv: Windows caps a
+// command line at 32767 chars, and a hyphen-leading prompt can't be misread as a flag.
+test('buildArgs: the prompt never appears on argv', () => {
+  for (const prompt of ['---', '- something', 'x'.repeat(40_000)]) {
     const args = buildArgs({ id: 'a', prompt, model: 'default' }, null);
-    assert.deepEqual(args.slice(-3, -1), ['-p', '--']);
-    assert.ok(args[args.length - 1].startsWith(prompt), args[args.length - 1]);
+    assert.equal(args[args.length - 1], '-p');
+    assert.ok(!args.some((a) => a.includes(prompt)), 'prompt leaked onto argv');
   }
 });
 
-test('buildArgs: every flag lands before the -p -- prompt, never after it', () => {
+test('buildArgs: every flag lands before the trailing -p', () => {
   const args = buildArgs(
     { id: 'abcdef12', prompt: '--- go', model: 'opus', effort: 'high', permissionMode: 'plan', agent: 'explore', worktree: true, cwd: '/repo' },
     null,
   );
-  assert.deepEqual(args.slice(-3, -1), ['-p', '--']);
-  assert.match(args[args.length - 1], /^--- go\n\n/);
+  assert.equal(args[args.length - 1], '-p');
   for (const flag of ['--output-format', '--verbose', '--model', '--effort', '--permission-mode', '--agent', '--worktree', '--add-dir']) {
-    assert.ok(args.indexOf(flag) > -1 && args.indexOf(flag) < args.length - 3, `${flag} must precede -p`);
+    assert.ok(args.indexOf(flag) > -1 && args.indexOf(flag) < args.length - 1, `${flag} must precede -p`);
   }
 });
 
