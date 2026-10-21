@@ -535,6 +535,13 @@ rejected cards re-run with the manager's feedback appended to the prompt), and a
 **permission ceiling** (default `acceptEdits`) the manager can't assign beyond.
 Guardrail-blocked actions become suggestions instead of executing.
 
+**Suggestions clean themselves up.** A suggestion disappears as soon as approving
+it would do nothing: its card moved on, an `update_task` / `retarget_pr` card is
+done (or the PR merged or closed), or the error a `resolve_error` names is
+resolved. This happens live when a card changes status or an error resolves, not
+only on page load. A Sensei run error ("Manager run errored: …") resolves itself
+when a later Sensei run finishes cleanly.
+
 **Management style:** freeform standing instructions ("prefer haiku for docs tasks",
 "never auto-approve migrations") — no code changes needed.
 
