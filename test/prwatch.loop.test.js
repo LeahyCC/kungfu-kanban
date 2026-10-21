@@ -54,6 +54,9 @@ before(() => {
   git('commit', '-qm', 'init');
   git('worktree', 'add', '-q', '-b', 'kanban-aaaaaaaa', path.join(TMP, 'wt'));
 
+  // Post-merge cleanup would delete the fixture worktree the later tests need;
+  // it has its own suite (wtcleanup.test.js, wtcleanup.sweep.test.js).
+  store.state.settings.cleanupOnMerge = false;
   manager.invoke = (trigger) => invokes.push(trigger);
   manager.config = () => ({ triggers: { onFinish: true } });
   runner.followUp = (id, msg) => { followUps.push({ id, msg }); return { queued: true }; };
