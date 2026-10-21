@@ -351,7 +351,10 @@ issue automatically — issue → card → agent → PR → merged → closed.
 project) to do this on request: say "create a kungfu todo for …" and it drafts
 the cards, drops the file in the inbox, and confirms the import. It encodes the
 format, frugal model-routing, and the self-contained-prompt rule (card agents
-start with zero conversation context).
+start with zero conversation context). When a session is asked to manage a run
+(spawn, review and merge the cards itself), the skill also tells it to switch the
+Sensei and the PR watcher's auto-fixers off first, review every PR for real, and
+restore the old settings afterwards.
 
 **Installing it is automatic**: every server start writes it to
 `~/.claude/skills/kungfu-todo/` with this clone's real paths and port baked in,
