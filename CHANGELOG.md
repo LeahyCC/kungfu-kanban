@@ -7,6 +7,14 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.23.1] - 2026-10-20
+
+### Fixed
+- The flow report's queued wait now measures how long a card sat before any work began. Cards record `firstQueuedAt` and `firstStartedAt` once and never overwrite them, so a cooldown re-park or a re-run from Review no longer shrinks or inflates the wait. The board's own re-parks also leave `queuedAt` alone (#161).
+- A card merged straight from Review no longer gets a `doneAt` in the same moment as `prMergedAt`. `doneAt` is now only stamped when a person or the Sensei marks the card done, so done-to-merged measures real approval-to-merge time (#161).
+- The board's automatic CI fixes are no longer counted as follow-ups, and a follow-up is counted when it starts rather than when it is queued, so a card dragged or deleted in between counts nothing (#161).
+- The flow report shows a card's real status; the error flag only appears for cards still in Review. The archive reader is shared between the board and the report scripts, and the PATCH route no longer writes status outside `setStatus` (#161).
+
 ## [1.23.0] - 2026-10-20
 
 ### Added

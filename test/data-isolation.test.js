@@ -10,7 +10,7 @@ const path = require('path');
 // own data dir BEFORE its first ../lib require.
 
 // lib modules that never load store (directly or transitively).
-const STORE_FREE = new Set(['bus', 'discovery', 'pty', 'schedule', 'skill', 'usage', 'version']);
+const STORE_FREE = new Set(['archive-file', 'bus', 'discovery', 'pty', 'schedule', 'skill', 'usage', 'version']);
 
 test('every test file isolates its data dir before loading lib/store', () => {
   const dir = __dirname;
