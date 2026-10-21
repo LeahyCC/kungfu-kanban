@@ -393,6 +393,11 @@ Every N minutes (⚙ Settings, default 10, 0 = off) the board checks each Review
 card's PR via `gh`:
 
 - **Merged** → the card moves to Done ("PR merged") and you get a notification.
+  With cleanup on (default, ⚙ Settings), the board then kills processes still
+  running inside the card's worktree, removes the worktree, and deletes the local
+  and remote branch. It checks the branch tip landed on the base first; for a
+  squash or rebase merge it trusts GitHub's MERGED state but keeps the local
+  branch. Any cleanup failure is logged on the card and in the error tracker.
 - **Closed without merge** → noted once on the card transcript.
 - **Conflicting** (main moved under the branch) → with auto-fix on (default), the
   board spawns a **fix card**: a fresh agent run _inside the original worktree_
