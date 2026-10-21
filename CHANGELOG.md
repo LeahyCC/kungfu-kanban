@@ -7,6 +7,22 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.22.0] - 2026-10-20
+
+### Added
+- When a card's PR merges, the board removes what the card left behind: processes still running in its worktree, the worktree itself, and the local and remote branch. On by default; turn it off with "clean up worktree and branches after merge" in Settings (#150).
+- Every card prompt now tells the agent to run long commands in the foreground, since a headless session ends with its turn and nothing comes back for a background job. On Windows it also says there is no python (#148).
+- CI runs the test suite on Windows as well as Ubuntu and macOS (#151).
+
+### Fixed
+- The board no longer crashes when a prompt is too long for the Windows command line. Sensei, card and follow-up prompts go to `claude` on stdin, a spawn that throws is logged on the card, and an unhandled rejection is logged instead of killing the server (#153).
+- A failed save of `tasks.json` or `settings.json` is logged and retried instead of crashing the board. Each write uses its own temp file, and renames retry while Windows holds the file (#149).
+- On Windows a second server could start on the same data folder, because the single-instance lock relied on `ps`. The lock now checks the process another way on Windows and is created exclusively (#149).
+- A worktree card that hit an error after committing still gets its PR opened or recorded, so its `after:` dependents are released when it merges. Uncommitted leftovers from the failed run are not committed (#147, fixes #85).
+- Conflict-fixer cards run at the parent card's permission mode instead of always at acceptEdits (#154, fixes #70).
+- The dependency badge tooltip no longer double-escapes `&`, inline code inside link text renders, and a locked transcript file no longer stops the server from starting (#152, fixes #65, #66, #67).
+- The version-update tests pass on machines with `core.autocrlf=true` (#151).
+
 ## [1.21.1] — 2026-10-11
 
 ### Fixed
