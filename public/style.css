@@ -528,6 +528,9 @@ input.tiny { width: 60px; }
   background: color-mix(in srgb, var(--warning) 12%, transparent);
   font-weight: 600;
 }
+/* a published contract reads "api v2": names are lowercase identifiers, so the
+   badge keeps their case instead of shouting */
+.badge.contract { text-transform: none; color: var(--info); border-color: var(--info); }
 .badge.dep-met {
   color: var(--success);
   border-color: var(--success);

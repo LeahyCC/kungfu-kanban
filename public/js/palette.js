@@ -18,6 +18,7 @@ const COMMANDS = [
   { label: 'Go to Board', key: '1', run: () => showTab('board') },
   { label: 'Go to Sensei', key: '2', run: () => showTab('manager') },
   { label: 'Go to Archive', key: '3', run: () => showTab('archive') },
+  { label: 'Go to Contracts', key: '4', run: () => showTab('contracts') },
   { label: '⚙ Settings', run: () => openSettings() },
   { label: '◐ Toggle theme', run: () => $('#themeToggle').click() },
 ];

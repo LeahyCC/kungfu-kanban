@@ -15,6 +15,7 @@ import { $, createCoalescer } from './util.js';
 import { applyCooldown, applyModelBlocks, renderNetChip, setServerOffline, renderUsage, setCliAuth } from './chips.js';
 import { renderErrChip, loadErrors, loadManager, setMgrBusy, renderAttn, refreshMgrBadgeSoon } from './manager.js';
 import { render, loadTasks } from './board.js';
+import { contractsVisible, loadContracts, renderContractRows } from './contracts.js';
 import { renderDrawerMeta, renderDrawerActions, closeDrawer, appendTranscriptEntry } from './drawer.js';
 
 const managerVisible = () => !$('#managerView').classList.contains('hidden');
@@ -34,12 +35,14 @@ export function connectSSE() {
       sseWasDown = false;
       loadTasks();
       if (managerVisible()) loadManager();
+      if (contractsVisible()) loadContracts();
     }
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       loadTasks();
       if (managerVisible()) loadManager();
+      if (contractsVisible()) loadContracts();
     }
   });
 
@@ -53,6 +56,7 @@ export function connectSSE() {
       renderAttn(); // chip-only while the popup is hidden
       if (managerVisible()) loadManager();
       else refreshMgrBadgeSoon(); // badge count only, debounced >=5s
+      if (contractsVisible()) renderContractRows(); // the publishing card's title may have changed
     }
     if (drawerDirty) {
       drawerDirty = false;
@@ -88,6 +92,10 @@ export function connectSSE() {
     }
     if (evt.type === 'auth') {
       setCliAuth(!!evt.blocked); // CLI logged out / back in
+      return;
+    }
+    if (evt.type === 'contracts') {
+      if (contractsVisible()) loadContracts();
       return;
     }
     if (evt.type === 'errors') {

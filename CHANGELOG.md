@@ -7,6 +7,13 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.24.0] - 2026-10-21
+
+### Added
+- Contracts: named, versioned text files one card publishes and others read. A store and HTTP API (`/api/contracts`, list, latest, by version) keep every version with its sha256 (#165).
+- A card can declare the files it writes with `publishes:` lines; when it finishes cleanly the board reads each one from the card's worktree and publishes it as a contract, recording `task.published` on the card (#166).
+- A Contracts tab next to Archive lists each contract with its latest version, short sha, publishing card and time, and shows any version's content as plain text. Cards that published show a badge such as `api v2` and list every published version in their drawer. The tab refreshes live through a new `contracts` SSE event, sent when a version is published.
+
 ## [1.23.2] - 2026-10-21
 
 ### Added

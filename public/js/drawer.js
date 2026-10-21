@@ -265,7 +265,7 @@ function metaKey(t) {
   return JSON.stringify([
     t.v !== undefined ? t.v : null, t.status, t.model, t.effort, t.permissionMode, t.permissionBlocked,
     t.cwd, t.prChecks, t.deps, t.depsUnresolved, t.createdAt, t.updatedAt, t.ctxTokens,
-    t.modelUsed, t.skills, t.stats, t.sessionId, t.runCwd, t.prUrl, t.prBaseBranch,
+    t.modelUsed, t.skills, t.stats, t.sessionId, t.runCwd, t.prUrl, t.prBaseBranch, t.published,
     depPart, held, cfg.models, cfg.efforts, cfg.permissionModes,
   ]);
 }
@@ -348,6 +348,8 @@ export function renderDrawerMeta(t) {
   }
   if (t.modelUsed && t.model !== 'default' && !t.modelUsed.includes(t.model)) bits.unshift(`ran on: ${t.modelUsed}`);
   if (t.skills && t.skills.length) bits.push(`skills: ${t.skills.join(', ')}`);
+  // Every version this card published, not just the newest per name.
+  for (const p of t.published || []) bits.push({ text: `published: ${p.name} v${p.version}`, title: `sha256 ${p.sha256}` });
   if (t.stats) {
     // one run-stats chip: turns · wall clock · tokens (was three)
     const s = t.stats;

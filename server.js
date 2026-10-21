@@ -1053,7 +1053,12 @@ function contractReply(res, fn) {
 }
 
 app.post('/api/contracts', (req, res) =>
-  contractReply(res, () => contracts.publish(req.body && typeof req.body === 'object' ? req.body : {}))
+  contractReply(res, () => {
+    const result = contracts.publish(req.body && typeof req.body === 'object' ? req.body : {});
+    // The Contracts tab lists by name, so only a new version changes what it shows.
+    if (result.created) broadcast({ type: 'contracts' });
+    return result;
+  })
 );
 app.get('/api/contracts', (req, res) => contractReply(res, () => ({ contracts: contracts.list() })));
 app.get('/api/contracts/:name', (req, res) => contractReply(res, () => contracts.get(req.params.name)));

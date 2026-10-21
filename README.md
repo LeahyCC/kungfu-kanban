@@ -291,8 +291,9 @@ the same thing with the `after` key (see [Importing cards](#importing-cards-from
 
 A contract is a named, versioned text file one card publishes so other cards can
 read it. The HTTP API stores and serves them, and a worktree card can publish a
-file it wrote (see [Publishing from a card](#publishing-from-a-card)); the UI and
-dependencies on contracts come later. Content is any text (the board never
+file it wrote (see [Publishing from a card](#publishing-from-a-card)), and the
+board has a [Contracts tab](#the-contracts-tab); dependencies on contracts come
+later. Content is any text (the board never
 parses it), up to 1 MB, with no NUL bytes. Files live in `data/contracts/<name>/<version>.<ext>`
 and the metadata in `data/contracts/index.json`.
 
@@ -346,6 +347,23 @@ latest version records nothing.
 done whose worktree still exists, and returns `{ published, unchanged, problems }`.
 It answers `404` when the worktree is gone, `409` when the card is not in review
 or done, and `400` when the card is not a worktree card or declares no `publishes`.
+
+#### The Contracts tab
+
+**Contracts** sits next to Archive in the header (palette command *Go to Contracts*,
+hotkey `4`). It lists one row per contract name: the name, its latest version, the
+first 8 characters of the sha, the publishing card's title (click it to open that
+card's drawer; a card that has since been removed shows "(card removed)", and a
+contract posted straight to the API shows "API") and when it was published.
+Click a row to read the latest content in a read-only block, and use the version
+picker to read an older one. Content is always shown as plain text, never parsed
+as HTML or markdown.
+
+A card that published something carries a badge on its tile for the newest
+version of each contract (`api v2`), and its drawer lists every version it
+published. Publishing sends the server's SSE frame `{ type: 'contracts' }` (also
+sent when a version is posted to `POST /api/contracts`), so an open Contracts tab
+refreshes on its own.
 
 ---
 

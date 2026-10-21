@@ -11,7 +11,7 @@
  * on #board, so reused nodes never need listener re-attachment and a disabled
  * (withBusy) button stays disabled across renders. */
 
-import { state, COLUMNS, RUNNING_LIKE, CTX_WINDOW, optimistic } from './state.js';
+import { state, COLUMNS, RUNNING_LIKE, CTX_WINDOW, optimistic, latestPublished } from './state.js';
 import { $, esc, relTime, fmtTok, scheduleLabel } from './util.js';
 import { api, toast, confirmDlg, withBusy } from './api.js';
 import { isPrUnshipped, depPass } from './deps.js';
@@ -119,7 +119,7 @@ const stampedSeals = new Set();
 const OWN_FIELDS = ['status', 'title', 'priority', 'createdBy', 'model', 'effort', 'agent',
   'worktree', 'issueNumber', 'deps', 'depsUnresolved', 'prUrl', 'prChecks', 'error', 'liveOut',
   'ctxTokens', 'stats', 'schedule', 'skillsAuto', 'skills', 'createdAt', 'updatedAt', 'group',
-  'permissionBlocked', 'openPr', 'prMergedAt', 'prClosedNoted', 'prBaseBranch'];
+  'permissionBlocked', 'openPr', 'prMergedAt', 'prClosedNoted', 'prBaseBranch', 'published'];
 
 function ownHash(t) {
   let s = '';
@@ -460,6 +460,9 @@ function patchCardEl(el, t, pass) {
   for (const s of (t.skills || []).slice(0, 3)) meta.push(`<span class="badge">${esc(s)}</span>`);
   if ((t.skills || []).length > 3) meta.push(`<span class="badge">+${t.skills.length - 3}</span>`);
   if (t.prUrl) meta.push(`<a class="pr-link" href="${esc(t.prUrl)}" target="_blank" rel="noopener">PR ↗</a>`);
+  for (const p of latestPublished(t)) {
+    meta.push(`<span class="badge contract" title="Published contract ${esc(p.name)} v${esc(String(p.version))}">${esc(p.name)} v${esc(String(p.version))}</span>`);
+  }
   // PR check rollup (from the PR watcher): red until CI is 100% green.
   if (t.prChecks && t.status !== 'done') {
     const c = t.prChecks;
