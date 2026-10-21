@@ -25,6 +25,32 @@ test('buildPrompt: plain task keeps its prompt first, UI-verify convention appen
   assert.match(out, /npx playwright/);
 });
 
+test('buildPrompt: foreground convention is appended to every prompt', () => {
+  const out = buildPrompt({ prompt: 'do the thing' });
+  assert.match(out, /Standing convention — long commands/);
+  assert.match(out, /Bash timeout at 600000 ms/);
+  assert.match(out, /no `;` or `&&` chains, no redirects/);
+});
+
+function withPlatform(value, fn) {
+  const original = Object.getOwnPropertyDescriptor(process, 'platform');
+  Object.defineProperty(process, 'platform', { value });
+  try {
+    fn();
+  } finally {
+    Object.defineProperty(process, 'platform', original);
+  }
+}
+
+test('buildPrompt: no-python line is added on win32 only', () => {
+  withPlatform('win32', () => {
+    assert.match(buildPrompt({ prompt: 'body' }), /do not call `python` or `python3`/);
+  });
+  withPlatform('linux', () => {
+    assert.doesNotMatch(buildPrompt({ prompt: 'body' }), /python/);
+  });
+});
+
 test('buildPrompt: missing prompt falls back to an empty string (no orphan convention)', () => {
   assert.equal(buildPrompt({}), '');
 });
