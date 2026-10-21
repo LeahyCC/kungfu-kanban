@@ -371,6 +371,17 @@ publishing card's code merged. Every new contract version (finish-time publish,
 away. Contracts are never deleted, so a met entry stays met. The card shows
 `⛓ uses: <name>` while it waits, and its drawer says what it waits for.
 
+When the card launches, each `uses` entry is resolved: unpinned means the latest
+version at that moment, `@N` means exactly version N even if newer ones exist.
+The agent's prompt then carries the full text of every contract, fenced, under a
+header such as ``Contract `api` v1 (sha256 …), built against this exact version``.
+The card records what it got as `contractsUsed: [{ name, version, sha256 }]` and
+shows one `built against api v1` chip per entry (the sha is in its tooltip).
+A re-run, or a follow-up that resumes the session, resolves again and records
+again, so the field always describes the latest launch. If a contract cannot be
+read at launch the card goes to Review with a `Failed to launch` error instead
+of running without it.
+
 #### The Contracts tab
 
 **Contracts** sits next to Archive in the header (palette command *Go to Contracts*,

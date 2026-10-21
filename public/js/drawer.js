@@ -352,6 +352,8 @@ export function renderDrawerMeta(t) {
   if (t.skills && t.skills.length) bits.push(`skills: ${t.skills.join(', ')}`);
   // Every version this card published, not just the newest per name.
   for (const p of t.published || []) bits.push({ text: `published: ${p.name} v${p.version}`, title: `sha256 ${p.sha256}` });
+  // The contract versions the last launch was built against.
+  for (const c of t.contractsUsed || []) bits.push({ text: `built against ${c.name} v${c.version}`, title: `sha256 ${c.sha256}` });
   if (t.stats) {
     // one run-stats chip: turns · wall clock · tokens (was three)
     const s = t.stats;

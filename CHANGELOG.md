@@ -7,6 +7,12 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.25.0] — 2026-10-21
+
+### Added
+- A card can wait on a contract with `uses: <name>` or `uses: <name>@<version>`, stored as `task.uses`. It stays in Queued until each named contract exists, and every new version starts waiting cards. This is weaker than `after:`: the contract was published, not the publishing card's code merged (#168).
+- A card that `uses` contracts is now built against them. At launch each entry resolves (unpinned to the latest version at that moment, pinned to exactly that version), the full text goes into the agent's prompt under a header naming the version and sha256, and the card records `contractsUsed: [{ name, version, sha256 }]`. A re-run or a resumed follow-up resolves and records again. A contract that cannot be read fails the launch with a card error instead of running without it. The drawer shows one `built against api v1` chip per entry, sha in the tooltip (#169).
+
 ## [1.24.0] - 2026-10-21
 
 ### Added
