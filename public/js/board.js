@@ -441,7 +441,7 @@ function patchCardEl(el, t, pass) {
     const label = firstIsMergeWait ? '⛓ waits for merge:' : '⛓ after:';
     const title = firstIsMergeWait
       ? `${unmetDeps[0].title} is approved but its PR is still open — merging releases this card`
-      : `Waits until done: ${esc(unmetDeps.map((d) => d.title).join(' · '))}`;
+      : `Waits until done: ${unmetDeps.map((d) => d.title).join(' · ')}`;
     meta.push(`<span class="badge dep" title="${esc(title)}">${label} ${esc(String(first || '').slice(0, 30))}${first && first.length > 30 ? '…' : ''}${more}</span>`);
   } else if ((t.deps || []).length) {
     meta.push(`<span class="badge dep-met" title="All prerequisites are done">⛓ deps met</span>`);
