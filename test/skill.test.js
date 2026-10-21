@@ -56,6 +56,24 @@ test('skill.install()/status(): install baked absolute board path and the config
   assert.ok(out.content.includes('localhost:9931'), 'installed file should bake in the configured port');
 });
 
+test('skill.install(): generated skill has the managed-run section with the real endpoints', () => {
+  const { out } = runInScratchHome(
+    `
+    skill.install();
+    const fs = require('fs');
+    const dest = require('path').join(process.env.HOME, '.claude', 'skills', 'kungfu-todo', 'SKILL.md');
+    console.log(JSON.stringify({ content: fs.readFileSync(dest, 'utf8') }));
+    `,
+    { PORT: '9931' }
+  );
+  const c = out.content;
+  assert.ok(c.includes('## When you are asked to manage the run'));
+  assert.ok(c.includes('http://localhost:9931/api/manager/config'));
+  assert.ok(c.includes('http://localhost:9931/api/settings'));
+  assert.ok(c.includes('"prWatchAutoFixCi": false'));
+  assert.ok(c.includes('restored'));
+});
+
 test('skill.install() defaults the port to 4747 when PORT is unset', () => {
   const { out } = runInScratchHome(
     `
