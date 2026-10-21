@@ -206,6 +206,8 @@ appended to the card's prompt so Sensei reviews and retries see it.
   600000 ms timeout. Nothing is left running in the background, since the
   session ends when the turn does. A command that can't finish in 10 minutes
   is not run and is reported instead.
+- **Published files**: a worktree card with `publishes` is told which file(s) it
+  must write and that the board publishes them as contracts when it finishes.
 - **No python on Windows**: on Windows, the board checks once (`where.exe`,
   never running python) for a real interpreter outside `WindowsApps`. If none
   is found it adds a line telling agents not to call `python` or `python3`.
@@ -288,7 +290,8 @@ the same thing with the `after` key (see [Importing cards](#importing-cards-from
 ### Contracts
 
 A contract is a named, versioned text file one card publishes so other cards can
-read it. The HTTP API stores and serves them; card publishing, the UI and
+read it. The HTTP API stores and serves them, and a worktree card can publish a
+file it wrote (see [Publishing from a card](#publishing-from-a-card)); the UI and
 dependencies on contracts come later. Content is any text (the board never
 parses it), up to 1 MB, with no NUL bytes. Files live in `data/contracts/<name>/<version>.<ext>`
 and the metadata in `data/contracts/index.json`.
@@ -308,6 +311,41 @@ that version. `name` must match `^[a-z0-9][a-z0-9._-]{0,63}$` (no `..`, no trail
 
 Invalid input gets a `400` and an unknown name or version a `404`, both as `{ error }`.
 Like the rest of `/api`, these routes sit behind the token gate.
+
+#### Publishing from a card
+
+A worktree card declares the files it will write with a repeatable `publishes`
+line in its card header:
+
+```markdown
+## Define the API shape
+worktree: true
+publishes: api-shape docs/api-shape.md
+publishes: error-codes docs/errors.json
+```
+
+The task stores them as `publishes: [{ name, path }]`; the same shape is accepted
+by `POST /api/tasks` and `PATCH /api/tasks/:id`. `name` follows the contract name
+rule above. `path` is relative to the repo root: no absolute paths, no `..`
+segment, no `:`. A bad line in an import is skipped and logged to the error
+tracker as an import warning; a bad value over the API is a `400`.
+
+The agent's prompt gets one line naming the file(s). When the card finishes
+cleanly (no error, not stopped), the board reads each path from the card's
+worktree and publishes it as that contract, with `taskId` set to the card and the
+file's extension as `ext` (`txt` if it has none or an invalid one). A path that
+resolves outside the worktree, including through a symlink, is refused. A missing
+file or a rejected one (binary, over 1 MB) never fails the card: it becomes a note
+in the card's transcript and an error-tracker entry of kind `publish`.
+
+Each new version is recorded on the card as `task.published`, a list of
+`{ name, version, sha256, publishedAt }`. Publishing content identical to the
+latest version records nothing.
+
+`POST /api/tasks/:id/publish` does the same on demand for a card in review or
+done whose worktree still exists, and returns `{ published, unchanged, problems }`.
+It answers `404` when the worktree is gone, `409` when the card is not in review
+or done, and `400` when the card is not a worktree card or declares no `publishes`.
 
 ---
 
@@ -352,7 +390,9 @@ Recognized keys (case/space-insensitive): `cwd` (`dir`/`repo`), `model`, `effort
 `permissions`, `priority` (0–3), `worktree`, `openPr` (`pr`), `agent`,
 `skills` (comma-separated), `acceptance`, `issue` (GitHub issue number),
 `base` (`prBase`/`baseBranch`, the PR's target branch), `after` (`deps`/`dependsOn`/
-`needs`, a prerequisite card title — repeat the line for several), `sequential`
+`needs`, a prerequisite card title — repeat the line for several), `publishes`
+(`<contract-name> <path-in-repo>`, repeat the line for several; see
+[Contracts](#contracts)), `sequential`
 (frontmatter-only: chain every card in the file to the one above it). Unknown or
 invalid values are ignored; a card with no body uses its title as the prompt.
 
