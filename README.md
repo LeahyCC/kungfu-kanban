@@ -206,8 +206,9 @@ appended to the card's prompt so Sensei reviews and retries see it.
   600000 ms timeout. Nothing is left running in the background, since the
   session ends when the turn does. A command that can't finish in 10 minutes
   is not run and is reported instead.
-- **No python on Windows**: the Windows build adds a line telling agents not
-  to call `python` or `python3`.
+- **No python on Windows**: on Windows, the board checks once (`where.exe`,
+  never running python) for a real interpreter outside `WindowsApps`. If none
+  is found it adds a line telling agents not to call `python` or `python3`.
 
 ### Subscription limits, automatic cooldown
 

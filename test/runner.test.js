@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 // Own temp data dir, before any lib require: see test/helpers/temp-data-dir.js.
 require('./helpers/temp-data-dir');
 
-const { nextRunnable, notifyGroupCompletions, buildPrompt, buildArgs } = require('../lib/runner');
+const { nextRunnable, notifyGroupCompletions, buildPrompt, buildArgs, setPythonProbe } = require('../lib/runner');
 const store = require('../lib/store');
 
 function withTasks(tasks, fn) {
@@ -42,12 +42,54 @@ function withPlatform(value, fn) {
   }
 }
 
-test('buildPrompt: no-python line is added on win32 only', () => {
-  withPlatform('win32', () => {
-    assert.match(buildPrompt({ prompt: 'body' }), /do not call `python` or `python3`/);
+const STUB = 'C:\\Users\\x\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe\r\nC:\\Users\\x\\AppData\\Local\\Microsoft\\WindowsApps\\python3.exe\r\n';
+const NO_PY = /do not call `python` or `python3`/;
+
+function withProbe(out, fn) {
+  let calls = 0;
+  setPythonProbe(() => {
+    calls++;
+    return out;
   });
-  withPlatform('linux', () => {
-    assert.doesNotMatch(buildPrompt({ prompt: 'body' }), /python/);
+  try {
+    fn(() => calls);
+  } finally {
+    setPythonProbe();
+  }
+}
+
+test('buildPrompt: win32 with only Store stubs gets the no-python line', () => {
+  withProbe(STUB, () => {
+    withPlatform('win32', () => assert.match(buildPrompt({ prompt: 'body' }), NO_PY));
+  });
+});
+
+test('buildPrompt: win32 with nothing found gets the no-python line', () => {
+  withProbe('', () => {
+    withPlatform('win32', () => assert.match(buildPrompt({ prompt: 'body' }), NO_PY));
+  });
+});
+
+test('buildPrompt: win32 with a real python gets no no-python line', () => {
+  withProbe(STUB + 'C:\\Python312\\python.exe\r\n', () => {
+    withPlatform('win32', () => assert.doesNotMatch(buildPrompt({ prompt: 'body' }), /python/));
+  });
+});
+
+test('buildPrompt: detection runs once and is cached', () => {
+  withProbe('', (calls) => {
+    withPlatform('win32', () => {
+      buildPrompt({ prompt: 'a' });
+      buildPrompt({ prompt: 'b' });
+    });
+    assert.equal(calls(), 1);
+  });
+});
+
+test('buildPrompt: non-Windows never adds the line and never runs detection', () => {
+  withProbe('', (calls) => {
+    withPlatform('linux', () => assert.doesNotMatch(buildPrompt({ prompt: 'body' }), /python/));
+    assert.equal(calls(), 0);
   });
 });
 
