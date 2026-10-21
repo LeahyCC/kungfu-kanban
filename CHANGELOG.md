@@ -7,6 +7,15 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.23.2] - 2026-10-21
+
+### Added
+- The kungfu-todo skill now has a section on managing a run: turn the Sensei and the PR watcher's auto-fixers off first, spawn, review and merge yourself, then restore them (#162).
+
+### Fixed
+- Sensei suggestions are dropped as soon as they stop meaning anything, instead of lingering until someone dismisses them (#163).
+- The Sensei no longer dies with "Prompt is too long" on a machine with many MCP connectors. `--tools ''` only removed the built-in tools; the claude CLI still loaded every connector and skill from the global config, about 755,000 tokens of context for a one-line prompt. The Sensei now runs with `--strict-mcp-config` and `--disable-slash-commands`, and the same one-line prompt uses about 8,000. Cards are unchanged (#164, follows #163).
+
 ## [1.23.1] - 2026-10-20
 
 ### Fixed
