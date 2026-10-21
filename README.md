@@ -557,6 +557,31 @@ are sent to TypeSafe; leave the key unset to keep it off. The board reads its ow
 `KFK_TYPESAFE_KEY` rather than the SDK's usual `TYPESAFE_API_KEY`, so having a
 TypeSafe key set for other work never turns this on by accident.
 
+### Flow numbers (`npm run flow-report`)
+
+Every status change goes through `lib/transitions.js`, which records a few
+facts on the card as they happen. Cards from before this existed simply lack
+them.
+
+| Field | Meaning |
+| --- | --- |
+| `queuedAt` | ISO time of the latest entry into Queued (overwritten each time) |
+| `doneAt` | ISO time of the latest entry into Done |
+| `followUps` | How many follow-up messages the card has been sent (drawer or Sensei `followup_task`) |
+| `sendBacks` | How many times a card in Review or Done went back to Queued or Running instead of being finished: Sensei `reject_task` / `requeue_task`, a drag back, a re-run. Follow-ups and the board's own cooldown / offline / model-fallback re-parks are not counted |
+
+The counters only exist once they go above zero, so a blank cell in the report
+means "none recorded", which is zero for a recent card and unknown for an old
+one.
+
+`npm run flow-report` reads `data/tasks.json` and `data/archive.jsonl` (or
+`KFK_DATA_DIR`) without touching them, and prints one row per card: queued wait
+(`startedAt` minus `queuedAt`), whether it had dependencies, follow-ups,
+send-backs, and done to merged (`prMergedAt` minus `doneAt`). Anything a card
+doesn't have stays blank. The last line gives the card count, how many cards
+carry each field, and the median queued wait and done-to-merged time. It is
+the "before" picture for starting a card ahead of its dependency.
+
 ---
 
 ## Run at login (optional)
