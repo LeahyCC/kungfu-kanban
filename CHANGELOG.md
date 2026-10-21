@@ -7,6 +7,13 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.22.1] - 2026-10-20
+
+### Fixed
+- Two servers starting at the same moment can no longer both take the single-instance lock. A stale lock is renamed away instead of deleted, so only one starter can clear it, and a rename blocked for a moment by antivirus is retried instead of skipped (#157).
+- Windows cards are only told there is no python when `where.exe` finds no interpreter outside the Store stubs (#156).
+- express 5.3.0 and playwright 1.64.1 (#146, #145).
+
 ## [1.22.0] - 2026-10-20
 
 ### Added
