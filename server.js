@@ -750,13 +750,14 @@ app.post('/api/notify/test', (req, res) => {
 const TASK_FIELDS = [
   'title', 'prompt', 'cwd', 'model', 'effort', 'permissionMode',
   'skills', 'skillsAuto', 'agent', 'worktree', 'openPr', 'prBaseBranch', 'status', 'priority', 'acceptanceCriteria',
-  'schedule', 'issueNumber', 'group',
+  'schedule', 'issueNumber', 'group', 'publishes',
   'prUrl', // repair hatch: lets a manually-created PR be attached to its card
   'permissionBlocked', // acknowledge-only: the UI may clear a block (null), never set one
 ];
 const STATUSES = ['backlog', 'queued', 'running', 'stopping', 'review', 'done'];
 
 const { parseSchedule, scheduleDue } = require('./lib/schedule');
+const publishLib = require('./lib/publish');
 
 function makeTask(b, createdBy = 'user') {
   return {
@@ -779,6 +780,7 @@ function makeTask(b, createdBy = 'user') {
     deps: depsLib.sanitize(b.deps, null),
     schedule: parseSchedule(b.schedule),
     issueNumber: Number.isInteger(b.issueNumber) ? b.issueNumber : null,
+    publishes: Array.isArray(b.publishes) ? b.publishes : [], // validated by the route before this runs
     status: 'backlog',
     createdAt: new Date().toISOString(),
     createdBy,
@@ -808,7 +810,15 @@ app.get('/api/tasks/:id', (req, res) => {
 });
 
 app.post('/api/tasks', (req, res) => {
-  const task = makeTask(req.body || {});
+  const body = req.body || {};
+  if ('publishes' in body) {
+    try {
+      body.publishes = publishLib.normalize(body.publishes);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+  }
+  const task = makeTask(body);
   state.tasks.unshift(task);
   save();
   broadcast({ type: 'task', task });
@@ -827,6 +837,13 @@ app.patch('/api/tasks/:id', (req, res) => {
   }
   if ('status' in req.body && (req.body.status === 'running' || req.body.status === 'stopping')) {
     return res.status(400).json({ error: 'status cannot be set directly to running/stopping' });
+  }
+  if ('publishes' in req.body) {
+    try {
+      req.body.publishes = publishLib.normalize(req.body.publishes);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
   }
   if ('deps' in req.body) {
     const clean = depsLib.sanitize(req.body.deps, task.id);
@@ -858,6 +875,27 @@ app.patch('/api/tasks/:id', (req, res) => {
   // Shipping a card (or loosening deps) can free queued dependents.
   if (task.status === 'done' || 'deps' in req.body) runner.pumpQueue();
   res.json(task);
+});
+
+// Publish the card's declared files as contracts now (what finish-time does),
+// for a card whose worktree still exists. 404 = no card/worktree, 409 = wrong state.
+app.post('/api/tasks/:id/publish', async (req, res) => {
+  const task = getTask(req.params.id);
+  if (!task) return res.status(404).json({ error: 'not found' });
+  if (!['review', 'done'].includes(task.status)) {
+    return res.status(409).json({ error: 'only a card in review or done can be published' });
+  }
+  if (!task.worktree) return res.status(400).json({ error: 'publishing needs a worktree card' });
+  if (!Array.isArray(task.publishes) || !task.publishes.length) {
+    return res.status(400).json({ error: 'this card declares no publishes' });
+  }
+  try {
+    const result = await publishLib.publishTask(task);
+    if (result.error) return res.status(404).json({ error: result.error });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e).slice(0, 300) });
+  }
 });
 
 app.delete('/api/tasks/:id', (req, res) => {
