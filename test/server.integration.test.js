@@ -531,6 +531,29 @@ describe('contracts API', () => {
     assert.equal(body.contract.version, 2);
   });
 
+  test('a new version is announced over SSE so the Contracts tab can refresh', async () => {
+    const res = await fetch(`${base}/api/events`, { headers: auth });
+    assert.equal(res.status, 200);
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    try {
+      await post({ name: 'sse-contract', content: 'one' });
+      let seen = '';
+      const deadline = Date.now() + 5000;
+      while (!seen.includes('"type":"contracts"') && Date.now() < deadline) {
+        const { value, done } = await Promise.race([
+          reader.read(),
+          new Promise((r) => setTimeout(() => r({ done: true }), 5000)),
+        ]);
+        if (done) break;
+        seen += dec.decode(value, { stream: true });
+      }
+      assert.match(seen, /"type":"contracts"/);
+    } finally {
+      await reader.cancel();
+    }
+  });
+
   test('GET /api/contracts lists latest metadata without content', async () => {
     const res = await get('/api/contracts');
     assert.equal(res.status, 200);

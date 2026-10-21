@@ -51,6 +51,18 @@ export const optimistic = {
   clear(id) { this.base.delete(id); },
 };
 
+// task.published logs every version a card published; the card tile and drawer
+// care about the newest one per contract name, in first-published order.
+export function latestPublished(task) {
+  const byName = new Map();
+  for (const p of (task && Array.isArray(task.published)) ? task.published : []) {
+    if (!p || typeof p.name !== 'string') continue;
+    const seen = byName.get(p.name);
+    if (!seen || p.version > seen.version) byName.set(p.name, p);
+  }
+  return [...byName.values()];
+}
+
 // Slim SSE projections omit the heavy text fields (prompt, resultText,
 // acceptanceCriteria) and carry full:false — merge those shallowly over the
 // cached task so the omitted fields survive. Full payloads (no flag, e.g. the

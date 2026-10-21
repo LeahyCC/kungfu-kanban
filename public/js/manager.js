@@ -8,12 +8,14 @@ import { api, confirmDlg, withBusy, toast } from './api.js';
 import { openDrawer, bypassAndRerun } from './drawer.js';
 import { loadTasks } from './board.js';
 import { loadArchive } from './archive.js';
+import { loadContracts } from './contracts.js';
 
 // ---------- tabs ----------
 const TABS = [
   ['#tabBoard', 'board', '#board'],
   ['#tabManager', 'manager', '#managerView'],
   ['#tabArchive', 'archive', '#archiveView'],
+  ['#tabContracts', 'contracts', '#contractsView'],
 ];
 export function showTab(which) {
   $('#boardToolbar').classList.toggle('hidden', which !== 'board');
@@ -28,10 +30,12 @@ export function showTab(which) {
   }
   if (which === 'manager') loadManager();
   if (which === 'archive') loadArchive();
+  if (which === 'contracts') loadContracts();
 }
 $('#tabBoard').addEventListener('click', () => showTab('board'));
 $('#tabManager').addEventListener('click', () => showTab('manager'));
 $('#tabArchive').addEventListener('click', () => showTab('archive'));
+$('#tabContracts').addEventListener('click', () => showTab('contracts'));
 // roving arrow-key navigation across the tabs, with wraparound
 document.querySelector('.app-tabs').addEventListener('keydown', (e) => {
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;

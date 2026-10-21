@@ -39,6 +39,7 @@
   <link rel="modulepreload" href="js/board.js" />
   <link rel="modulepreload" href="js/chips.js" />
   <link rel="modulepreload" href="js/composer.js" />
+  <link rel="modulepreload" href="js/contracts.js" />
   <link rel="modulepreload" href="js/deps.js" />
   <link rel="modulepreload" href="js/drawer.js" />
   <link rel="modulepreload" href="js/manager.js" />
@@ -87,6 +88,7 @@
       <button id="tabBoard" class="app-tab active" role="tab" aria-selected="true" aria-controls="board">Board</button>
       <button id="tabManager" class="app-tab" role="tab" aria-selected="false" aria-controls="managerView" tabindex="-1">Sensei <span id="suggCount" class="pill hidden"></span></button>
       <button id="tabArchive" class="app-tab" role="tab" aria-selected="false" aria-controls="archiveView" tabindex="-1">Archive</button>
+      <button id="tabContracts" class="app-tab" role="tab" aria-selected="false" aria-controls="contractsView" tabindex="-1">Contracts</button>
     </nav>
     <div class="app-status telemetry" aria-label="Board summary">
       <div class="telem telem-agents" title="How many agent sessions are running, out of the parallel cap">
@@ -265,6 +267,19 @@
     <div id="archiveStats" class="slab archive-stats"></div>
     <input id="archiveSearch" class="filter" type="search" placeholder="⌕ search archive…" aria-label="Search archived cards by title, repo, model, or group" />
     <div id="archiveList" class="archive-list"></div>
+  </div>
+
+  <!-- Contracts: versioned text files cards publish for each other -->
+  <div id="contractsView" class="archive-view contracts-view hidden" role="tabpanel" aria-labelledby="tabContracts" tabindex="-1">
+    <div id="contractsList" class="archive-list contracts-list"></div>
+    <section id="contractDetail" class="contract-detail hidden" aria-live="polite">
+      <div class="c-detail-head">
+        <h2 id="contractDetailName" class="c-detail-name mono"></h2>
+        <label class="c-pick">version <select id="contractVersion"></select></label>
+        <span id="contractDetailMeta" class="c-detail-meta"></span>
+      </div>
+      <pre id="contractContent" class="mono c-content" tabindex="0"></pre>
+    </section>
   </div>
 
   <!-- Card editor modal -->

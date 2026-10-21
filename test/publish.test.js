@@ -110,6 +110,26 @@ describe('publishTask against a real worktree', () => {
     assert.equal(task.published[1].version, 2);
   });
 
+  test('a new version broadcasts a contracts event; unchanged content does not', async () => {
+    const bus = require('../lib/bus');
+    const id = 'a1b2c3d4-0010';
+    const { repo, wt } = makeRepo(id);
+    write(wt, 'api.md', 'v1');
+    const task = makeTask(id, repo, { publishes: [{ name: 'live-api', path: 'api.md' }] });
+    const frames = [];
+    bus.subscribe((m) => frames.push(m.type));
+    try {
+      await publish.publishTask(task);
+      assert.ok(frames.includes('contracts'), `frames: ${frames}`);
+
+      frames.length = 0;
+      await publish.publishTask(task);
+      assert.ok(!frames.includes('contracts'), `unchanged republish still broadcast: ${frames}`);
+    } finally {
+      bus.subscribe(() => {});
+    }
+  });
+
   test('a missing file is a transcript note and an error-tracker entry, and the other files still publish', async () => {
     const id = 'a1b2c3d4-0003';
     const { repo, wt } = makeRepo(id);

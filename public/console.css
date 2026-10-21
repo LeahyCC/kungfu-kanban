@@ -691,6 +691,65 @@ button.primary:not(:disabled):active { transform: none; box-shadow: none; }
 .archive-list { border: 1px solid var(--rule); border-radius: 3px; }
 .archive-row summary:hover, .archive-row[open] summary { background: var(--paper-2); }
 
+/* contracts: one grid row per name; the content pane sits under the list */
+.c-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) auto auto minmax(0, 2fr) auto;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--rule);
+}
+.c-row:last-child { border-bottom: none; }
+.c-row:hover, .c-row.selected { background: var(--paper-2); }
+.c-name, .c-card {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.c-name { color: var(--ink-900); font-family: var(--font-mono); font-size: 13px; }
+.c-card { color: var(--accent-ink); font-size: 13px; text-decoration: underline; text-underline-offset: 2px; }
+.c-name:focus-visible, .c-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.c-ver, .c-sha { font-size: 12px; color: var(--ink-600); }
+.c-by { min-width: 0; display: flex; }
+.c-by-none, .c-when { color: var(--ink-400); font-size: 12px; white-space: nowrap; }
+.c-when time { color: inherit; }
+.contract-detail { margin-top: 16px; }
+.c-detail-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 8px; }
+.c-detail-name { margin: 0; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.c-pick { color: var(--ink-600); font-size: 12px; display: inline-flex; gap: 6px; align-items: center; }
+.c-pick select { width: auto; }
+.c-detail-meta { color: var(--ink-400); font-size: 12px; }
+.c-content {
+  margin: 0;
+  padding: 12px 14px;
+  max-height: 60vh;
+  overflow: auto;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--paper-1);
+  color: var(--ink-900);
+  font-size: 12.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* touch: the name and card links reach the 44px tap target */
+@media (hover: none) {
+  .c-name, .c-card { display: inline-flex; align-items: center; min-height: 44px; }
+  .c-row { align-items: center; }
+}
+@media (max-width: 700px) {
+  .c-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .c-by { grid-column: 1 / 3; }
+  .c-when { grid-column: 3; justify-self: end; }
+}
+
 @media (max-width: 900px) {
   html.kk-rail-on .sensei-rail {
     position: fixed;

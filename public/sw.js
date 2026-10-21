@@ -4,7 +4,7 @@
 // mid-load drop or deploy just keeps the old coherent set). /api/, /login,
 // /logout and non-GET requests are never intercepted — live data stays live,
 // SSE untouched.
-const VERSION = '2026-09-29.4'; // bump on every deploy that touches ASSETS
+const VERSION = '2026-10-21.1'; // bump on every deploy that touches ASSETS
 const SHELL = 'kk-shell-' + VERSION;
 const ASSETS = [
   '/',
@@ -19,6 +19,7 @@ const ASSETS = [
   '/js/board.js',
   '/js/chips.js',
   '/js/composer.js',
+  '/js/contracts.js',
   '/js/deps.js',
   '/js/drawer.js',
   '/js/manager.js',
