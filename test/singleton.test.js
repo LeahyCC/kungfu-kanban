@@ -156,6 +156,21 @@ test('claim: clearing a stale lock leaves no stale.* files behind', () => {
   assert.equal(fx.files.get(LOCK), String(A));
 });
 
+test('claim: a rename briefly held by antivirus (EBUSY) is retried, not skipped', () => {
+  const fx = fakeFs({ [LOCK]: '4242' });
+  const rename = fx.renameSync;
+  let fails = 2;
+  let sleeps = 0;
+  fx.renameSync = (from, to) => {
+    if (fails-- > 0) throw Object.assign(new Error('EBUSY'), { code: 'EBUSY' });
+    return rename(from, to);
+  };
+  assert.equal(claim(() => false, () => { sleeps++; }, fx, A), null);
+  assert.equal(sleeps, 2, 'it backed off between attempts');
+  assert.deepEqual([...fx.files.keys()], [LOCK]);
+  assert.equal(fx.files.get(LOCK), String(A), 'and ends up holding the lock');
+});
+
 test('claim: an unwritable dir does not block startup', () => {
   const denied = () => { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }); };
   const stale = fakeFs({ [LOCK]: '4242' });
