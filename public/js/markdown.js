@@ -9,7 +9,12 @@ function mdInline(s) {
   const spans = [];
   const stash = (html) => `\x01${spans.push(html) - 1}\x01`;
   s = s.replace(/`([^`]+)`/g, (_, c) => stash(`<code>${c}</code>`));
-  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, text, href) => stash(`<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`));
+  // The link text can hold a code span already stashed above, so resolve those
+  // placeholders here: the final pass only runs once, and would leave them behind.
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, text, href) => {
+    const label = text.replace(/\x01(\d+)\x01/g, (__, i) => spans[Number(i)]);
+    return stash(`<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`);
+  });
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
   s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
