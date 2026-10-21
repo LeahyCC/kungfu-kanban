@@ -39,7 +39,7 @@ test('landed branch: kills stragglers, removes worktree, deletes both branches',
   assert.deepEqual(h.killed, [111, 222]); // the board's own pid is never killed
   assert.ok(h.calls.includes('git fetch origin'));
   assert.ok(h.calls.includes('git merge-base --is-ancestor deadbeef origin/main'));
-  assert.ok(h.calls.includes(`git worktree remove --force ${WT}`));
+  assert.ok(h.calls.includes(`git worktree remove --force --force ${WT}`));
   assert.ok(h.calls.includes('git branch -D kanban/aaaaaaaa'));
   assert.ok(h.calls.includes('git push origin --delete kanban/aaaaaaaa'));
 });
