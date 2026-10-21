@@ -10,7 +10,9 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const store = require('../lib/store');
-const { executeAction, heldForApproval, suggestionLive, stopCurrent, SEMI_HELD } = require('../lib/manager');
+const { executeAction, heldForApproval, suggestionLive, stopCurrent, finishInvocation, SEMI_HELD } = require('../lib/manager');
+const errlog = require('../lib/errlog');
+const { setStatus } = require('../lib/transitions');
 
 // --- stopCurrent -------------------------------------------------------
 
@@ -163,7 +165,105 @@ test('suggestionLive: a deleted/archived target card is always dead', () => {
   assert.equal(suggestionLive(s), false);
 });
 
-test('suggestionLive: card-less actions (create_task, resolve_error) are always live', () => {
+test('suggestionLive: create_task has no card to go stale, so it stays live', () => {
   assert.equal(suggestionLive({ action: { type: 'create_task' } }), true);
-  assert.equal(suggestionLive({ action: { type: 'resolve_error', errorId: 'x' } }), true);
+});
+
+test('suggestionLive: resolve_error dies once its error is resolved or gone', () => {
+  const e = errlog.capture('run-failed', { text: 'suggestionLive resolve_error probe' });
+  const s = { action: { type: 'resolve_error', errorId: e.id } };
+  assert.equal(suggestionLive(s), true);
+  errlog.resolve(e.id, 'human');
+  assert.equal(suggestionLive(s), false, 'resolved');
+  assert.equal(suggestionLive({ action: { type: 'resolve_error', errorId: 'never-existed' } }), false, 'unknown id');
+});
+
+test('suggestionLive: update_task and retarget_pr die once the card is done', () => {
+  const task = { id: 'upd-done', status: 'review' };
+  store.state.tasks.push(task);
+  try {
+    for (const type of ['update_task', 'retarget_pr']) {
+      assert.equal(suggestionLive({ action: { type, taskId: task.id } }), true, `${type} live in review`);
+    }
+    task.status = 'done';
+    for (const type of ['update_task', 'retarget_pr']) {
+      assert.equal(suggestionLive({ action: { type, taskId: task.id } }), false, `${type} dead when done`);
+    }
+  } finally {
+    store.state.tasks.length = store.state.tasks.length - 1;
+  }
+});
+
+test('suggestionLive: retarget_pr dies once the PR is merged or closed, even before the card is done', () => {
+  const task = { id: 'retarget-moot', status: 'review', prUrl: 'https://x' };
+  store.state.tasks.push(task);
+  try {
+    const s = { action: { type: 'retarget_pr', taskId: task.id } };
+    assert.equal(suggestionLive(s), true);
+    task.prClosedNoted = true;
+    assert.equal(suggestionLive(s), false, 'closed');
+    delete task.prClosedNoted;
+    task.prMergedAt = new Date().toISOString();
+    assert.equal(suggestionLive(s), false, 'merged');
+  } finally {
+    store.state.tasks.length = store.state.tasks.length - 1;
+  }
+});
+
+// --- Sensei run errors clear on the next clean run -----------------------
+
+test('a clean Sensei run resolves earlier run-level Sensei errors, not failed actions', () => {
+  const runErr = errlog.capture('sensei', { text: 'Manager run errored: boom' });
+  const unparsable = errlog.capture('sensei', { text: 'Manager output unparsable (x): y' });
+  const actionErr = errlog.capture('sensei', { text: 'create "a" — failed: nope' });
+  const cardErr = errlog.capture('run-failed', { text: 'a card failed' });
+  finishInvocation(JSON.stringify({ result: JSON.stringify({ actions: [] }) }), '', 'test', false);
+  const open = (id) => errlog.isOpen(id);
+  assert.equal(open(runErr.id), false);
+  assert.equal(open(unparsable.id), false);
+  assert.equal(open(actionErr.id), true, 'a failed action is not fixed by a clean run');
+  assert.equal(open(cardErr.id), true, 'other kinds are untouched');
+});
+
+test('a Sensei run that errors again does not resolve its own earlier errors', () => {
+  const runErr = errlog.capture('sensei', { text: 'Manager run errored: still broken' });
+  finishInvocation(JSON.stringify({ is_error: true, result: 'still broken' }), '', 'test', false);
+  assert.equal(errlog.isOpen(runErr.id), true);
+});
+
+// --- pruning is event-driven, not only on page load -----------------------
+
+const tick = () => new Promise((r) => setImmediate(r));
+
+// Seed a suggestion the way the Sensei does (autonomy defaults to 'suggest'),
+// and read manager.json from disk: publicState() prunes on its own, which would
+// mask whether the event-driven prune ran.
+function suggest(action) {
+  finishInvocation(JSON.stringify({ result: JSON.stringify({ actions: [action] }) }), '', 'test', false);
+}
+function persistedActions() {
+  return JSON.parse(fs.readFileSync(path.join(process.env.KFK_DATA_DIR, 'manager.json'), 'utf8')).suggestions.map((s) => s.action);
+}
+
+test('resolving an error prunes its resolve_error suggestion without a page load', async () => {
+  const e = errlog.capture('run-failed', { text: 'event-driven prune probe' });
+  suggest({ type: 'resolve_error', errorId: e.id, reasoning: 'test' });
+  assert.ok(persistedActions().some((a) => a.errorId === e.id), 'seeded');
+  errlog.resolve(e.id, 'auto');
+  await tick();
+  assert.equal(persistedActions().some((a) => a.errorId === e.id), false);
+});
+
+test('a card changing status prunes its suggestions without a page load', async () => {
+  const task = { id: 'status-prune', status: 'review' };
+  store.state.tasks.push(task);
+  try {
+    suggest({ type: 'approve_task', taskId: task.id, reasoning: 'test' });
+    assert.ok(persistedActions().some((a) => a.taskId === task.id), 'seeded');
+    setStatus(task, 'done');
+    await tick();
+    assert.equal(persistedActions().some((a) => a.taskId === task.id), false);
+  } finally {
+    store.state.tasks.length = store.state.tasks.length - 1;
+  }
 });
