@@ -27,6 +27,9 @@ export const state = {
   editingId: null,
   drawerId: null,
   mgrState: null,
+  // Newest version of every contract (GET /api/contracts), loaded at boot and
+  // on each 'contracts' event; deps.js reads it to tell whether a `uses:` is met.
+  contracts: [],
   // Last known board version (max task.v seen over SSE, or X-Board-Version
   // from a conditional GET). 0 = version support not yet detected — loadTasks
   // then does a plain full fetch, exactly like before.

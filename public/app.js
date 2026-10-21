@@ -21,6 +21,7 @@ import { applyCooldown, applyModelBlocks, renderNetChip, setServerOffline, rende
 import { closePalette } from './js/palette.js'; // importing also wires the palette + global hotkeys
 import { toggleTerminal } from './js/term.js';
 import { connectSSE } from './js/sse.js';
+import { loadContracts } from './js/contracts.js';
 
 // ---------- Escape + focus trap for modals, the drawer, and dialogs ----------
 const inTerminal = () => $('#termPanel').contains(document.activeElement);
@@ -135,6 +136,7 @@ function bootError(msg) {
   applyTerminalSetting();
   connectSSE(); // handlers exist before an early event can land
   if (!(await loadTasks())) { bootError('loaded config, but the task list failed — retry?'); return; }
+  loadContracts(); // uses: badges need the list, not just the Contracts tab
   renderHealth();
   renderUsage();
   loadErrors();

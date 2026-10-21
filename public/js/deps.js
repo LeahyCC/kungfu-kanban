@@ -1,7 +1,25 @@
-/* Dependency logic — mirrors lib/deps.js's unmet()/prUnshipped(); keep in sync.
- * Used by both board.js (badges, sort) and drawer.js (renderDrawerMeta). */
+/* Dependency logic — mirrors lib/deps.js's unmet()/prUnshipped()/unmetUses();
+ * keep in sync. Used by both board.js (badges, sort) and drawer.js
+ * (renderDrawerMeta). */
 
 import { state } from './state.js';
+
+// The `uses:` entries still waiting on a contract: unpinned needs any version
+// of the name, pinned needs that version. Versions run 1..n and are never
+// deleted, so "v exists" is "newest >= v".
+export function usesUnmet(t, newest = contractVersions()) {
+  const uses = Array.isArray(t.uses) ? t.uses : [];
+  if (!uses.length) return [];
+  return uses.filter((u) => (newest.get(u.name) || 0) < (u.version || 1));
+}
+
+// name → newest version, from the GET /api/contracts list.
+export function contractVersions(list = state.contracts) {
+  return new Map((list || []).map((c) => [c.name, c.version]));
+}
+
+// "contract api" / "contract api v2", for badges and the drawer.
+export const useLabel = (u) => `contract ${u.name}${u.version ? ` v${u.version}` : ''}`;
 
 // The dep cards that still block this one (deleted/archived ids count as met —
 // same rule as the server). A done card whose PR is still open unmerged also
@@ -50,6 +68,18 @@ export function depPass(tasks) {
     return u;
   };
 
+  // Contracts are not cards, so they stay out of unmet() and chainDepth.
+  const newest = contractVersions();
+  const usesMemo = new Map();
+  const unmetUses = (t) => {
+    let u = usesMemo.get(t.id);
+    if (!u) {
+      u = usesUnmet(t, newest);
+      usesMemo.set(t.id, u);
+    }
+    return u;
+  };
+
   const depthMemo = new Map();
   const depth = (t, seen = new Set()) => {
     const cached = depthMemo.get(t.id);
@@ -84,5 +114,5 @@ export function depPass(tasks) {
     if (t.status === 'done') s.done++;
   }
 
-  return { byId, unmet, depth, held, groupStats };
+  return { byId, unmet, unmetUses, depth, held, groupStats };
 }

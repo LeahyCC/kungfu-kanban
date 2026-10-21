@@ -62,8 +62,32 @@ test('importer field "after"/"deps"/"dependson"/"needs" all set depTitles, repea
   assert.deepEqual(cards[0].depTitles, ['One', 'Zero']);
 });
 
-// --- invalid field VALUES stop field-parsing and fall through to prompt -----
+// --- invalid field VALUES: skipped, header parsing goes on -----------------
 
+// Regression: a known key with a bad value used to end the header block, so
+// the `after:` below it became prompt text and the card lost its dependency.
+test('importer: a bad value mid-header is ignored with a warning and later header lines still parse', () => {
+  const cards = parseMarkdown('## Card\nbase: bad branch!\nafter: Other\nmodel: opus\nbody');
+  assert.deepEqual(cards[0].depTitles, ['Other']);
+  assert.equal(cards[0].model, 'opus');
+  assert.equal(cards[0].prBaseBranch, undefined);
+  assert.equal(cards[0].prompt, 'body');
+  assert.equal(cards.cwdWarnings.length, 1);
+  assert.equal(cards.cwdWarnings[0].card, 'Card');
+  assert.equal(cards.cwdWarnings[0].key, 'base');
+  assert.equal(cards.cwdWarnings[0].value, 'bad branch!');
+});
+
+test('importer: the same holds for every key that validates its value', () => {
+  for (const line of ['model: instagram', 'effort: extreme', 'permissions: sudo', 'priority: x', 'issue: abc', 'cwd: relative/x']) {
+    const cards = parseMarkdown(`## Card\n${line}\nafter: Other\nbody`);
+    assert.deepEqual(cards[0].depTitles, ['Other'], line);
+    assert.equal(cards[0].prompt, 'body', line);
+  }
+});
+
+// A bad line that ends the header block (prose follows) stays in the prompt,
+// as before: it may well be prose that happens to start with a key word.
 test('importer: an unrecognized value on a recognized-key line ends field parsing (line becomes prompt text)', () => {
   const cases = [
     'model: instagram',

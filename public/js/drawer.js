@@ -16,7 +16,7 @@
 import { state, RUNNING_LIKE, COLUMNS, CTX_WINDOW } from './state.js';
 import { $, esc, relTime, fmtTok, fmtClock, nearBottom } from './util.js';
 import { api, confirmDlg, alertDlg, withBusy, toast } from './api.js';
-import { depsUnmet, isPrUnshipped } from './deps.js';
+import { depsUnmet, isPrUnshipped, usesUnmet, useLabel } from './deps.js';
 import { mdToHtml } from './markdown.js';
 import { loadTasks, applyOptimistic, rollbackOptimistic, mergeTaskResponse } from './board.js';
 import { openModal } from './modals.js';
@@ -266,7 +266,7 @@ function metaKey(t) {
     t.v !== undefined ? t.v : null, t.status, t.model, t.effort, t.permissionMode, t.permissionBlocked,
     t.cwd, t.prChecks, t.deps, t.depsUnresolved, t.createdAt, t.updatedAt, t.ctxTokens,
     t.modelUsed, t.skills, t.stats, t.sessionId, t.runCwd, t.prUrl, t.prBaseBranch, t.published,
-    depPart, held, cfg.models, cfg.efforts, cfg.permissionModes,
+    depPart, held, usesUnmet(t), cfg.models, cfg.efforts, cfg.permissionModes,
   ]);
 }
 
@@ -332,6 +332,8 @@ export function renderDrawerMeta(t) {
     const parts = unmetD.map((d) => isPrUnshipped(d) ? `${d.title} (done, awaiting merge)` : `${d.title} (not done)`);
     bits.push(`⛓ waits for: ${parts.join(' · ')}`);
   } else if ((t.deps || []).length) bits.push({ text: '⛓ deps met', title: 'All prerequisites are done' });
+  const unmetU = usesUnmet(t);
+  if (unmetU.length) bits.push(`⛓ waits for ${unmetU.map(useLabel).join(' · ')}`);
   const held = state.tasks.filter((x) => x.status === 'queued' && (x.deps || []).includes(t.id));
   if (held.length && (t.status !== 'done' || isPrUnshipped(t))) bits.push(`🖐 blocks: ${held.map((x) => x.title).join(' · ')}`);
   if ((t.depsUnresolved || []).length) bits.push(`⛓ unresolved: ${t.depsUnresolved.join(' · ')}`);

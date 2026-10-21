@@ -1,6 +1,6 @@
 /* Contracts tab: the latest version of every published contract, and a
- * read-only view of any version's content. The list is refetched when the tab
- * opens and on the server's 'contracts' event; task events only re-resolve the
+ * read-only view of any version's content. The list is fetched at boot, when
+ * the tab opens and on the server's 'contracts' event; task events only re-resolve the
  * publishing card's title, which lives in state.tasks. Content is only ever
  * written with textContent, so a contract holding markup or markdown shows
  * literally. */
@@ -8,7 +8,8 @@
 import { state } from './state.js';
 import { $, esc, fmtLogTs } from './util.js';
 import { api } from './api.js';
-import { openDrawer } from './drawer.js';
+import { openDrawer, renderDrawerMeta } from './drawer.js';
+import { render } from './board.js';
 
 let items = [];
 let selected = null; // { name, version, latest } — what the detail pane shows
@@ -16,10 +17,16 @@ let loadSeq = 0; // a slow response must not overwrite a newer pick
 
 export const contractsVisible = () => !$('#contractsView').classList.contains('hidden');
 
+// Loaded at boot and on every 'contracts' event, tab open or not: the board's
+// `uses:` badges read state.contracts too.
 export async function loadContracts() {
   const r = await api('/api/contracts');
   if (!r || r.error || !Array.isArray(r.contracts)) return;
   items = r.contracts;
+  state.contracts = r.contracts;
+  render(); // fingerprint-gated: a no-op unless a contract version changed
+  const open = state.drawerId && state.tasks.find((x) => x.id === state.drawerId);
+  if (open) renderDrawerMeta(open); // change-gated the same way
   renderRows();
   if (!selected) return;
   const row = items.find((c) => c.name === selected.name);

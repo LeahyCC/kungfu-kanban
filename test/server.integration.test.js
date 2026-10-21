@@ -244,6 +244,22 @@ describe('HTTP contract (no auth gate)', () => {
     assert.match(body.error, /cycle/);
   });
 
+  test('POST and PATCH /api/tasks — uses is validated and stored normalised', async () => {
+    const bad = await postJson(base, '/api/tasks', { title: 'u', uses: ['Bad Name'] });
+    assert.equal(bad.status, 400);
+    const created = await (await postJson(base, '/api/tasks', { title: 'u', uses: ['api', 'api@2', 'api'] })).json();
+    assert.deepEqual(created.uses, [{ name: 'api', version: null }, { name: 'api', version: 2 }]);
+    const plain = await (await postJson(base, '/api/tasks', { title: 'plain' })).json();
+    assert.deepEqual(plain.uses, []);
+
+    const patchBad = await patchJson(base, `/api/tasks/${created.id}`, { uses: [{ name: 'api', version: 0 }] });
+    assert.equal(patchBad.status, 400);
+    const kept = await (await fetch(`${base}/api/tasks/${created.id}`)).json();
+    assert.deepEqual(kept.uses, created.uses, 'a rejected PATCH changes nothing');
+    const patched = await (await patchJson(base, `/api/tasks/${created.id}`, { uses: [{ name: 'schema', version: 3 }] })).json();
+    assert.deepEqual(patched.uses, [{ name: 'schema', version: 3 }]);
+  });
+
   test('PATCH /api/tasks/:id — an overlong title is re-sliced to 200 chars', async () => {
     const created = await (await postJson(base, '/api/tasks', { title: 'short' })).json();
     const res = await patchJson(base, `/api/tasks/${created.id}`, { title: 'y'.repeat(300) });
