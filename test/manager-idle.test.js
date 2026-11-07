@@ -11,6 +11,7 @@ const assert = require('node:assert/strict');
 
 const store = require('../lib/store');
 const errlog = require('../lib/errlog');
+store.state.settings.manager = { enabled: true }; // off by default since 1.26.0; the idle gate is what's under test here
 const manager = require('../lib/manager');
 const { state } = store;
 

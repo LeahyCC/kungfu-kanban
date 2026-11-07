@@ -43,6 +43,7 @@ store.state.settings.notifyMac = false;
 store.state.settings.keepAwake = false;
 store.state.settings.maxConcurrent = 20; // earlier tests leave never-closing stub children holding slots
 store.state.settings.maxRunMinutes = 0; // the stub child never closes; no watchdog timer to hold the process open
+store.state.settings.manager = { enabled: true }; // the Sensei is off by default; this file tests its spawn
 
 const { spawnClaude } = require('../lib/claude-spawn');
 const runner = require('../lib/runner');

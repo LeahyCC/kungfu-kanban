@@ -48,7 +48,8 @@ Conventions for coding sessions in this repo:
   machine if the browser binary is missing. (`npx --package playwright node
   script.js` does NOT work — modern npm puts the bin on PATH but sets no
   NODE_PATH.) `lib/runner.js` injects this convention into every card prompt
-  and the Sensei withholds approval of UI diffs with no browser evidence.
+  and the Sensei, when enabled, withholds approval of UI diffs with no browser
+  evidence.
   Playwright is deliberately **not** a dependency of this app — the npx and
   browser caches are per-machine, so nothing is baked into `npm install`
   (see PR protocol below for why).

@@ -192,7 +192,7 @@
         <span class="who"><b>The Sensei</b><span>triage · dispatch · review</span></span>
       </div>
       <form id="mgrForm">
-        <label class="check-row" title="The Sensei is an LLM that triages new cards (routing, priority), dispatches work, and reviews finished runs — each trigger is one claude -p call on your subscription"><input type="checkbox" name="enabled" /> Sensei enabled</label>
+        <label class="check-row" title="Off by default: the Claude Code session you drive the board from is the manager. Tick this and the Sensei triages new cards (routing, priority), dispatches work and reviews finished runs — each trigger is one claude -p call on your subscription. While it's off it still answers messages you send it, and acts on nothing."><input type="checkbox" name="enabled" /> Sensei enabled</label>
         <div class="row">
           <label title="The model the Sensei itself thinks with — not the models it assigns to cards">Model <select name="model"></select></label>
           <label title="The Sensei's own reasoning budget">Effort <select name="effort"></select></label>

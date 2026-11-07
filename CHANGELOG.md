@@ -7,7 +7,12 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
-## [1.25.0] — 2026-10-21
+## [1.26.0] — 2026-11-06
+
+### Changed
+- **The Sensei now ships off.** Most boards are driven from a Claude Code session, and that session is the manager: it writes the cards, launches them, reads the PRs and merges them. A Sensei working underneath it pays twice for the same fix and can merge a diff nobody read. Tick "Sensei enabled" in the Manager tab and everything it has always done comes back, unchanged. Existing boards keep whatever is in their `data/settings.json`; this moves the default only, so untick the box to turn it off on a board you have been running (#172).
+- Off no longer means deaf. A message you send yourself — the Sensei chat, the rail's Ask box, ⇪ Split into cards, 🥋 Ask the Sensei to fix these — still gets a real run and a real answer, because a chat box that silently swallows every message is worse than none. Such a run can only propose: its actions are held for your ✓ whatever autonomy the Sensei was left on, so asking a switched-off Sensei a question is not the same as switching it back on. Everything event-driven (card finished, new card, PR settled, the interval tick) does nothing while it is off (#172).
+- The `kungfu-todo` skill now puts the calling session in charge instead of handing the batch to the Sensei. Owning the run was a conditional last section; it is the default now, and it spells out the whole lifecycle: confirm nothing else spawns or merges, launch, watch each card's CI and transcript, prefer a follow-up over a re-run, review every PR on its pushed head, then merge. It may merge a prose-only diff itself once checks are green, and must report and wait for a go-ahead before merging anything that touches code, tests or config (#172).
 
 ### Added
 - A card can wait on a contract with `uses: <name>` or `uses: <name>@<version>`, stored as `task.uses`. It stays in Queued until each named contract exists, and every new version starts waiting cards. This is weaker than `after:`: the contract was published, not the publishing card's code merged (#168).

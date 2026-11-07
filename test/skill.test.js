@@ -56,7 +56,7 @@ test('skill.install()/status(): install baked absolute board path and the config
   assert.ok(out.content.includes('localhost:9931'), 'installed file should bake in the configured port');
 });
 
-test('skill.install(): generated skill has the managed-run section with the real endpoints', () => {
+test('skill.install(): generated skill makes the session the lead, with the real endpoints', () => {
   const { out } = runInScratchHome(
     `
     skill.install();
@@ -67,11 +67,15 @@ test('skill.install(): generated skill has the managed-run section with the real
     { PORT: '9931' }
   );
   const c = out.content;
-  assert.ok(c.includes('## When you are asked to manage the run'));
+  assert.ok(c.includes('## Running the batch'), 'owning the run is the default section, not a conditional one');
+  assert.ok(c.includes('**You are the lead.**'), 'the session is told it owns the cards');
   assert.ok(c.includes('http://localhost:9931/api/manager/config'));
   assert.ok(c.includes('http://localhost:9931/api/settings'));
   assert.ok(c.includes('"prWatchAutoFixCi": false'));
-  assert.ok(c.includes('restored'));
+  // The merge rule is the one line that keeps a session from shipping code on
+  // its own judgement. It must not quietly drop out of a future rewrite.
+  assert.ok(/only prose/.test(c), 'prose-only PRs are the ones it may merge itself');
+  assert.ok(/wait for the user to\s+say go/.test(c), 'code changes wait for a go-ahead');
 });
 
 test('skill.install() defaults the port to 4747 when PORT is unset', () => {

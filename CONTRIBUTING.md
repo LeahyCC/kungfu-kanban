@@ -38,7 +38,8 @@ the project's identity.
 **In scope** — things that make the single-user, local-first board better:
 
 - Better agent handling: model/effort routing, worktree and PR flow, the
-  Sensei's review and merge logic, cooldown and fallback behaviour.
+  Sensei's review and merge logic (off by default, still fully supported),
+  cooldown and fallback behaviour.
 - Board UX: the card drawer, columns, drag-and-drop, keyboard access, mobile/PWA
   polish, day/night dojo.
 - Resilience: recovery from restarts and crashes, offline handling, clearer
