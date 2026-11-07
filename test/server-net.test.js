@@ -174,8 +174,8 @@ describe('network/SSE contract (no auth gate)', () => {
   before(async () => {
     dataDir = mkTempDataDir();
     ({ child, base } = await bootServer({ KFK_DATA_DIR: dataDir }));
-    // Sensei is enabled by default — neuter it before any POST /api/tasks so
-    // no test card fans out into a real `claude -p` invocation.
+    // The Sensei ships off, so this pins rather than changes it: no test card
+    // can fan out into a real `claude -p` invocation even if that default moves.
     await putJson(base, '/api/manager/config', { enabled: false });
   });
 

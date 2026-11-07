@@ -34,6 +34,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const store = require('../lib/store');
 store.state.settings.keepAwake = false;
+store.state.settings.manager = { enabled: true }; // off by default since 1.26.0; these tests are about a real run
 const manager = require('../lib/manager');
 
 test('senseiArgs keeps MCP servers and skills out of the context', () => {

@@ -164,9 +164,10 @@ describe('HTTP contract (no auth gate)', () => {
   before(async () => {
     dataDir = mkTempDataDir();
     ({ child, base } = await bootServer({ KFK_DATA_DIR: dataDir }));
-    // The Sensei is enabled by default with onNewCard triggers — first API
-    // call after boot, before any task-creating test, so a POST /api/tasks
-    // below never fans out into a real `claude -p` invocation.
+    // The Sensei ships off, so a fresh data dir already has it off and this is
+    // belt and braces: it pins the state these tests need, so a POST
+    // /api/tasks below can never fan out into a real `claude -p` invocation
+    // if the default ever moves again.
     await putJson(base, '/api/manager/config', { enabled: false });
   });
 

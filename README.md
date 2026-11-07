@@ -102,14 +102,17 @@ flowchart LR
     PR --> CI[CI]
     PR --> Watch[PR-watch sweep]
     Watch -->|merged| Merge[Merge]
-    Sensei[Sensei] -->|reviews diff| PR
-    Sensei -->|merges, within autonomy| Merge
+    Sensei[Sensei, off by default] -.->|reviews diff| PR
+    Sensei -.->|merges, within autonomy| Merge
     Merge --> Deps[Gated dependents release]
 ```
 
 The Sensei is an LLM manager (its own `claude -p` call) that reviews a card's
 actual diff and merges the ones that pass, up to whatever autonomy level you've
-set it — see [The Manager](#the-manager-the-sensei).
+set it. It ships **off**: out of the box you review and merge, and the
+kungfu-todo skill tells the Claude Code session you are talking to that it owns
+the cards it creates. Tick one box to hand that back to the board — see
+[The Manager](#the-manager-the-sensei).
 
 ---
 
@@ -247,7 +250,7 @@ transcript notes every substitution. The Sensei's own runs substitute too.
 | Git worktree        | `--worktree kanban-<id>`     | isolates the run on its own branch                                                                        |
 | Open PR when done   | post-run `gh pr create`      | requires worktree; see below                                                                              |
 | Priority            | sort order (0–3)             | 2+ shows the vermillion square                                                                            |
-| Acceptance criteria | manager review rubric        | the Sensei approves/rejects against this                                                                  |
+| Acceptance criteria | review rubric                | what you (or the Sensei, when enabled) judge the finished card against                                    |
 | Repeat              | schedule (interval or daily) | `6h` every 6 hours, `14:30` daily — see [Scheduled cards](#scheduled-cards)                               |
 | Skills              | injected into the prompt     | pick from installed skills, or **✦ auto-select** to let the agent choose                                  |
 
@@ -467,19 +470,24 @@ issue automatically — issue → card → agent → PR → merged → closed.
 project) to do this on request: say "create a kungfu todo for …" and it drafts
 the cards, drops the file in the inbox, and confirms the import. It encodes the
 format, frugal model-routing, and the self-contained-prompt rule (card agents
-start with zero conversation context). When a session is asked to manage a run
-(spawn, review and merge the cards itself), the skill also tells it to switch the
-Sensei and the PR watcher's auto-fixers off first, review every PR for real, and
-restore the old settings afterwards.
+start with zero conversation context).
+
+**The session owns what it creates.** With the Sensei off, nothing else is going
+to launch those cards or look at what comes back, so the skill tells the session
+it is the lead: check that nothing else spawns or merges, launch the batch, watch
+each card's CI, review every PR on its pushed head, and then merge — itself for a
+prose-only diff, and only with your go-ahead for anything touching code, tests or
+config.
 
 **Installing it is automatic**: every server start writes it to
 `~/.claude/skills/kungfu-todo/` with this clone's real paths and port baked in,
 and refreshes it whenever the template changes. ⚙ Settings shows its status,
 with a manual Install/Update button as a repair hatch.
 
-Imported cards land in **Backlog** tagged `import`, and the Sensei gets one
-triage ping per batch (if the new-card trigger is on) — so you can paste a plan,
-and routing/prioritization happens for you.
+Imported cards land in **Backlog** tagged `import`, unless the file sets
+`queue: true`, which launches them on import. With the Sensei enabled it also
+gets one triage ping per batch (if the new-card trigger is on), so you can paste
+a plan and have routing and prioritization done for you.
 
 The board also ships the ponytail lazy-senior-dev discipline and the humanizer
 skill (strips AI writing tells from PR titles, descriptions, and result
@@ -576,7 +584,9 @@ launch failures, Sensei action errors, and subscription-limit cooldowns.
 Repeats bump a counter instead of piling up rows, and entries auto-resolve
 when the thing they describe later succeeds. A red ⚠ chip in the header counts
 open entries; clicking it opens the tracker with per-entry ✓ resolve, links to
-the card/PR, and an **"Ask the Sensei to fix these"** button. The Sensei sees
+the card/PR, and an **"Ask the Sensei to fix these"** button (that one works
+even with the Sensei switched off, since you asked for it — it comes back with
+suggestions to approve). The Sensei sees
 open entries every run and can `resolve_error` (mark one handled) or
 `retarget_pr` (move a PR onto the right base branch via `gh pr edit --base`) —
 it only fixes the operation (permissions, bases, re-runs), never the code.
@@ -626,6 +636,23 @@ that triages new cards (model/effort/skills/priority routing), dispatches queued
 work, reviews finished cards against their acceptance criteria, and answers you in
 chat ("plan the auth refactor into cards", "what's blocking?").
 
+**Off by default** (since 1.26.0). Most people drive this board from a Claude
+Code session, and that session is the manager: it writes the cards, launches
+them, reads the PRs and merges them. A Sensei working underneath it pays twice
+for the same fix and can merge a diff nobody read. So nothing below happens
+until you tick **Sensei enabled** in the Manager tab; everything in this section
+then works exactly as described.
+
+While it is off it is not deaf: a message **you** send still gets an answer —
+the chat box, the rail's Ask box, ⇪ Split into cards, and 🥋 Ask the Sensei to
+fix these all work. It just answers and proposes. Nothing it suggests executes
+without your ✓, whatever autonomy it was left on, and no card finishing, new
+card, settled PR or interval tick starts a run.
+
+Existing boards keep whatever is in their `data/settings.json` — this default
+only applies to a fresh one. Untick the box to turn it off on a board you have
+been running.
+
 **Autonomy ladder** (Manager tab):
 
 | Level                 | Can do without you                                             |
@@ -661,8 +688,9 @@ when a later Sensei run finishes cleanly.
 **Management style:** freeform standing instructions ("prefer haiku for docs tasks",
 "never auto-approve migrations") — no code changes needed.
 
-The manager's own model/effort (default opus/medium) are configurable; it can also
-be disabled entirely with the checkbox.
+The manager's own model/effort (default opus/medium) are configurable. The
+**Sensei enabled** checkbox is what switches the whole thing on; it starts
+unticked.
 
 ### Shadow model routing (optional, Jev)
 
