@@ -76,6 +76,10 @@ test('skill.install(): generated skill makes the session the lead, with the real
   // its own judgement. It must not quietly drop out of a future rewrite.
   assert.ok(/only prose/.test(c), 'prose-only PRs are the ones it may merge itself');
   assert.ok(/wait for the user to\s+say go/.test(c), 'code changes wait for a go-ahead');
+  // `repo` is an alias of `cwd` in a card's header block, so a prompt line
+  // starting "Repo:" either redirects the card or fails the import. Eleven
+  // cards hit the second case on one board before the skill said so.
+  assert.ok(/`Repository:`, never `Repo:`/.test(c), 'the Repo: trap is spelled out');
 });
 
 test('skill.install() defaults the port to 4747 when PORT is unset', () => {
