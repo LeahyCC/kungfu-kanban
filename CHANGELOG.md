@@ -7,6 +7,11 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+## [1.26.1] — 2026-11-09
+
+### Fixed
+- The `kungfu-todo` skill now warns about `Repo:`. In a card's header block (the `key: value` lines directly under the `##` heading) `repo` is an alias of `cwd`, along with `dir` and `directory`, so `Repo: /some/path` there silently sends the card to another working directory and `Repo: some-project` is rejected as a bad path and logged in the error tracker. One board collected eleven import errors that way. The skill now says to write `Repository:`, which the parser ignores and leaves in the prompt. Behaviour is unchanged; only the skill text is.
+
 ## [1.26.0] — 2026-11-06
 
 ### Changed
