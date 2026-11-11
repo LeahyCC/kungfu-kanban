@@ -7,6 +7,9 @@ compares your clone against `origin/main` and offers a one-click update.
 
 ## [Unreleased]
 
+### Fixed
+- The `kungfu-todo` skill no longer reads `data/auth-token`. Its API calls use plain `curl` on a board with no token gate, and send `$KFK_TOKEN` from the environment on one with the gate on. Reading the file put the token in the session's transcript, and a `Read(**/auth-token)` deny rule blocked every call, so sessions could not check their own cards.
+
 ## [1.26.1] — 2026-11-09
 
 ### Fixed

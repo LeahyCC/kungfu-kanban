@@ -80,6 +80,10 @@ test('skill.install(): generated skill makes the session the lead, with the real
   // starting "Repo:" either redirects the card or fails the import. Eleven
   // cards hit the second case on one board before the skill said so.
   assert.ok(/`Repository:`, never `Repo:`/.test(c), 'the Repo: trap is spelled out');
+  // Reading the token file put it in the transcript, and a Read(**/auth-token)
+  // deny rule blocked every API call the skill told the session to make.
+  assert.ok(!/cat [^\n]*auth-token/.test(c), 'no command reads the token file');
+  assert.ok(c.includes('$KFK_TOKEN'), 'a gated board takes the token from the environment');
 });
 
 test('skill.install() defaults the port to 4747 when PORT is unset', () => {
