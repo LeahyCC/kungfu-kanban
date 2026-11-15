@@ -70,6 +70,11 @@ test('skill.install(): generated skill makes the session the lead, with the real
   assert.ok(c.includes('## Running the batch'), 'owning the run is the default section, not a conditional one');
   assert.ok(c.includes('**You are the lead.**'), 'the session is told it owns the cards');
   assert.ok(c.includes('http://localhost:9931/api/manager/config'));
+  // GET /api/config has no manager field; the Sensei's switch is config.enabled
+  // on GET /api/manager. The skill once sent sessions looking in the wrong place.
+  assert.ok(!c.includes('manager.enabled'));
+  assert.ok(c.includes('curl -s http://localhost:9931/api/manager\n'));
+  assert.ok(c.includes('config.enabled'));
   assert.ok(c.includes('http://localhost:9931/api/settings'));
   assert.ok(c.includes('"prWatchAutoFixCi": false'));
   // The merge rule is the one line that keeps a session from shipping code on

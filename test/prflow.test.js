@@ -47,10 +47,35 @@ test('prBody: footer credits the project in both shapes', () => {
   assert.match(prBody({}), /🥋 Opened by/);
 });
 
-test('prBody: prompt is truncated at 1500 chars', () => {
-  const body = prBody({ prompt: 'x'.repeat(2000) });
-  assert.ok(body.includes('x'.repeat(1500)));
-  assert.ok(!body.includes('x'.repeat(1501)));
+// 2026-11-15: the whole pasted card prompt used to be the PR body. Reviewers
+// want what was done and what to check, so the prompt never goes in.
+test('prBody: never pastes the card prompt; summary plus acceptance checklist', () => {
+  const body = prBody({
+    prompt: 'Repository: ACE. Long instructions to the agent '.repeat(40),
+    resultText: 'Moved the status bar below the NOW card.',
+    acceptanceCriteria: '- the bar shows after scrolling\n2. no layout shift\n- [ ] tests pass',
+  });
+  assert.ok(!body.includes('instructions to the agent'));
+  assert.match(body, /## Summary\nMoved the status bar below the NOW card\./);
+  assert.match(body, /## Acceptance criteria\n- \[ \] the bar shows after scrolling\n- \[ \] no layout shift\n- \[ \] tests pass/);
+});
+
+test('prBody: summary is capped at 2000 chars', () => {
+  const body = prBody({ resultText: 'x'.repeat(3000) });
+  assert.ok(body.includes('x'.repeat(2000)));
+  assert.ok(!body.includes('x'.repeat(2001)));
+});
+
+test('prBody: no em dashes, even when the agent wrote them', () => {
+  const body = prBody({ resultText: 'Fixed it — and tested it—twice.', acceptanceCriteria: 'works — on mobile' });
+  assert.ok(!body.includes('—'));
+  assert.match(body, /Fixed it, and tested it, twice\./);
+});
+
+test('prBody: a report with its own heading is not given a second one', () => {
+  const body = prBody({ resultText: '## What changed\nStuff' });
+  assert.ok(!body.includes('## Summary'));
+  assert.match(body, /^## What changed\nStuff/);
 });
 
 // --- prefer the run's final report when it fills in the repo's own PR
@@ -86,18 +111,18 @@ test('prBody: uses the run\'s final report as the body when it fills in the repo
   assert.ok(!body.includes('instructions to the agent'), 'the raw prompt is dropped once the report fills the template');
 });
 
-test('prBody: falls back to the raw prompt when the final report does NOT fill the repo\'s template', () => {
+test('prBody: a report that does NOT fill the repo\'s template goes under a Summary heading', () => {
   const cwd = scratchRepo({
     '.github/PULL_REQUEST_TEMPLATE.md': '## Summary\n\n## Test plan\n',
   });
   const body = prBody({ cwd, prompt: 'do the thing', resultText: 'Done! Everything works now.' });
-  assert.match(body, /## Task\ndo the thing/);
+  assert.match(body, /^## Summary\nDone! Everything works now\./);
+  assert.ok(!body.includes('do the thing'));
 });
 
-test('prBody: falls back to the raw prompt when the repo has no PR template at all', () => {
-  const cwd = scratchRepo({}); // no .github/PULL_REQUEST_TEMPLATE.md
-  const body = prBody({ cwd, prompt: 'do the thing', resultText: '## Summary\nDid it\n\n## Test plan\nran it' });
-  assert.match(body, /## Task\ndo the thing/);
+test('prBody: no report and no criteria leaves only the footer', () => {
+  const cwd = scratchRepo({});
+  assert.match(prBody({ cwd, prompt: 'do the thing' }), /^🥋 Opened by/);
 });
 
 // --- drop the attribution footer when the repo's own CONTRIBUTING.md
