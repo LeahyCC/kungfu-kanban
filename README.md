@@ -515,6 +515,31 @@ still in the worktree, nothing is lost.
 
 **One-time setup:** `gh auth login` (with push scope to the repos you'll use).
 
+**Where worktrees live.** By default the card runs `claude --worktree
+kanban-<id>`, which puts the worktree inside the repo at
+`<repo>/.claude/worktrees/kanban-<id>` (the flag takes a name, not a path). To
+keep them in one shared folder instead, set `worktreeRoot`:
+
+```bash
+curl -s -X PUT -H "Content-Type: application/json" \
+  -d '{"worktreeRoot": "H:\\Git\\.worktrees"}' http://localhost:4747/api/settings
+```
+
+The board then makes each card's worktree itself at
+`<worktreeRoot>/<repo folder>/kanban-<id>` on branch `worktree-kanban-<id>`
+(forked from the local default branch) and runs claude inside it. The folder is
+named for the card because the agent picks its branch later. Untracked files
+listed in the repo's `.worktreeinclude` are copied in, as `claude --worktree`
+does. A card that already has a worktree keeps using it. `~` is accepted; an
+empty string goes back to the default.
+
+**Processes left running.** When a worktree card's run ends (finished, failed or
+stopped), the board kills whatever is still running inside its worktree, such as
+a `next dev` the agent never stopped, and names each process on the card. A
+board terminal open in that worktree keeps its processes. Cards cut off by a
+board restart or crash are reaped when the board starts again. Cards without a
+worktree run in your own checkout and are never reaped.
+
 ### PR watch: merged PRs ship, conflicted PRs self-heal
 
 Every N minutes (⚙ Settings, default 10, 0 = off) the board checks each Review
@@ -525,7 +550,11 @@ card's PR via `gh`:
   running inside the card's worktree, removes the worktree, and deletes the local
   and remote branch. It checks the branch tip landed on the base first; for a
   squash or rebase merge it trusts GitHub's MERGED state but keeps the local
-  branch. Any cleanup failure is logged on the card and in the error tracker.
+  branch. The `worktree-kanban-<id>` branch the worktree started on goes too,
+  when it has no commits beyond the base. If the folder survives the removal
+  (Windows, with `node_modules` or `.next` briefly locked) and git no longer owns
+  it, the board deletes it. Any cleanup failure is logged on the card and in the
+  error tracker.
 - **Closed without merge** → noted once on the card transcript.
 - **Conflicting** (main moved under the branch) → with auto-fix on (default), the
   board spawns a **fix card**: a fresh agent run _inside the original worktree_

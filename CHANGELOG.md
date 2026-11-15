@@ -5,6 +5,17 @@ All notable changes to Kungfu Kanban. Format follows
 minor bumps for features, patch bumps for fixes. The board's status line
 compares your clone against `origin/main` and offers a one-click update.
 
+## [1.28.0] - 2026-11-15
+
+### Added
+- `worktreeRoot` setting (`PUT /api/settings`). When set, the board makes each worktree card's worktree itself at `<worktreeRoot>/<repo folder>/kanban-<id>` and runs claude inside it, instead of `claude --worktree`, which only takes a name and always nests the worktree inside the repo at `.claude/worktrees/`. The branch is still `worktree-kanban-<id>`, files listed in `.worktreeinclude` are still copied in, and a card that already has a worktree keeps it. Unset keeps today's behaviour.
+- When a worktree card's run ends (finished, failed or stopped), the board kills what is still running inside its worktree, such as a `next dev` or `next start -p 3123` the agent left up, and names each process on the card. A board terminal open in the worktree is left alone. Cards a restart or crash interrupted are reaped when the board starts again.
+
+### Fixed
+- Merge cleanup now deletes the `worktree-kanban-<id>` branch `claude --worktree` creates, when it has no commits beyond the base. The agent switches to its own feature branch, and only that one was deleted, so one stale branch piled up per merged card.
+- On Windows, a worktree folder that survived `git worktree remove` (pnpm's `node_modules` and `.next`, briefly locked) is deleted when git no longer owns it, with retries. A failure is reported on the card.
+- On Windows the process finder never matched anything: git prints worktree paths with forward slashes and Windows command lines carry backslashes, so merge cleanup killed nothing and dev servers kept the folder locked. Both spellings are searched now.
+
 ## [Unreleased]
 
 ### Fixed
