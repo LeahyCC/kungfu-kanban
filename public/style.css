@@ -1723,6 +1723,11 @@ a.err-card:hover { text-decoration: underline; }
 .follow-row { display: flex; gap: 8px; margin-top: 10px; }
 .follow-row input { flex: 1; }
 .follow-row button { padding: 6px 14px; font-size: 0.8125rem; }
+/* follow-ups sent while the card runs, waiting for the run to end */
+.follow-queue { margin-top: 10px; border: 1px solid var(--rule); border-left: 3px solid var(--info); padding: 6px 10px; font-size: 0.8125rem; }
+.follow-queue-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
+.follow-queue-item { margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.badge.followq { color: var(--info); border-color: var(--info); }
 
 /* the work: the card's prompt, editable in place */
 .drawer-prompt { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }

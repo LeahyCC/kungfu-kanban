@@ -5,6 +5,18 @@ All notable changes to Kungfu Kanban. Format follows
 minor bumps for features, patch bumps for fixes. The board's status line
 compares your clone against `origin/main` and offers a one-click update.
 
+## [1.29.0] - 2026-11-15
+
+### Added
+- A follow-up sent while a card is running is queued on the card instead of refused with 409. It shows as a `✉ N queued` badge and a list above the follow-up box (the button reads **⏳ Queue**), and everything queued goes to the same session as one follow-up when the run ends, after the PR flow. `DELETE /api/tasks/<id>/followup` (or **clear**) drops the queue. The board's own follow-ups (CI fixer, Sensei) still get the refusal and retry on their next pass, so they cannot stack.
+- `scripts/windows/supervise.js`: runs the board on Windows with no console window to close, restarts `server.js` whenever it exits (like launchd's `KeepAlive`), and stops it cleanly with `--stop` over IPC. `--install` writes the Startup-folder script. The server's own `git`, `gh` and `claude` children get no window either.
+- `resumeInterrupted` setting, off by default: when on, a card a restart or crash cut short resumes its own session when the board starts.
+
+### Fixed
+- The board handles `SIGHUP` (Windows sends it when the console window is closed) and `SIGBREAK` (Ctrl+Break) like `SIGINT`: running cards are marked "interrupted by server restart" and state is flushed. Unhandled, they ended the board with no log line and killed every card agent.
+- Every exit logs `board exit: <reason> (code N)` with a timestamp, so an overnight stop says why.
+- A second follow-up sent to a card already waiting for a slot used to overwrite the first. Both are kept now.
+
 ## [Unreleased]
 
 ### Fixed
