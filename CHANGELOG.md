@@ -16,6 +16,14 @@ compares your clone against `origin/main` and offers a one-click update.
 - On Windows, a worktree folder that survived `git worktree remove` (pnpm's `node_modules` and `.next`, briefly locked) is deleted when git no longer owns it, with retries. A failure is reported on the card.
 - On Windows the process finder never matched anything: git prints worktree paths with forward slashes and Windows command lines carry backslashes, so merge cleanup killed nothing and dev servers kept the folder locked. Both spellings are searched now.
 
+## [1.27.1] - 2026-11-15
+
+### Changed
+- The README is now a short front page. It leads with why the board saves tokens: each card runs in its own fresh session on its own model, so the Claude Code session you are steering stays small. The technical sections moved, text unchanged, into one file per topic under `docs/`, with an index at `docs/README.md`.
+- New `docs/token-savings.md` explains the mechanism and says where a card is not worth it. There is no benchmark behind it and it claims none.
+- The homepage leads with the same point: a new hero, a "where the tokens go" section, and feature and FAQ copy about context, per-card models and resumed follow-ups. `llms.txt` matches.
+- The homepage no longer describes the Sensei as always on. The four forms, the feature grid, the Sensei band and three manual lines now say it is optional and off by default, as it has been since 1.26.0 (#179).
+
 ## [1.27.0] - 2026-11-15
 
 ### Fixed

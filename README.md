@@ -7,53 +7,61 @@
 [![License: MIT](https://img.shields.io/github/license/LeahyCC/kungfu-kanban)](LICENSE)
 
 <picture>
-  <img alt="Kungfu Kanban board — dark theme, five columns, grouped cards with live agent telemetry" src="docs/updated-board.png">
+  <img alt="Kungfu Kanban board, dark theme, five columns, grouped cards with live agent telemetry" src="docs/updated-board.png">
 </picture>
 
-Kungfu Kanban is a local kanban board where Claude Code agents work the cards on your
-own subscription login, no API keys, no per-token billing. Cards can chain into
-dependencies gated by merge, an AI "Manager" reads the actual diff on every finished
-card and merges the green ones itself, and the whole stack leans on a single npm dependency (`express`) — agents run through
-the `claude` CLI you already have — with CI checking every push. It's for a single developer
-who wants a fleet of agents chewing through a backlog without standing up a SaaS or a
-database to do it.
+Kungfu Kanban is a local kanban board where every card is a Claude Code agent.
+You stay in one Claude Code session and hand the work out as cards. Each card
+runs in its own fresh session, on the model it needs, and comes back as a pull
+request.
 
-**[kungfu-kanban.com](https://kungfu-kanban.com)** — this README as an illustrated manual.
+That split is the reason to use it. The session you are steering holds the plan
+and the results. The file reads, test logs and diffs stay in the cards. So your
+session stays small for the whole backlog: it costs less per turn and it doesn't
+compact halfway through. Everything runs on your Claude subscription login, with
+no API keys and no per-token billing.
 
 > A tool for one person, by design: single-user, local-first, everything in a folder
 > of JSON on your own machine. There is no hosted version and there won't be one.
 
-**How it works:** an Express server (`server.js`) serves the board UI and spawns
-`claude -p <prompt> --output-format stream-json` per card. Output streams into the
-card's transcript over server-sent events. An LLM "Manager" (also a `claude -p` call)
-triages, dispatches, and reviews cards. Everything persists as JSON files in `data/`.
-
-[Manual](https://kungfu-kanban.com) · [Compare](https://kungfu-kanban.com/compare) ·
-[Docs](https://kungfu-kanban.com/docs) ·
+[Docs](docs/README.md) · [Website](https://kungfu-kanban.com) ·
+[Compare](https://kungfu-kanban.com/compare) ·
 [Releases](https://github.com/LeahyCC/kungfu-kanban/releases) ·
 [Issues](https://github.com/LeahyCC/kungfu-kanban/issues)
 
 ---
 
-## Contents
+## Why it saves tokens
 
-- [Quick start](#quick-start)
-- [Requirements](#requirements)
-- [Architecture at a glance](#architecture-at-a-glance)
-- [The board](#the-board)
-- [Importing cards from Markdown](#importing-cards-from-markdown)
-- [Repo cards, real PRs](#repo-cards-real-prs)
-- [Notifications](#notifications)
-- [Use it from your phone (Tailscale)](#use-it-from-your-phone-tailscale)
-- [The Manager (the Sensei)](#the-manager-the-sensei)
-- [Run at login (optional)](#run-at-login-optional)
-- [Configuration reference](#configuration-reference)
-- [Troubleshooting](#troubleshooting)
-- [Security notes](#security-notes)
-- [Status & contributions](#status--contributions)
-- [Contributing](#contributing)
-- [Credits](#credits)
-- [License](#license)
+```
+One long session                       With the board
+
+┌───────────────────────────┐          ┌────────────────┐
+│ the plan                  │          │ the plan       │  your session:
+│ task 1  files, logs, diff │          │ card results   │  stays small
+│ task 2  files, logs, diff │          └───────┬────────┘
+│ task 3  files, logs, diff │                  │ cards
+│ task 4  ...               │          ┌───────┼────────┐
+│ (compacted, plan fades)   │          ▼       ▼        ▼
+└───────────────────────────┘        haiku   sonnet    opus
+  every turn re-reads all of it      fresh   fresh     fresh
+```
+
+- **Your main session stays small.** It holds the plan and what each card came
+  back with. The digging happens in the card and stays there.
+- **Every card starts fresh.** A card gets its own prompt and nothing from your
+  conversation, so task six doesn't pay to re-read tasks one to five.
+- **Cheap models do the easy cards.** Model and effort are set per card: haiku
+  for chores, opus only where it earns it.
+- **Fixes resume, they don't restart.** A follow-up or a CI fix reopens the
+  card's own session, so the agent keeps what it already learned.
+- **You can watch the spend.** A usage meter for the 5-hour window, plus live
+  tokens and context use on every running card.
+
+There is no benchmark behind this, only the mechanism, and a two-line fix is
+still cheaper in the session you already have open. The board pays off when the
+work is a list. The full reasoning is in
+[How the board saves tokens](docs/token-savings.md).
 
 ---
 
@@ -65,870 +73,84 @@ npm install
 npm start          # → http://localhost:4747
 ```
 
-That's it for local use. The server binds `127.0.0.1` only by default. Using it
-from your phone over Tailscale needs one more command,
-`openssl rand -hex 16 > data/auth-token`, to turn on the token gate — full
-walkthrough in [Use it from your phone](#use-it-from-your-phone-tailscale).
+That's it for local use. The server binds `127.0.0.1` only. To use the board
+from your phone, see [Phone access](docs/phone.md).
 
 **Updating**: the status line shows your board version and checks `origin/main`
-(every 30 min); when your clone is behind, a **⬆ update available** button pulls
-fast-forward, runs `npm ci` if needed, and restarts the server (instant under
-launchd; under plain `npm start`, start it again). Blocked while cards are
-running. See [CHANGELOG.md](CHANGELOG.md) for what changed.
-
----
+every 30 minutes. When your clone is behind, an **⬆ update available** button
+pulls, runs `npm ci` if needed and restarts the server. It waits while cards
+are running. See
+[CHANGELOG.md](CHANGELOG.md) for what changed.
 
 ## Requirements
 
 | Thing                                               | Why                                                          | Check                                                  |
 | --------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------ |
-| **Node 20+**                                        | server runtime (uses global `fetch`)                         | `node -v`                                              |
+| **Node 20+**                                        | server runtime                                               | `node -v`                                              |
 | **Claude Code CLI**, logged in on your subscription | runs every card                                              | `claude --version`, then `claude` → `/login` if needed |
 | **git**                                             | worktree isolation for repo cards                            | `git -v`                                               |
 | **GitHub CLI (`gh`)**, authed                       | only for "Open PR when done"                                 | `gh auth status`                                       |
-| **macOS**                                           | desktop notifications (`osascript`); the rest works anywhere | —                                                      |
+| **macOS**                                           | desktop notifications (`osascript`); the rest works anywhere | n/a                                                    |
 | **Tailscale** (optional)                            | use the board from your phone                                | `tailscale status`                                     |
 
----
-
-## Architecture at a glance
-
-```mermaid
-flowchart LR
-    UI[Board UI] <--> Server[Express server]
-    Server -->|spawns| CLI[claude CLI per card]
-    CLI --> WT[Git worktree]
-    WT --> PR[GitHub PR]
-    PR --> CI[CI]
-    PR --> Watch[PR-watch sweep]
-    Watch -->|merged| Merge[Merge]
-    Sensei[Sensei, off by default] -.->|reviews diff| PR
-    Sensei -.->|merges, within autonomy| Merge
-    Merge --> Deps[Gated dependents release]
-```
-
-The Sensei is an LLM manager (its own `claude -p` call) that reviews a card's
-actual diff and merges the ones that pass, up to whatever autonomy level you've
-set it. It ships **off**: out of the box you review and merge, and the
-kungfu-todo skill tells the Claude Code session you are talking to that it owns
-the cards it creates. Tick one box to hand that back to the board — see
-[The Manager](#the-manager-the-sensei).
-
----
-
-## The board
-
-Columns: **Backlog → Queued → Running → Review → Done**
-
-- **＋ New card** (or drag an existing card to **Queued**, or ▶ Run in the card
-  drawer) launches it.
-- **parallel** (toolbar, 1–8, default 2) caps concurrent sessions so you don't burn
-  subscription rate limits; extra launches wait in Queued and start automatically as
-  slots free up.
-- Click any card for the **drawer**: live transcript, token/turn stats, and a
-  `claude -r <session-id>` command to resume that session in your terminal.
-- Finished runs land in **Review** (with a vermillion error stripe if they failed).
-  **✓ Done** ships them — hanko seal included.
-- If the server restarts mid-run, orphaned "running" cards are recovered into Review.
-- **⚙ Settings** (toolbar): default working directory, repos directory, ntfy
-  topic, macOS notification toggle, and Done-column archiving (see below).
-- **☀ / ☾** toggles the day/night dojo. Night is the default.
-- The toolbar shows live **system status**: green dots when the `claude` CLI and
-  `gh` auth are healthy, red with a plain-English warning when they're not.
-- The **⛽ usage chip** shows output tokens burned in the rolling 5-hour limit
-  window across ALL Claude Code activity on the machine (board + terminal),
-  computed from the local session logs. Set a budget in ⚙ Settings to turn it
-  into a % meter (amber ≥70%, red ≥90%); the full in/out/cache/per-model
-  breakdown lives in ⚙ Settings.
-- The drawer shows **The work** — the card's prompt, editable in place — and
-  running cards report live output tokens and **session context usage** (ctx %).
-- Cards with a PR get **⇉ Merge PR / Close PR** buttons in the drawer — merging
-  happens via `gh` and stamps the card Done on the spot.
-
-### Built-in terminal (⌘J)
-
-**▸\_ Terminal** in the toolbar (or ⌘J, or `t` in the command palette) opens a real
-shell at the bottom of the board — your `$SHELL` started as a login+interactive
-shell, so `~/.zshrc` and `~/.zprofile` load exactly as they do in your own terminal:
-prompt, aliases, plugins, colours. It is a genuine pty, so job control and
-full-screen TUIs (vim, lazygit, `claude -r <session-id>`) work, and resizing the
-panel resizes the shell.
-
-**Each card has its own terminal too.** ▸\_ Terminal in a card's drawer opens a shell
-in _that card's_ working tree — the git worktree the agent ran in when the card used
-one, not the parent repo — so `git diff`, the tests, and `claude -r <session-id>` all
-land where the work happened. The tree's path shows in the panel bar. One shell per
-card: reopening the card reattaches to it, ⏻ kill ends it and gives you a fresh one.
-
-Sessions belong to the **server**, not the tab. Close the panel, reload the board,
-or pick it up on your phone over Tailscale — `npm test` keeps running and the panel
-reattaches with its scrollback. The panel bar holds one tab per shell (＋ for a new
-one), **⏻ kill** ends the current shell for good, and **✕** just hides the panel.
-Up to 8 sessions; a shell with nobody attached is reaped after 30 idle minutes.
-
-No native module is involved: the pty comes from Python's standard library
-(`lib/ptyhost.py`, spawned by `lib/pty.js`), so installing the board is still
-`git pull && npm i`. It needs `python3` — stock on macOS with the Xcode command
-line tools.
-
-⚠ It is a shell on your Mac behind the same token as the rest of the board. That is
-not a new trust boundary (anyone with the token can already run a card at
-`bypassPermissions`), but it is a much more direct one — turn it off in
-**⚙ Settings → System → built-in terminal** if you'd rather not have it. Turning it
-off also kills any sessions already open.
-
-### Archiving old Done cards
-
-The Done column would otherwise grow forever, so a daily sweep moves cards out
-once they've sat in Done longer than `settings.archiveDays` (default 7,
-measured from `finishedAt`, falling back to `createdAt`). Archived cards are:
-
-- appended as full JSON to `data/archive.jsonl` (one line per card), and
-- removed from `data/tasks.json`, with their `data/transcripts/<id>.jsonl` file deleted.
-
-The sweep runs once at server startup and every 24h after that. Set
-**Archive "done" cards after (days)** to `0` in ⚙ Settings to turn it off;
-archived history in `data/archive.jsonl` is never deleted automatically.
-
-### Follow-up prompts
-
-Open any card that has run and type in the **follow-up box** under the transcript
-("fix the bug where…", "also add…"). The run **resumes the same CLI session**
-(`claude -r`), so the agent keeps its full context — and for worktree cards it
-re-enters the original worktree, so a follow-up push updates the existing PR.
-Follow-ups respect the parallel cap and queue like any run; the follow-up text is
-appended to the card's prompt so Sensei reviews and retries see it.
-
-### Standing conventions in every card prompt
-
-`lib/runner.js` appends these to each card's prompt (after the card's own text):
-
-- **UI verification**: UI changes must be proven in a real headless browser
-  (`npx playwright`), not code review alone.
-- **Foreground commands**: builds and tests run in the foreground with a
-  600000 ms timeout. Nothing is left running in the background, since the
-  session ends when the turn does. A command that can't finish in 10 minutes
-  is not run and is reported instead.
-- **Published files**: a worktree card with `publishes` is told which file(s) it
-  must write and that the board publishes them as contracts when it finishes.
-- **No python on Windows**: on Windows, the board checks once (`where.exe`,
-  never running python) for a real interpreter outside `WindowsApps`. If none
-  is found it adds a line telling agents not to call `python` or `python3`.
-
-### Subscription limits, automatic cooldown
-
-When a run dies on a usage/rate limit, the board:
-
-- parses the reset time from the CLI's error (falls back to a 1-hour backoff),
-- **requeues the card** (it wasn't a real failure) and pauses all auto flow —
-  queue pumping, Sensei triggers, PR auto-fix — until the limit resets,
-- shows a **⏳ countdown chip** in the header, and pings your phone.
-
-Manual run clicks during cooldown queue instead of burning against the wall.
-When the timer expires everything queued launches automatically and you get a
-"training resumes" notification.
-
-**Model fallback**: a _model-specific_ cap or outage (e.g. an Opus-hours limit
-while Sonnet still works, or a 529 overload) doesn't pause anything — the failed
-model is blocked temporarily (30 min for caps, 10 for overloads), the card
-requeues, and launches step down the ladder **fable → opus → sonnet → haiku**
-until the block expires. Cards keep their configured model and climb back up
-automatically; a **⬇ chip** in the header shows what's stepped down, and the
-transcript notes every substitution. The Sensei's own runs substitute too.
-
-### Card fields
-
-| Field               | Maps to                      | Notes                                                                                                     |
-| ------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Title               | —                            | shown on the card, PR title, notification text                                                            |
-| Prompt              | the `claude -p` prompt       | what the agent should do                                                                                  |
-| Working directory   | process `cwd`                | repo dropdown (scans the ⚙ Settings repos directory for git repos) or any path                            |
-| Model               | `--model`                    | default / fable / opus / sonnet / haiku                                                                   |
-| Effort              | `--effort`                   | default / low / medium / high / xhigh / max                                                               |
-| Permissions         | `--permission-mode`          | `acceptEdits` (default), `auto`, `plan`, `dontAsk`, `bypassPermissions` — see [Security](#security-notes) |
-| Agent               | `--agent`                    | your custom agents from `~/.claude/agents/*.md`                                                           |
-| Git worktree        | `--worktree kanban-<id>`     | isolates the run on its own branch                                                                        |
-| Open PR when done   | post-run `gh pr create`      | requires worktree; see below                                                                              |
-| Priority            | sort order (0–3)             | 2+ shows the vermillion square                                                                            |
-| Acceptance criteria | review rubric                | what you (or the Sensei, when enabled) judge the finished card against                                    |
-| Repeat              | schedule (interval or daily) | `6h` every 6 hours, `14:30` daily — see [Scheduled cards](#scheduled-cards)                               |
-| Skills              | injected into the prompt     | pick from installed skills, or **✦ auto-select** to let the agent choose                                  |
-
-### Skills & agents discovery
-
-Auto-discovered at load, no config:
-
-- Personal skills: `~/.claude/skills/*/SKILL.md`
-- Plugin skills: every enabled plugin in `~/.claude/plugins/installed_plugins.json`
-  (their `skills/` and `workflow-skills/` dirs), namespaced `plugin:skill`
-- Agents: `~/.claude/agents/*.md`
-
-### Scheduled cards
-
-Give a card a **Repeat** value in the editor to run it on a schedule:
-
-- `6h` (or `6`) — every 6 hours (fractional hours like `0.5h` are allowed)
-- `14:30` — daily at 14:30 (24-hour local time)
-
-The server checks once a minute. When a card is due, it's **cloned into a fresh
-one-shot card** (with no schedule of its own) that's launched via the normal
-runner — so clones respect the **parallel** (maxConcurrent) queue and flow
-Backlog → Running → Review → Done like any other card. The scheduled card itself
-stays in **Backlog** carrying a `⏱` badge and never moves columns on its own;
-drag it elsewhere and it stops firing until it's back in Backlog. Clear the
-Repeat field to turn scheduling off.
-
-### Dependencies
-
-Give a card a `deps` list — other card ids it must wait for — and it stays in
-**Backlog** until every dependency is Done (approved or its PR merged); the
-runner then launches it automatically. Columns lay chains out in run order and
-dependency badges show unmet-prerequisite depth. The Sensei can chain a
-multi-card plan itself: `create_task`/`update_task` accept exact card titles
-and ordinals (including cards created earlier in the same batch), not just
-ids, reusing the importer's title resolver — unresolvable entries surface as
-`⛓ unresolved dep` instead of silently dropping the chain. Import markdown sets
-the same thing with the `after` key (see [Importing cards](#importing-cards-from-markdown)).
-
-### Contracts
-
-A contract is a named, versioned text file one card publishes so other cards can
-read it. The HTTP API stores and serves them, and a worktree card can publish a
-file it wrote (see [Publishing from a card](#publishing-from-a-card)), and the
-board has a [Contracts tab](#the-contracts-tab); dependencies on contracts come
-later. Content is any text (the board never
-parses it), up to 1 MB, with no NUL bytes. Files live in `data/contracts/<name>/<version>.<ext>`
-and the metadata in `data/contracts/index.json`.
-
-A contract's metadata is `{ name, version, sha256, taskId, publishedAt, ext, bytes }`.
-`version` starts at 1 and goes up by one each time a name gets new content;
-publishing the same content as the latest version changes nothing and returns
-that version. `name` must match `^[a-z0-9][a-z0-9._-]{0,63}$` (no `..`, no trailing
-`.`, no Windows device names like `con`), and `ext` (default `txt`) must match `^[a-z0-9]{1,10}$`.
-
-| Request | Response |
-|---|---|
-| `POST /api/contracts` `{ name, content, ext?, taskId? }` | `{ contract, created }`; `created` is `false` when the content matched the latest version |
-| `GET /api/contracts` | `{ contracts: [...] }`, the latest metadata per name, no content |
-| `GET /api/contracts/:name` | `{ contract, content }` for the latest version |
-| `GET /api/contracts/:name/:version` | `{ contract, content }` for that version |
-
-Invalid input gets a `400` and an unknown name or version a `404`, both as `{ error }`.
-Like the rest of `/api`, these routes sit behind the token gate.
-
-#### Publishing from a card
-
-A worktree card declares the files it will write with a repeatable `publishes`
-line in its card header:
-
-```markdown
-## Define the API shape
-worktree: true
-publishes: api-shape docs/api-shape.md
-publishes: error-codes docs/errors.json
-```
-
-The task stores them as `publishes: [{ name, path }]`; the same shape is accepted
-by `POST /api/tasks` and `PATCH /api/tasks/:id`. `name` follows the contract name
-rule above. `path` is relative to the repo root: no absolute paths, no `..`
-segment, no `:`. A bad line in an import is skipped and logged to the error
-tracker as an import warning; a bad value over the API is a `400`.
-
-The agent's prompt gets one line naming the file(s). When the card finishes
-cleanly (no error, not stopped), the board reads each path from the card's
-worktree and publishes it as that contract, with `taskId` set to the card and the
-file's extension as `ext` (`txt` if it has none or an invalid one). A path that
-resolves outside the worktree, including through a symlink, is refused. A missing
-file or a rejected one (binary, over 1 MB) never fails the card: it becomes a note
-in the card's transcript and an error-tracker entry of kind `publish`.
-
-Each new version is recorded on the card as `task.published`, a list of
-`{ name, version, sha256, publishedAt }`. Publishing content identical to the
-latest version records nothing.
-
-`POST /api/tasks/:id/publish` does the same on demand for a card in review or
-done whose worktree still exists, and returns `{ published, unchanged, problems }`.
-It answers `404` when the worktree is gone, `409` when the card is not in review
-or done, and `400` when the card is not a worktree card or declares no `publishes`.
-
-#### Waiting on a contract
-
-A card can wait for a contract instead of a card, with a repeatable `uses` line:
-
-```markdown
-## Build the client
-uses: api-shape          # any version
-uses: error-codes@2      # exactly version 2
-```
-
-The task stores them as `uses: [{ name, version }]`, with `version` null when
-not pinned. `POST /api/tasks` and `PATCH /api/tasks/:id` accept the same list,
-or strings like `"api-shape@2"`; a bad entry is a `400`. A bad import line is
-skipped with an import warning, like a bad `publishes` line.
-
-A queued card launches once every `after:` prerequisite is done **and** every
-`uses` entry exists: any version of the name, or the pinned version. This is
-weaker than `after:`: it means the contract was published, not that the
-publishing card's code merged. Every new contract version (finish-time publish,
-`POST /api/tasks/:id/publish`, `POST /api/contracts`) starts waiting cards right
-away. Contracts are never deleted, so a met entry stays met. The card shows
-`⛓ uses: <name>` while it waits, and its drawer says what it waits for.
-
-When the card launches, each `uses` entry is resolved: unpinned means the latest
-version at that moment, `@N` means exactly version N even if newer ones exist.
-The agent's prompt then carries the full text of every contract, fenced, under a
-header such as ``Contract `api` v1 (sha256 …), built against this exact version``.
-The card records what it got as `contractsUsed: [{ name, version, sha256 }]` and
-shows one `built against api v1` chip per entry (the sha is in its tooltip).
-A re-run, or a follow-up that resumes the session, resolves again and records
-again, so the field always describes the latest launch. If a contract cannot be
-read at launch the card goes to Review with a `Failed to launch` error instead
-of running without it.
-
-#### The Contracts tab
-
-**Contracts** sits next to Archive in the header (palette command *Go to Contracts*,
-hotkey `4`). It lists one row per contract name: the name, its latest version, the
-first 8 characters of the sha, the publishing card's title (click it to open that
-card's drawer; a card that has since been removed shows "(card removed)", and a
-contract posted straight to the API shows "API") and when it was published.
-Click a row to read the latest content in a read-only block, and use the version
-picker to read an older one. Content is always shown as plain text, never parsed
-as HTML or markdown.
-
-A card that published something carries a badge on its tile for the newest
-version of each contract (`api v2`), and its drawer lists every version it
-published. Publishing sends the server's SSE frame `{ type: 'contracts' }` (also
-sent when a version is posted to `POST /api/contracts`), so an open Contracts tab
-refreshes on its own.
-
----
-
-## Importing cards from Markdown
-
-Turn a plan into a backlog in one paste. Two entry points:
-
-- **⇪ Import** (toolbar): paste markdown or pick a file — works from your phone.
-- **Watch folder**: drop `.md` files into `data/inbox/` — cards appear
-  automatically and the file is archived to `data/inbox/imported/`. Files already
-  in the inbox when the server starts are imported too.
-
-Two formats, auto-detected:
-
-**Sections** — every `## Heading` becomes a card. The heading is the title,
-leading `key: value` lines set fields, an `### Acceptance` subsection becomes the
-acceptance criteria, everything else is the prompt. Optional frontmatter sets
-file-wide defaults:
-
-```markdown
----
-cwd: /Users/you/project
-model: sonnet
-worktree: true
-openPr: true
----
-
-## Fix the flaky login test
-
-model: opus
-priority: 2
-The test in auth.spec.ts fails intermittently because…
-
-### Acceptance
-
-- passes 10x in a row
-
-## Update the README badges
-```
-
-Recognized keys (case/space-insensitive): `cwd` (`dir`/`repo`), `model`, `effort`,
-`permissions`, `priority` (0–3), `worktree`, `openPr` (`pr`), `agent`,
-`skills` (comma-separated), `acceptance`, `issue` (GitHub issue number),
-`base` (`prBase`/`baseBranch`, the PR's target branch), `after` (`deps`/`dependsOn`/
-`needs`, a prerequisite card title — repeat the line for several), `publishes`
-(`<contract-name> <path-in-repo>`, repeat the line for several; see
-[Contracts](#contracts)), `sequential`
-(frontmatter-only: chain every card in the file to the one above it). Unknown or
-invalid values are ignored; a card with no body uses its title as the prompt.
-
-**Checklist** — a file with no `##` headings: every unchecked `- [ ] item`
-becomes a card (checked items are skipped).
-
-**✨ Drafting**: describe the work in plain English in the Draft box and the Sensei
-writes the card doc into the textarea for review. Pick a repo and check **🔍
-explore repo first** to let it read the actual code before writing — slower, but
-cards reference real files. **↻ Refine** iterates on the draft in the same
-session ("split card 2, make the last one opus"). A live preview under the
-textarea shows what will be created and warns about titles already on the board.
-
-**⇣ From issues**: pick a repo and pull its open GitHub issues into cards
-(`issue: N` field). Their PRs include `Fixes #N`, so merging the PR closes the
-issue automatically — issue → card → agent → PR → merged → closed.
-
-**From Claude Code**: the board ships a skill — generated by
-[`lib/skill.js`](lib/skill.js) — that teaches every Claude Code session (any
-project) to do this on request: say "create a kungfu todo for …" and it drafts
-the cards, drops the file in the inbox, and confirms the import. It encodes the
-format, frugal model-routing, and the self-contained-prompt rule (card agents
-start with zero conversation context).
-
-**The session owns what it creates.** With the Sensei off, nothing else is going
-to launch those cards or look at what comes back, so the skill tells the session
-it is the lead: check that nothing else spawns or merges, launch the batch, watch
-each card's CI, review every PR on its pushed head, and then merge — itself for a
-prose-only diff, and only with your go-ahead for anything touching code, tests or
-config.
-
-**Installing it is automatic**: every server start writes it to
-`~/.claude/skills/kungfu-todo/` with this clone's real paths and port baked in,
-and refreshes it whenever the template changes. ⚙ Settings shows its status,
-with a manual Install/Update button as a repair hatch.
-
-Imported cards land in **Backlog** tagged `import`, unless the file sets
-`queue: true`, which launches them on import. With the Sensei enabled it also
-gets one triage ping per batch (if the new-card trigger is on), so you can paste
-a plan and have routing and prioritization done for you.
-
-The board also ships the ponytail lazy-senior-dev discipline and the humanizer
-skill (strips AI writing tells from PR titles, descriptions, and result
-summaries) — both auto-install to `~/.claude/skills` and pre-select on new
-cards. See [Credits](#credits) for attribution.
-
-## Repo cards, real PRs
-
-Give a card a working directory that's a git repo with an `origin` remote, check
-**Git worktree** + **Open PR when done**, and run it. After the agent succeeds:
-
-1. The worktree is located by asking git (`git worktree list`) for the branch
-   named `kanban-<card-id>` — wherever the CLI put it.
-2. Changes the agent left in tracked files are committed with the card title as
-   the message (`git add -u`, so untracked files are never swept in; they are
-   listed on the card instead). The repo's hooks always run. A hook that fails,
-   or a commit that fails for any other reason, is logged with git's own output
-   and the changes stay in the worktree; the flow carries on with the agent's
-   own commits.
-3. If the branch has no commits beyond the base (the branch your main checkout is
-   on), the flow stops, so there are no empty PRs.
-4. The branch is pushed to `origin` (hooks run here too). If the agent already
-   opened a PR on the branch, that PR is attached to the card. Otherwise
-   `gh pr create` opens one: title = card title, body = the agent's final
-   report plus the acceptance criteria as a checklist.
-5. The **PR link** lands on the card, in the drawer, and in your phone notification.
-
-Every step logs to the card transcript (`⇡` lines). Failures (no remote, `gh` not
-authed, push rejected…) log an `✕` line and leave the card in Review. The work is
-still in the worktree, nothing is lost.
-
-**One-time setup:** `gh auth login` (with push scope to the repos you'll use).
-
-**Where worktrees live.** By default the card runs `claude --worktree
-kanban-<id>`, which puts the worktree inside the repo at
-`<repo>/.claude/worktrees/kanban-<id>` (the flag takes a name, not a path). To
-keep them in one shared folder instead, set `worktreeRoot`:
-
-```bash
-curl -s -X PUT -H "Content-Type: application/json" \
-  -d '{"worktreeRoot": "H:\\Git\\.worktrees"}' http://localhost:4747/api/settings
-```
-
-The board then makes each card's worktree itself at
-`<worktreeRoot>/<repo folder>/kanban-<id>` on branch `worktree-kanban-<id>`
-(forked from the local default branch) and runs claude inside it. The folder is
-named for the card because the agent picks its branch later. Untracked files
-listed in the repo's `.worktreeinclude` are copied in, as `claude --worktree`
-does. A card that already has a worktree keeps using it. `~` is accepted; an
-empty string goes back to the default.
-
-**Processes left running.** When a worktree card's run ends (finished, failed or
-stopped), the board kills whatever is still running inside its worktree, such as
-a `next dev` the agent never stopped, and names each process on the card. A
-board terminal open in that worktree keeps its processes. Cards cut off by a
-board restart or crash are reaped when the board starts again. Cards without a
-worktree run in your own checkout and are never reaped.
-
-### PR watch: merged PRs ship, conflicted PRs self-heal
-
-Every N minutes (⚙ Settings, default 10, 0 = off) the board checks each Review
-card's PR via `gh`:
-
-- **Merged** → the card moves to Done ("PR merged") and you get a notification.
-  With cleanup on (default, ⚙ Settings), the board then kills processes still
-  running inside the card's worktree, removes the worktree, and deletes the local
-  and remote branch. It checks the branch tip landed on the base first; for a
-  squash or rebase merge it trusts GitHub's MERGED state but keeps the local
-  branch. The `worktree-kanban-<id>` branch the worktree started on goes too,
-  when it has no commits beyond the base. If the folder survives the removal
-  (Windows, with `node_modules` or `.next` briefly locked) and git no longer owns
-  it, the board deletes it. Any cleanup failure is logged on the card and in the
-  error tracker.
-- **Closed without merge** → noted once on the card transcript.
-- **Conflicting** (main moved under the branch) → with auto-fix on (default), the
-  board spawns a **fix card**: a fresh agent run _inside the original worktree_
-  that merges the base branch, resolves the conflicts preserving both sides, and
-  pushes — updating the PR in place. Max 2 attempts per PR, one active fixer at a
-  time; after that you get a "needs you" notification and it stops. Fix cards
-  wear an `auto-fix` badge and flow through the normal columns, so the Sensei
-  reviews the resolution like any other run.
-- **Red CI** on an otherwise clean PR → with CI auto-fix on (default), the card's
-  _own session_ is resumed with the failing logs, so no retry is burned. Max 2
-  attempts. Failures the watcher has verified as infrastructure (billing,
-  runners never starting) are never auto-fixed — no code change can fix those.
-
-The two auto-fixes are separate switches in ⚙ Settings → System: pushing a merge
-commit to your branch and sending an agent at your CI are different amounts of
-trust, so you can keep either one without the other.
-
-Keep local `main` pushed: agent worktrees branch from the default branch, so an
-unpushed main is how you get avoidable conflicts in the first place.
-
----
-
-## Notifications
-
-When a card lands in **Review** (or fails), you get notified. User-stopped runs
-don't notify.
-
-### macOS (on by default)
-
-Fires via `osascript`. Toggle in ⚙ Settings. If nothing appears, check System
-Settings → Notifications → allow notifications for "Script Editor" / your terminal.
-
-### Phone (ntfy)
-
-1. Install the **ntfy** app ([iOS](https://apps.apple.com/us/app/ntfy/id1625396347) /
-   [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy)) — no
-   account needed.
-2. Pick a long, unguessable topic name (ntfy topics are a public namespace — anyone
-   who knows the name can read it): e.g. `kk-$(openssl rand -hex 8)`.
-3. Put it in **⚙ Settings → ntfy topic** on the board.
-4. In the ntfy app: **+ → Subscribe to topic** → same name.
-
-Pushes include the card title, and tapping one opens the PR when there is one.
-Because the topic is public-by-obscurity, keep card titles free of secrets.
-
-**🔔 Test notification** (in ⚙ Settings) fires both channels on demand — use it to
-verify the phone hookup. You can also watch the topic live at
-`https://ntfy.sh/<your-topic>` in any browser.
-
-### Error tracker
-
-The board keeps a persistent log (`data/errors.json`) of every operational
-error or block as it happens — permission stops, PRs opened against the wrong
-base branch, PR-flow commit/push/create failures, PR conflicts past auto-fix,
-launch failures, Sensei action errors, and subscription-limit cooldowns.
-Repeats bump a counter instead of piling up rows, and entries auto-resolve
-when the thing they describe later succeeds. A red ⚠ chip in the header counts
-open entries; clicking it opens the tracker with per-entry ✓ resolve, links to
-the card/PR, and an **"Ask the Sensei to fix these"** button (that one works
-even with the Sensei switched off, since you asked for it — it comes back with
-suggestions to approve). The Sensei sees
-open entries every run and can `resolve_error` (mark one handled) or
-`retarget_pr` (move a PR onto the right base branch via `gh pr edit --base`) —
-it only fixes the operation (permissions, bases, re-runs), never the code.
-API: `GET /api/errors`, `POST /api/errors/:id/resolve`,
-`POST /api/errors/resolve-all`; a live `errors` SSE event keeps the chip honest.
-
----
-
-## Use it from your phone (Tailscale)
-
-The server **refuses** to bind beyond loopback without an access token, because the
-runner executes code. The safe path is a token + Tailscale (the port stays on
-loopback; Tailscale proxies it inside your tailnet only):
-
-```bash
-# 1. one-time: create the token (this enables the login gate)
-openssl rand -hex 16 > data/auth-token
-
-# 2. run the board
-npm start                          # logs: "token gate: ON"
-
-# 3. one-time: serve it over your tailnet with HTTPS
-tailscale serve --bg 4747
-tailscale serve status             # shows your https://<machine>.<tailnet>.ts.net URL
-```
-
-On your phone: install Tailscale, sign in to the same tailnet, open the URL, enter
-the token once — it's stored as a cookie for a year. Scripts/API calls can send
-`Authorization: Bearer <token>` instead.
-
-**Install it as an app**: the board is a PWA. On iPhone, open the tailnet URL in
-Safari → Share → **Add to Home Screen** — you get a standalone full-screen app
-with the robot icon and night-dojo status bar.
-
-- Token can also come from the `KFK_TOKEN` env var (overrides the file).
-- Rotate it by regenerating `data/auth-token` (old cookies stop working).
-- `tailscale serve` is tailnet-only. **Never** use `tailscale funnel` or a public
-  port-forward for this app.
-- To stop sharing: `tailscale serve --https=443 off` (or `tailscale serve reset`).
-
----
-
-## The Manager (the Sensei)
-
-An LLM manager — itself a `claude -p` structured-output call on your subscription —
-that triages new cards (model/effort/skills/priority routing), dispatches queued
-work, reviews finished cards against their acceptance criteria, and answers you in
-chat ("plan the auth refactor into cards", "what's blocking?").
-
-**Off by default** (since 1.26.0). Most people drive this board from a Claude
-Code session, and that session is the manager: it writes the cards, launches
-them, reads the PRs and merges them. A Sensei working underneath it pays twice
-for the same fix and can merge a diff nobody read. So nothing below happens
-until you tick **Sensei enabled** in the Manager tab; everything in this section
-then works exactly as described.
-
-While it is off it is not deaf: a message **you** send still gets an answer —
-the chat box, the rail's Ask box, ⇪ Split into cards, and 🥋 Ask the Sensei to
-fix these all work. It just answers and proposes. Nothing it suggests executes
-without your ✓, whatever autonomy it was left on, and no card finishing, new
-card, settled PR or interval tick starts a run.
-
-Existing boards keep whatever is in their `data/settings.json` — this default
-only applies to a fresh one. Untick the box to turn it off on a board you have
-been running.
-
-**Autonomy ladder** (Manager tab):
-
-| Level                 | Can do without you                                             |
-| --------------------- | -------------------------------------------------------------- |
-| `suggest` _(default)_ | nothing — every action waits for your ✓                        |
-| `semi`                | create / route / run cards; approve-reject verdicts still wait |
-| `auto`                | everything, within guardrails                                  |
-
-Deleting cards is never available to the manager, at any level.
-
-**Act without asking** (under the ladder): the four verdicts `semi` holds back —
-merge PR, approve, retry, follow-up — can each be released on their own, so
-"merge green PRs yourself but ask before approving" no longer means jumping all
-the way to `auto`. All unticked by default, which is the `semi` above; the group
-is inert on `suggest` (holds everything) and `auto` (holds nothing).
-
-**Triggers:** on task finish (review it), on new card (triage it), every N minutes
-(0 = off), and chat. Each trigger is one manager invocation — mind your rate limits
-before enabling the interval.
-
-**Guardrails:** max launches/hour (default 10), max retries/task (default 2 —
-rejected cards re-run with the manager's feedback appended to the prompt), and a
-**permission ceiling** (default `acceptEdits`) the manager can't assign beyond.
-Guardrail-blocked actions become suggestions instead of executing.
-
-**Suggestions clean themselves up.** A suggestion disappears as soon as approving
-it would do nothing: its card moved on, an `update_task` / `retarget_pr` card is
-done (or the PR merged or closed), or the error a `resolve_error` names is
-resolved. This happens live when a card changes status or an error resolves, not
-only on page load. A Sensei run error ("Manager run errored: …") resolves itself
-when a later Sensei run finishes cleanly.
-
-**Management style:** freeform standing instructions ("prefer haiku for docs tasks",
-"never auto-approve migrations") — no code changes needed.
-
-The manager's own model/effort (default opus/medium) are configurable. The
-**Sensei enabled** checkbox is what switches the whole thing on; it starts
-unticked.
-
-### Shadow model routing (optional, Jev)
-
-With `KFK_TYPESAFE_KEY` in the server's environment, each card's first run also
-asks [TypeSafe](https://docs.typesafe.ai)'s Jev classifier how hard the card is
-and records the model that difficulty would pick (`haiku`, `sonnet` or `opus`) on
-the card as `jevRoute`, along with the score, Jev's confidence, and the model
-version that answered. The call is pinned to `jev-1.13.0` so the score bands
-stay put. A score outside 0 to 2 is ignored and asked again on a later run.
-**Nothing is routed:** the card still runs on its own model. The call is in
-the background and never delays a launch.
-
-`npm run jev-report` lists Jev's pick, confidence, and version next to the
-model each card actually ran on, its cost and its outcome, so you can see
-whether routing by it would save money before switching anything on. The
-card's title, prompt and acceptance criteria
-are sent to TypeSafe; leave the key unset to keep it off. The board reads its own
-`KFK_TYPESAFE_KEY` rather than the SDK's usual `TYPESAFE_API_KEY`, so having a
-TypeSafe key set for other work never turns this on by accident.
-
-### Flow numbers (`npm run flow-report`)
-
-Every status change goes through `lib/transitions.js`, which records a few
-facts on the card as they happen. Cards from before this existed simply lack
-them.
-
-| Field | Meaning |
+## How a batch runs
+
+1. In any Claude Code session, say "create a kungfu todo for ...". The bundled
+   `kungfu-todo` skill writes the cards and drops them in the board's inbox. You
+   can also paste Markdown into the board or pull in GitHub issues.
+2. Cards launch, up to the **parallel** cap. A card that depends on another
+   waits until that one has merged.
+3. Each repo card works in its own git worktree and opens a real pull request.
+   The board watches its CI.
+4. Your session reviews the PR and merges it once you say go. The board then
+   removes the worktree and the branch.
+
+The board also has its own LLM manager, the Sensei, which can triage, review
+and merge for you. It ships off, because the session you are already talking to
+does that job. See [The Sensei](docs/sensei.md).
+
+## Docs
+
+| Doc | What is in it |
 | --- | --- |
-| `firstQueuedAt` | ISO time of the first entry into Queued. Written once, never overwritten |
-| `firstStartedAt` | ISO time of the first entry into Running. Written once, never overwritten |
-| `queuedAt` | ISO time of the latest entry into Queued, for information. Re-parks by the board (cooldown, offline, model fallback, logged-out CLI) do not move it |
-| `doneAt` | ISO time a person or the Sensei last marked the card Done (drag, PATCH, `approve_task`). Not set when the PR merging is what moved the card to Done |
-| `followUps` | How many follow-up messages the card has actually resumed on (drawer or Sensei `followup_task`), counted when the resume starts. The board's own CI fixes are not counted |
-| `sendBacks` | How many times a card in Review or Done went back to Queued or Running instead of being finished: Sensei `reject_task` / `requeue_task`, a drag back, a re-run. Follow-ups and the board's own cooldown / offline / model-fallback re-parks are not counted |
-
-The counters only exist once they go above zero, so a blank cell in the report
-means "none recorded", which is zero for a recent card and unknown for an old
-one.
-
-`npm run flow-report` reads `data/tasks.json` and `data/archive.jsonl` (or
-`KFK_DATA_DIR`) without touching them, and prints one row per card: its status
-(`error` only for a card still in Review with an error; otherwise the real
-status), queued wait (`firstStartedAt` minus `firstQueuedAt`: how long the card
-waited before any work began, across re-parks and re-runs), whether it had
-dependencies, follow-ups, send-backs, and done to merged (`prMergedAt` minus
-`doneAt`). Done to merged only exists for cards approved before their PR
-merged; a card the merge itself moved to Done has no `doneAt`, so the cell is
-blank. Cards that never queued (started straight from Backlog), or that
-predate `firstQueuedAt`, have a blank wait. The last line gives the card count,
-how many cards carry each field, and the median queued wait and done-to-merged
-time. It is the "before" picture for starting a card ahead of its dependency.
-
----
-
-## Run at login (optional)
-
-`~/Library/LaunchAgents/com.kungfu-kanban.plist`:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>Label</key><string>com.kungfu-kanban</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/opt/homebrew/bin/node</string>  <!-- `which node` -->
-    <string>server.js</string>
-  </array>
-  <key>WorkingDirectory</key><string>/Users/YOU/path/to/kungfu-kanban</string>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <!-- launchd's PATH is minimal; claude + gh + git must be findable -->
-    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
-  </dict>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-  <key>StandardOutPath</key><string>/tmp/kungfu-kanban.log</string>
-  <key>StandardErrorPath</key><string>/tmp/kungfu-kanban.log</string>
-</dict></plist>
-```
-
-```bash
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.kungfu-kanban.plist  # load: start now + at login
-launchctl kickstart -k gui/$(id -u)/com.kungfu-kanban                            # restart (e.g. after an update)
-launchctl bootout   gui/$(id -u)/com.kungfu-kanban                               # unload / stop
-```
-
-Gotcha: loading an agent that's **already loaded** fails with the cryptic
-`Load failed: 5: Input/output error` — that's launchd for "nothing to do".
-`launchctl list | grep kungfu` shows whether it's loaded; use `kickstart -k`
-to restart it.
-
----
-
-## Configuration reference
-
-**Environment variables**
-
-| Var                | Default     | Meaning                                                             |
-| ------------------ | ----------- | ------------------------------------------------------------------- |
-| `PORT`             | `4747`      | listen port                                                         |
-| `HOST`             | `127.0.0.1` | bind address; anything non-loopback requires a token                |
-| `KFK_TOKEN`        | —           | access token (overrides `data/auth-token`)                          |
-| `KFK_SHELL`        | `$SHELL`    | shell the built-in terminal launches                                |
-| `KFK_PYTHON`       | `python3`   | interpreter for the terminal's pty helper                           |
-| `KFK_TYPESAFE_KEY` | —           | turns on [shadow model routing](#shadow-model-routing-optional-jev) |
-
-**Files (`data/`, gitignored — this is all app state)**
-
-| File                          | Contents                                                                                                                                                                                                |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tasks.json`                  | all cards                                                                                                                                                                                               |
-| `settings.json`               | parallel cap, default cwd, ntfy topic, notification toggle, archive-after-days, manager config, `maxRunMinutes` (per-run watchdog, default 120, 0 disables), `terminal` (built-in terminal, default on) |
-| `manager.json`                | pending suggestions, chat history, launch timestamps                                                                                                                                                    |
-| `manager-log.jsonl`           | manager activity log                                                                                                                                                                                    |
-| `errors.json`                 | error tracker entries (see [Error tracker](#error-tracker))                                                                                                                                             |
-| `transcripts/<task-id>.jsonl` | per-card transcript                                                                                                                                                                                     |
-| `archive.jsonl`               | Done cards swept out after `archiveDays` (append-only)                                                                                                                                                  |
-| `inbox/`                      | watch folder for markdown imports; imported files move to `inbox/imported/`                                                                                                                             |
-| `auth-token`                  | access token (create to enable the gate)                                                                                                                                                                |
-
-Back up `data/` to keep your board; delete it to factory-reset. Individual sessions
-can always be reopened in the terminal with `claude -r <session-id>` (shown in each
-card's drawer).
-
----
-
-## Troubleshooting
-
-- **Card fails instantly with "Failed to launch claude CLI"** — `claude` isn't on
-  the server's PATH (common under launchd; fix the plist PATH above) or isn't
-  installed.
-- **Run errors mentioning auth/login** — the CLI isn't logged in: run `claude` in a
-  terminal, `/login`, pick your subscription account. API-key auth can't be used —
-  the runner deletes `ANTHROPIC_API_KEY` on purpose.
-- **PR flow: "no worktree matching …"** — the card ran without the worktree box, or
-  the cwd isn't a git repo. **"gh pr create failed"** — check `gh auth status` and
-  that `origin` points at GitHub.
-- **Port already in use** — `lsof -nP -iTCP:4747 -sTCP:LISTEN`, kill the old server.
-- **No macOS notifications** — System Settings → Notifications: allow "Script
-  Editor"/terminal; check the ⚙ Settings toggle.
-- **Hitting subscription rate limits** — lower **parallel**, prefer haiku/sonnet +
-  low effort for routine cards, disable the manager interval trigger, or use the
-  Sensei's frugality bias (it's prompted to route cheap by default).
-- **Server won't start: "Refusing to bind …"** — you set `HOST` without a token.
-  Create `data/auth-token` (or unset `HOST` and use Tailscale serve, which works
-  with loopback).
-- **A card keeps asking you to approve a command** — cards run headless, which
-  has no approval prompt, so replying "yes" can't grant a tool permission. A
-  card whose mode won't allow a command (often a build/test that needs to leave
-  the Bash sandbox) now lands **failed-in-review** with the reason. Raise the
-  card's **Permissions** (the drawer's `perms` select) to `bypassPermissions`,
-  or add an allow-rule in `.claude/settings.json`, then re-run.
-
-## Security notes
-
-This board **executes code on your machine** with whatever permission mode a card
-carries — `bypassPermissions` means exactly that. Accordingly:
-
-- The server never binds beyond loopback without a token, and you shouldn't either.
-  Tailscale serve (tailnet-only) + token is the supported remote path. No public
-  exposure, ever.
-- The manager's permission ceiling stops it from escalating cards beyond what you
-  allow; deleting cards is hard-blocked regardless of autonomy.
-- ntfy topics are public-by-obscurity: unguessable names only, no secrets in card
-  titles.
-- The token cookie is `HttpOnly`/`SameSite=Lax`, compared timing-safe, and lives a
-  year; rotate `data/auth-token` to invalidate.
-- The [built-in terminal](#built-in-terminal-j) is a shell on the host, gated by the
-  same token. It doesn't widen the blast radius (a card at `bypassPermissions`
-  already runs anything), but it is the most direct path to one — switch it off in
-  ⚙ Settings → System if you don't want it, and treat token loss as shell loss.
-
----
+| [How the board saves tokens](docs/token-savings.md) | Why cards cost less than one long session, and where they don't |
+| [Architecture](docs/architecture.md) | The server, the CLI, worktrees and PRs in one diagram |
+| [The board](docs/board.md) | Columns, the card drawer, the built-in terminal, archiving, follow-ups |
+| [Cards](docs/cards.md) | Card fields, skills, dependencies, scheduled cards |
+| [Importing cards](docs/importing.md) | The Markdown format, the watch folder, the `kungfu-todo` skill |
+| [Repo cards and PRs](docs/pull-requests.md) | Worktrees, PR watch, the auto-fixers |
+| [Contracts](docs/contracts.md) | Files one card publishes for other cards to build against |
+| [The Sensei](docs/sensei.md) | The optional LLM manager |
+| [Subscription limits](docs/limits.md) | Cooldown and model fallback |
+| [Notifications](docs/notifications.md) | macOS, phone pushes, the error tracker |
+| [Reports](docs/reports.md) | Flow numbers and shadow model routing |
+| [Phone access](docs/phone.md) | Token gate, Tailscale, install as an app |
+| [Run at login](docs/run-at-login.md) | The launchd agent |
+| [Configuration](docs/configuration.md) | Environment variables and the files in `data/` |
+| [Troubleshooting](docs/troubleshooting.md) | Common failures and fixes |
+| [Security notes](docs/security-notes.md) | What the board can run, and how it is locked down |
 
 ## Status & contributions
 
-This is a personal tool that happens to be public, and it's **open to
-contributions** — bug reports, fixes, focused features (issue-first), docs, and
-tests all land. The scope is deliberately narrow and that's the whole point:
-single-user, local-first, subscription-auth, one runtime dependency, code that
-runs on your own machine. Ideas that keep the board better _within_ that identity
-are welcome; ideas that would make it a different tool — multi-tenancy, hosted
-deployment, API-key providers, a database, billing — are out of scope. That
-version existed and was deleted on purpose; for those, a fork is the honest path.
-
-See **[CONTRIBUTING.md](CONTRIBUTING.md)** for what's in and out of scope, the
-fork-and-PR workflow, and the security-sensitive surfaces to flag.
-
-## Contributing
+This is a personal tool that happens to be public, and it's open to
+contributions: bug reports, fixes, focused features (issue first), docs and
+tests. The scope is narrow on purpose. It is single-user, local-first, runs on
+subscription auth and runs code on your own machine. Ideas that would make it a
+different tool (multi-tenancy, hosted deployment, API-key providers, a database,
+billing) are out of scope. That version existed and was deleted on purpose.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the fork-and-PR workflow, and
-[SECURITY.md](SECURITY.md) if you've found a vulnerability — report it privately
+[SECURITY.md](SECURITY.md) if you've found a vulnerability. Report it privately
 through GitHub, not as a public issue.
 
 ## Credits
 
 The board auto-installs two third-party Claude Code skills onto new cards:
 
-- [ponytail](https://github.com/DietrichGebert/ponytail) (MIT) — the
+- [ponytail](https://github.com/DietrichGebert/ponytail) (MIT): the
   lazy-senior-dev discipline that keeps agent diffs minimal.
-- [humanizer](https://github.com/blader/humanizer) (MIT) — strips AI writing
-  tells from PR titles, descriptions, and result summaries; patterns sourced
+- [humanizer](https://github.com/blader/humanizer) (MIT): strips AI writing
+  tells from PR titles, descriptions and result summaries. Its patterns come
   from Wikipedia's WikiProject AI Cleanup.
 
 ## License

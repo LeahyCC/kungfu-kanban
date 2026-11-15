@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kungfu Kanban — Kanban Board for Claude Code Agents</title>
   <meta name="description"
-    content="A local-first kanban board where every card runs a Claude Code agent on your subscription — no API keys, no token billing. Cards open real PRs; you press merge.">
+    content="A local kanban board for Claude Code. Hand work out as cards: each runs in its own fresh session on the model it needs, so your main session stays small and you use fewer tokens.">
   <link rel="canonical" href="https://kungfu-kanban.com/">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32">
@@ -17,18 +17,18 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Kungfu Kanban">
   <meta property="og:url" content="https://kungfu-kanban.com/">
-  <meta property="og:title" content="Kungfu Kanban — every card is a fighter">
+  <meta property="og:title" content="Kungfu Kanban: hand off the work, keep the context">
   <meta property="og:description"
-    content="A kanban board where every card runs a Claude Code agent on your subscription. No API keys. No token billing. Cards become PRs — you hold the merge button.">
+    content="Hand work out as cards. Each one is a Claude Code agent in its own fresh session, so your main session stays small and the backlog costs fewer tokens. Runs on your subscription, no API keys.">
   <meta property="og:image" content="https://kungfu-kanban.com/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt"
     content="The Kungfu Kanban cardboard robot beside the words: kanban board for Claude Code agents">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Kungfu Kanban — every card is a fighter">
+  <meta name="twitter:title" content="Kungfu Kanban: hand off the work, keep the context">
   <meta name="twitter:description"
-    content="A kanban board where every card runs a Claude Code agent on your subscription. No API keys. No token billing. Cards become PRs — you hold the merge button.">
+    content="Hand work out as cards. Each one is a Claude Code agent in its own fresh session, so your main session stays small and the backlog costs fewer tokens. Runs on your subscription, no API keys.">
   <meta name="twitter:image" content="https://kungfu-kanban.com/og.png">
   <script type="application/ld+json">
   {
@@ -49,7 +49,7 @@
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
         "license": "https://github.com/LeahyCC/kungfu-kanban/blob/main/LICENSE",
         "softwareRequirements": "Node.js 20+, Claude Code CLI with a Claude subscription",
-        "description": "A local-first kanban board where every card runs a Claude Code agent on your Claude subscription — no API keys, no token billing, no cloud. A Sensei manager triages the queue, repo cards open real pull requests, and everything stays in plain JSON on your machine.",
+        "description": "A local-first kanban board for Claude Code. You hand work out as cards from one session. Each card runs as its own fresh Claude Code session on the model it needs and comes back as a pull request, so your main session stays small. It runs on your Claude subscription with no API keys, and everything stays in plain JSON on your machine.",
         "sameAs": ["https://github.com/LeahyCC/kungfu-kanban"]
       },
       {
@@ -76,7 +76,7 @@
             "name": "Can cards open real pull requests?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes. Repo cards run in an isolated git worktree and open a pull request via the GitHub CLI when done. Every PR carries CI status; the Sensei can merge it itself once all checks are green (within its autonomy setting), and any merge moves the card to Done automatically. Conflicted PRs spawn a self-healing fix agent."
+              "text": "Yes. Repo cards run in an isolated git worktree and open a pull request via the GitHub CLI when done. Every PR carries CI status, and any merge moves the card to Done automatically. The optional Sensei can merge green PRs itself, within its autonomy setting. Conflicted PRs spawn a self-healing fix agent."
             }
           },
           {
@@ -92,7 +92,15 @@
             "name": "How does Kungfu Kanban keep Claude token usage low?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "The board ships with the ponytail skill (vendored, MIT), auto-installed and pre-selected on every new card. It steers agents to the smallest working solution — reuse before rewrite, standard library before dependencies, the shortest diff that ships — which ponytail's own benchmarks measure at roughly half the code and about 20% lower cost. The Sensei also routes frugally (haiku and low effort for trivial work), and a parallel cap plus automatic cooldowns keep runs inside your subscription's rate limits."
+              "text": "Mostly by splitting the work. Each card runs in its own fresh Claude Code session that starts with only the card's prompt, so no session re-reads the history of every earlier task. Model and effort are set per card, so chores run on Haiku and only the hard cards use Opus or Fable. Follow-ups and CI fixes resume the card's own session instead of starting over. The bundled ponytail skill (vendored, MIT) steers agents to the smallest working change, which ponytail's own benchmarks measure at roughly half the code and about 20% lower cost. A parallel cap and automatic cooldowns keep runs inside your subscription's rate limits."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Kungfu Kanban keep my main Claude Code session's context small?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, and that is the main reason to use it. You hand work out as cards from one Claude Code session with the bundled kungfu-todo skill. The file reads, test output and retries happen inside each card's own session. Your session holds the plan, each card's status and the pull request that comes back, so it stays small across a long backlog instead of filling up and compacting."
             }
           },
           {
@@ -166,9 +174,9 @@
         <div class="mkt-inner hero-grid">
           <div class="hero-copy">
             <p class="hero-kicker"><span class="pulse" aria-hidden="true"></span>LOCAL-FIRST · RUNS ON YOUR CLAUDE SUBSCRIPTION</p>
-            <h1>Every card is a fighter. <span class="muted">The master works for you.</span></h1>
+            <h1>Hand off the work. <span class="muted">Keep the context.</span></h1>
             <p class="hero-sub">
-              A kanban board that runs on your machine, where each card is a Claude Code agent on your subscription login. No API keys, no token billing, no cloud. Cards create, route, run and review themselves. Your only job is the merge button.
+              A kanban board for Claude Code that runs on your machine. Your main session writes short cards and hands them off. Each card is its own fresh agent on the model it needs, so the file reads, test logs and diffs never pile up in the conversation you are steering. Fewer tokens, no compacting halfway through, all on your subscription login.
             </p>
             <div class="install-box">
               <pre><span class="prompt">$ </span>git clone https://github.com/LeahyCC/kungfu-kanban.git
@@ -191,11 +199,41 @@
         </div>
         <div class="mkt-inner">
           <dl class="facts">
+            <div><dt>1</dt><dd>FRESH SESSION PER CARD</dd></div>
+            <div><dt>4</dt><dd>MODELS, PICKED PER CARD</dd></div>
             <div><dt>0</dt><dd>API KEYS</dd></div>
-            <div><dt>1</dt><dd>NPM DEPENDENCY</dd></div>
-            <div><dt>127.0.0.1</dt><dd>BINDS BY DEFAULT</dd></div>
             <div><dt>data/*.json</dt><dd>ALL APP STATE</dd></div>
           </dl>
+        </div>
+      </section>
+
+      <!-- WHERE THE TOKENS GO -->
+      <section class="ctx-section section-pad" id="tokens">
+        <div class="mkt-inner">
+          <p class="sec-kicker">§ WHERE THE TOKENS GO</p>
+          <h2 class="section-title">One long session fills up. <span class="muted">Cards don&rsquo;t.</span></h2>
+          <div class="ctx-compare">
+            <div class="ctx-panel">
+              <div class="form-top"><span>BEFORE</span><span>ONE LONG SESSION</span></div>
+              <div class="ctx-rows" role="img" aria-label="One session whose context is almost full: a small plan followed by the files, logs and diffs of four tasks">
+                <div class="ctx-row"><span>your session</span><span class="ctx-meter"><i class="plan" style="width:7%"></i><i class="work" style="width:25%"></i><i class="work" style="width:25%"></i><i class="work" style="width:25%"></i><i class="work" style="width:13%"></i></span></div>
+              </div>
+              <h3>Everything lands in one context</h3>
+              <p>Every turn re-reads all of it. By task four the session is paying for tasks one to three again, and compaction starts eating the plan you wrote at the top.</p>
+            </div>
+            <div class="ctx-panel">
+              <div class="form-top"><span>AFTER</span><span>WITH THE BOARD</span></div>
+              <div class="ctx-rows" role="img" aria-label="Your session holds only the plan and card results. Three cards each have their own partly filled context on haiku, sonnet and opus">
+                <div class="ctx-row"><span>your session</span><span class="ctx-meter"><i class="plan" style="width:7%"></i><i class="result" style="width:9%"></i></span></div>
+                <div class="ctx-row"><span>card · haiku</span><span class="ctx-meter"><i class="work" style="width:22%"></i></span></div>
+                <div class="ctx-row"><span>card · sonnet</span><span class="ctx-meter"><i class="work" style="width:38%"></i></span></div>
+                <div class="ctx-row"><span>card · opus</span><span class="ctx-meter"><i class="work" style="width:55%"></i></span></div>
+              </div>
+              <h3>The work stays in the cards</h3>
+              <p>Your session carries the plan and what came back. Each card starts empty, does one job on the model you picked, and keeps its mess to itself.</p>
+            </div>
+          </div>
+          <p class="ctx-legend"><span><i class="plan"></i>the plan</span><span><i class="work"></i>files, logs, diffs</span><span><i class="result"></i>card results</span><span class="ctx-fine">a picture of the mechanism, not a benchmark</span></p>
         </div>
       </section>
 
@@ -208,22 +246,22 @@
             <div class="form-cell">
               <div class="form-top"><span>01</span><span>BACKLOG</span></div>
               <h3>Say the work exists</h3>
-              <p>&ldquo;Create a kungfu todo&rdquo; in any terminal session. A pasted plan. Your open GitHub issues. Cards write themselves, acceptance criteria included.</p>
+              <p>&ldquo;Create a kungfu todo&rdquo; in any Claude Code session. It writes short, self-contained cards and drops them on the board. Then that conversation is free again.</p>
             </div>
             <div class="form-cell">
               <div class="form-top"><span>02</span><span>QUEUED</span></div>
-              <h3>The Sensei routes</h3>
-              <p>Model, effort, priority, skills: triaged per card, automatically. Haiku for drills, Fable for the tournament.</p>
+              <h3>Each card gets its model</h3>
+              <p>Haiku for chores, Sonnet for routine code, Opus or Fable for the hard ones. Easy work stops eating your top-model limits.</p>
             </div>
             <div class="form-cell">
               <div class="form-top"><span>03</span><span>RUNNING</span></div>
-              <h3>The dojo runs itself</h3>
-              <p>Cards launch, retry with feedback, step down models and absorb rate limits, unattended, inside your guardrails.</p>
+              <h3>A fresh session per card</h3>
+              <p>A card starts with its own prompt and nothing from your chat. Its file reads, test output and retries stay in that session.</p>
             </div>
             <div class="form-cell">
               <div class="form-top"><span>04</span><span>DONE</span></div>
-              <h3>PRs arrive, shipped</h3>
-              <p>Repo cards open real pull requests on their own; merged ones file themselves into Done. You hold the merge button. That&rsquo;s the whole job.</p>
+              <h3>You get a PR back</h3>
+              <p>Repo cards open real pull requests on their own. Your session reads the diff, and you hold the merge button.</p>
             </div>
           </div>
         </div>
@@ -359,80 +397,36 @@
           <h2 class="section-title">The discipline, itemized.</h2>
           <div class="paper-grid">
             <div class="paper-cell">
-              <span class="kicker">Subscription</span>
-              <h3>No API keys. On purpose.</h3>
-              <p>Every card runs the Claude Code CLI on your subscription login. The runner strips
-                <code>ANTHROPIC_API_KEY</code> from the environment, so it can never silently fall back to
-                pay‑per‑token.
-              </p>
-              <span class="footnote">no token billing. ever.</span>
+              <span class="kicker">Context</span>
+              <h3>Your main session stays small</h3>
+              <p>Say &ldquo;create a kungfu todo&rdquo; and the session you are in writes the cards and hands them off. It keeps the plan, the card statuses and the PRs that come back. It does not fill up and compact in the middle of a long backlog.</p>
+              <span class="footnote">one session plans. the cards do the digging.</span>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Fresh start</span>
+              <h3>Every card starts from zero</h3>
+              <p>A card gets its own prompt, its skills and nothing from your conversation. Task six never pays to re-read tasks one to five.</p>
             </div>
             <div class="paper-cell">
               <span class="kicker">Models</span>
-              <h3>Every fighter on the card</h3>
-              <p>Fable, Opus, Sonnet, Haiku — model and belt‑stripe effort picked per card. When one model hits a cap
-                or an outage, launches step down the ladder automatically and climb back when it clears.</p>
+              <h3>The right model per card</h3>
+              <p>Model and effort are picked per card, so chores run on Haiku and only the hard cards get Opus or Fable. When a model hits a cap or an outage, launches step down the ladder and climb back when it clears.</p>
             </div>
             <div class="paper-cell">
-              <span class="kicker">Skill</span>
-              <h3>&ldquo;Create a kungfu todo&rdquo;</h3>
-              <p>The board auto‑installs a Claude Code skill on your machine, so any session in any project can queue
-                work onto the board: say the word, and it drafts the cards, drops them in the inbox, and the Sensei
-                triages them.</p>
-              <span class="footnote">installed for you at boot. zero setup.</span>
+              <span class="kicker">Follow-ups</span>
+              <h3>Fix it in the same session</h3>
+              <p>A follow-up reopens the card&rsquo;s own session, and so does a red CI run. The agent keeps what it already learned about the code, so nothing gets rediscovered.</p>
             </div>
             <div class="paper-cell">
-              <span class="kicker">Manager</span>
-              <h3>A sensei for the queue</h3>
-              <p>Triages new cards, dispatches runs, reviews finished work against your acceptance criteria and the
-                actual PR diff — not just the agent&rsquo;s self-report — and merges green PRs itself when your autonomy
-                setting allows. Three autonomy levels; deleting cards is never on the table.</p>
+              <span class="kicker">Usage</span>
+              <h3>Watch the spend</h3>
+              <p>A usage chip shows output tokens for the rolling 5-hour window, across the board and your terminal. Set a budget and it turns into a meter. Every running card shows its live tokens and how full its context is.</p>
             </div>
             <div class="paper-cell">
-              <span class="kicker">Worktrees</span>
-              <h3>Repo cards ship PRs</h3>
-              <p>Coding tasks run in an isolated git worktree and open a real pull request via <code>gh</code> when
-                done. Every PR runs CI; PR watch ships merged cards and spawns fix agents for conflicts.</p>
-            </div>
-            <div class="paper-cell">
-              <span class="kicker">Chains</span>
-              <h3>Cards that wait their turn</h3>
-              <p>Give a card &ldquo;Runs after&rdquo; prerequisites and it waits in Queued until every one is actually
-                done — a done card with a still-open, unmerged PR still counts as blocking. The Sensei chains
-                multi-card plans itself.</p>
-            </div>
-            <div class="paper-cell">
-              <span class="kicker">Groups</span>
-              <h3>Batches run one lane at a time</h3>
-              <p>Cards from the same import or plan cluster under a collapsible group header. Only one card per group
-                is ever in progress, a queue-group button launches the whole batch, and finishing one fires a single
-                notification instead of one per card.</p>
-            </div>
-            <div class="paper-cell">
-              <span class="kicker">Cooldown</span>
-              <h3>Rate limits, absorbed</h3>
-              <p>Hit a subscription limit and the board requeues the card, pauses all auto flow, shows a countdown, and
-                resumes everything when the window resets. Nothing burns against the wall.</p>
-            </div>
-            <div class="paper-cell">
-              <span class="kicker">Import</span>
-              <h3>Markdown in, backlog out</h3>
-              <p>Any plan that reaches the inbox — a paste, a dropped <code>.md</code>, your open GitHub issues —
-                becomes cards on its own: model, priority, and acceptance criteria parsed from the text, Sensei
-                triage included.</p>
-            </div>
-            <div class="paper-cell">
-              <span class="kicker">Phone</span>
-              <h3>The dojo in your pocket</h3>
-              <p>Token gate + Tailscale serve puts the board on your phone, tailnet‑only. ntfy pushes tell you when a
-                card lands in Review. Installs as a PWA.</p>
-            </div>
-            <div class="paper-cell">
-              <span class="kicker">Local</span>
-              <h3>Everything on the record</h3>
-              <p>One Express server, plain JSON files in <code>data/</code>, every transcript and manager decision on
-                disk. Back up a folder, own your board.</p>
-              <span class="footnote">your machine. your files. obviously.</span>
+              <span class="kicker">Subscription</span>
+              <h3>No API keys. On purpose.</h3>
+              <p>Every card runs the Claude Code CLI on your subscription login. The runner strips <code>ANTHROPIC_API_KEY</code> from the environment, so it can never silently fall back to pay‑per‑token.</p>
+              <span class="footnote">no token billing. ever.</span>
             </div>
             <div class="paper-cell wide">
               <span class="kicker">Frugal</span>
@@ -444,6 +438,54 @@
                 pre-selected on new cards, deselect any time.</p>
               <span class="footnote">~54% less code, ~20% cheaper, ~27% faster — ponytail&rsquo;s own benchmarks.</span>
             </div>
+            <div class="paper-cell">
+              <span class="kicker">Skill</span>
+              <h3>&ldquo;Create a kungfu todo&rdquo;</h3>
+              <p>The board auto‑installs a Claude Code skill on your machine, so any session in any project can queue work onto the board. Say the word and it drafts the cards, drops them in the inbox, then launches and reviews the batch.</p>
+              <span class="footnote">installed for you at boot. zero setup.</span>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Worktrees</span>
+              <h3>Repo cards ship PRs</h3>
+              <p>Coding tasks run in an isolated git worktree and open a real pull request via <code>gh</code> when done. Every PR runs CI; PR watch ships merged cards and spawns fix agents for conflicts.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Chains</span>
+              <h3>Cards that wait their turn</h3>
+              <p>Give a card &ldquo;Runs after&rdquo; prerequisites and it waits in Queued until every one has merged. Queue the whole chain at once and it cascades on its own. No agent run is spent finding out it was blocked.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Groups</span>
+              <h3>Batches run one lane at a time</h3>
+              <p>Cards from the same import or plan cluster under a collapsible group header. Only one card per group is ever in progress, a queue-group button launches the whole batch, and finishing one fires a single notification instead of one per card.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Cooldown</span>
+              <h3>Rate limits, absorbed</h3>
+              <p>Hit a subscription limit and the board requeues the card, pauses all auto flow, shows a countdown, and resumes everything when the window resets. Nothing burns against the wall.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Import</span>
+              <h3>Markdown in, backlog out</h3>
+              <p>Any plan that reaches the inbox becomes cards on its own, whether it is a paste, a dropped <code>.md</code> or your open GitHub issues. Model, priority and acceptance criteria are parsed from the text.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Phone</span>
+              <h3>The dojo in your pocket</h3>
+              <p>Token gate + Tailscale serve puts the board on your phone, tailnet‑only. ntfy pushes tell you when a card lands in Review. Installs as a PWA.</p>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Local</span>
+              <h3>Everything on the record</h3>
+              <p>One Express server, plain JSON files in <code>data/</code>, every transcript on disk. Back up a folder, own your board.</p>
+              <span class="footnote">your machine. your files. obviously.</span>
+            </div>
+            <div class="paper-cell">
+              <span class="kicker">Manager</span>
+              <h3>An optional sensei</h3>
+              <p>Off by default, because the session you are already in does this job. Turn it on and the board triages new cards, reviews finished work against your acceptance criteria and the actual PR diff, and merges green PRs itself when your autonomy setting allows.</p>
+              <span class="footnote">three autonomy levels. deleting cards is never one of them.</span>
+            </div>
           </div>
         </div>
       </section>
@@ -452,11 +494,12 @@
       <section class="ink-band">
         <div class="mkt-inner">
           <div>
-            <h2>A sensei for the queue.</h2>
+            <h2>An optional sensei for the queue.</h2>
             <p>
-              The Manager reads every card, routes it to the right model, launches runs,
-              and reviews the results against your acceptance criteria. You choose how
-              much rope it gets.
+              Off by default, because the Claude Code session you are already in manages
+              the cards. Turn the Manager on and it routes each card to a model, launches
+              runs and reviews the results against your acceptance criteria. You choose
+              how much rope it gets.
             </p>
           </div>
           <div class="ladder-demo" aria-label="Autonomy levels">
@@ -666,8 +709,8 @@ npm start          <span class="c"># → http://localhost:4747</span></code></pr
                     </tr>
                     <tr>
                       <td>Acceptance criteria</td>
-                      <td>manager review rubric</td>
-                      <td>the Sensei approves/rejects against this</td>
+                      <td>review rubric</td>
+                      <td>what you (or the Sensei, when enabled) judge the finished card against</td>
                     </tr>
                     <tr>
                       <td>Group</td>
@@ -760,6 +803,10 @@ npm start          <span class="c"># → http://localhost:4747</span></code></pr
                   cards against their acceptance criteria and their actual PR diff, chains multi-card plans with
                   dependencies, and answers you in chat (&ldquo;plan the auth refactor into cards&rdquo;,
                   &ldquo;what&rsquo;s blocking?&rdquo;).</p>
+                <div class="note"><b>Off by default.</b> Most people drive the board from a Claude Code session,
+                  and that session is the manager. Nothing in this chapter runs until you tick
+                  <strong>Sensei enabled</strong> in the Manager tab. A message you send it yourself still gets an
+                  answer, as a suggestion for you to approve.</div>
                 <h4>Review &amp; fix powers</h4>
                 <p>A review card carries its real PR diff into the Sensei&rsquo;s context, not just the agent&rsquo;s
                   self-report — the diff is what catches ordering, logic, and safety issues a self-report misses.
@@ -885,8 +932,9 @@ after: Fix the flaky login test</code></pre>
                   <code>~/.claude/skills/kungfu-todo/</code> at every start, with your clone&rsquo;s real paths and
                   port baked in, and keeps it current as the board updates. ⚙ Settings shows its status alongside a
                   manual Install/Update button if you ever need it.</p>
-                <p>Imported cards land in <strong>Backlog</strong> tagged <code>import</code>, and the Sensei gets one
-                  triage ping per batch — paste a plan, and routing happens for you.</p>
+                <p>Imported cards land in <strong>Backlog</strong> tagged <code>import</code>, unless the file sets
+                  <code>queue: true</code>, which launches them on import. With the Sensei enabled it also gets one
+                  triage ping per batch.</p>
                 <p><a href="/docs#import-format">The import format, as its own reference page →</a></p>
               </div>
 

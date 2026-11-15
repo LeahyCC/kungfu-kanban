@@ -1084,3 +1084,37 @@ pre code { background: none; border: none; padding: 0; white-space: pre; font-si
   .masthead .wordmark .antenna { display: none; }
   .masthead nav .btn { padding: 8px 10px; }
 }
+
+/* ---------- where the tokens go: one long session vs cards ---------- */
+.ctx-section { border-bottom: 2px solid var(--rule-strong); }
+.section-title .muted { color: var(--ink-400); font-weight: 600; }
+.ctx-compare { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--rule); border-radius: 4px; }
+.ctx-panel { padding: 22px 22px 26px; display: flex; flex-direction: column; gap: 14px; }
+.ctx-panel + .ctx-panel { border-left: 1px solid var(--rule); }
+.ctx-panel h3 { font-size: 19px; }
+.ctx-panel p { color: var(--ink-600); font-size: 14.5px; line-height: 1.6; }
+/* Both panels reserve the same height for their bars so the headings line up. */
+.ctx-rows { display: flex; flex-direction: column; gap: 8px; min-height: 112px; padding: 6px 0; }
+.ctx-row {
+  display: grid; grid-template-columns: 112px 1fr; align-items: center; gap: 12px;
+  font-family: var(--font-mono), monospace; font-size: 11.5px; color: var(--ink-400);
+}
+.ctx-meter { display: flex; gap: 2px; height: 16px; padding: 2px; border: 1px solid var(--rule-strong); }
+.ctx-meter i, .ctx-legend i { display: block; }
+.ctx-meter i { height: 100%; }
+.ctx-section .plan { background: var(--accent); }
+.ctx-section .work { background: var(--ink-400); }
+.ctx-section .result { background: var(--success); }
+.ctx-legend {
+  display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 16px;
+  font-family: var(--font-mono), monospace; font-size: 11.5px; color: var(--ink-400);
+}
+.ctx-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.ctx-legend i { width: 10px; height: 10px; }
+.ctx-legend .ctx-fine { margin-left: auto; }
+@media (max-width: 860px) {
+  .ctx-compare { grid-template-columns: 1fr; }
+  .ctx-panel + .ctx-panel { border-left: none; border-top: 1px solid var(--rule); }
+  .ctx-rows { min-height: 0; }
+  .ctx-legend .ctx-fine { margin-left: 0; }
+}
