@@ -36,6 +36,39 @@ Gotcha: loading an agent that's **already loaded** fails with the cryptic
 `launchctl list | grep kungfu` shows whether it's loaded; use `kickstart -k`
 to restart it.
 
+## Windows
+
+```bash
+node scripts\windows\supervise.js --install   # add kungfu-kanban.cmd to your Startup folder
+node scripts\windows\supervise.js             # start now
+node scripts\windows\supervise.js --status
+node scripts\windows\supervise.js --stop      # clean stop: running cards are marked, state is flushed
+```
+
+The supervisor is the Windows stand-in for launchd's `KeepAlive`. It runs with
+no console window, starts `node server.js` with its output appended to
+`data\server.log`, and starts it again whenever it exits (an in-app update
+included), backing off for a minute after five exits in two minutes. The server
+gets a console with no window, so the `git`, `gh` and `claude` processes it
+starts do not flash windows either. `--stop` asks the server to shut down over
+IPC, because Windows has no signal to send it: `process.kill` there is a hard
+kill that skips the shutdown handler. `--install` keeps an older
+`kungfu-kanban.cmd` as `kungfu-kanban.cmd.bak`.
+
+Avoid the old `start /min cmd /c "node server.js"` line: closing that window,
+or Ctrl+C in it, ends the board and every card agent with it.
+
+Every exit writes a `board exit: <reason> (code N)` line to the log (`SIGINT`,
+`SIGHUP` for a closed console window, `SIGBREAK`, `supervisor: stop requested`,
+an uncaught exception, an update). No line at all means the process was killed
+from outside.
+
+Cards cut short by a restart land in Review marked "interrupted by server
+restart". `PUT /api/settings {"resumeInterrupted": true}` makes the board resume
+each one's session when it starts again (off by default, since each resume is a
+run). The flag is cleared on every start, so turning the setting on later never
+resumes old cards.
+
 ---
 
 [Back to the docs index](README.md)

@@ -16,7 +16,7 @@ import { applyCooldown, applyModelBlocks, renderNetChip, setServerOffline, rende
 import { renderErrChip, loadErrors, loadManager, setMgrBusy, renderAttn, refreshMgrBadgeSoon } from './manager.js';
 import { render, loadTasks } from './board.js';
 import { contractsVisible, loadContracts, renderContractRows } from './contracts.js';
-import { renderDrawerMeta, renderDrawerActions, closeDrawer, appendTranscriptEntry } from './drawer.js';
+import { renderDrawerMeta, renderDrawerActions, closeDrawer, appendTranscriptEntry, syncFollowForm } from './drawer.js';
 
 const managerVisible = () => !$('#managerView').classList.contains('hidden');
 
@@ -64,7 +64,7 @@ export function connectSSE() {
       if (t) {
         renderDrawerMeta(t); // internally change-gated
         renderDrawerActions(t);
-        $('#followForm').classList.toggle('hidden', !!RUNNING_LIKE[t.status] || !t.sessionId);
+        syncFollowForm(t);
         $('#promptEdit').disabled = !!RUNNING_LIKE[t.status];
       }
     }

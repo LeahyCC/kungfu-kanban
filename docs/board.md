@@ -81,6 +81,14 @@ re-enters the original worktree, so a follow-up push updates the existing PR.
 Follow-ups respect the parallel cap and queue like any run; the follow-up text is
 appended to the card's prompt so Sensei reviews and retries see it.
 
+A follow-up sent **while the card is running** (the button reads **⏳ Queue**, or
+`POST /api/tasks/<id>/followup` returns `{ queued: true, afterRun: true }`) waits
+on the card, listed above the box and shown as a `✉ N queued` badge. When the run
+ends, finished, failed or stopped, everything queued goes to the same session as
+one follow-up, oldest first, after the PR flow. **clear** (or
+`DELETE /api/tasks/<id>/followup`) drops them. A queue that survives a board
+restart is delivered when the board starts.
+
 ---
 
 [Back to the docs index](README.md)

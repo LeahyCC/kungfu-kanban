@@ -304,6 +304,8 @@ app.put('/api/settings', (req, res) => {
   if (typeof prWatchAutoFix === 'boolean') state.settings.prWatchAutoFix = prWatchAutoFix;
   if (typeof req.body.prWatchAutoFixCi === 'boolean') state.settings.prWatchAutoFixCi = req.body.prWatchAutoFixCi;
   if (typeof req.body.cleanupOnMerge === 'boolean') state.settings.cleanupOnMerge = req.body.cleanupOnMerge;
+  // Off by default: on, a card cut short by a restart resumes its session at boot.
+  if (typeof req.body.resumeInterrupted === 'boolean') state.settings.resumeInterrupted = req.body.resumeInterrupted;
   // Board-wide override: false always drops the "Opened by Kungfu Kanban"
   // footer, even for a repo whose CONTRIBUTING.md has no opinion either way.
   if (typeof req.body.prFooter === 'boolean') state.settings.prFooter = req.body.prFooter;
@@ -520,7 +522,10 @@ app.post('/api/system/update-board', async (req, res) => {
   try {
     const r = await version.update();
     res.json({ ok: true, ...r, restarting: true });
-    setTimeout(() => process.exit(0), 800); // launchd KeepAlive brings us back
+    setTimeout(() => {
+      exitReason = 'board update, restarting';
+      process.exit(0);
+    }, 800); // launchd KeepAlive (or the Windows supervisor) brings us back
   } catch (e) {
     res.status(500).json({ error: String(e.message || e).slice(0, 300) });
   }
@@ -991,12 +996,21 @@ app.post('/api/tasks/:id/stop', (req, res) => {
   res.json(out);
 });
 
-// Follow-up prompt: resume the card's session with extra instructions.
+// Follow-up prompt: resume the card's session with extra instructions. Sent
+// while the card runs, it is queued on the card ({ queued, afterRun }) and
+// delivered when the run ends.
 app.post('/api/tasks/:id/followup', (req, res) => {
   const msg = ((req.body && req.body.message) || '').trim();
   if (!msg) return res.status(400).json({ error: 'empty message' });
-  const out = runner.followUp(req.params.id, msg);
-  if (out.error) return res.status(409).json(out);
+  const out = runner.followUp(req.params.id, msg, { queue: true });
+  if (out.error) return res.status(out.error === 'not found' ? 404 : 409).json(out);
+  res.json(out);
+});
+
+// Drop the follow-ups queued for a running card's next turn.
+app.delete('/api/tasks/:id/followup', (req, res) => {
+  const out = runner.clearQueuedFollowUps(req.params.id);
+  if (out.error) return res.status(404).json(out);
   res.json(out);
 });
 
@@ -1123,15 +1137,34 @@ if (HOST !== '127.0.0.1' && HOST !== 'localhost' && !auth.getToken()) {
 // children orphaned, and the debounced save could lose the final write. Now
 // we stop every running child, mark its card honestly, and flush synchronously
 // before exiting — a restart is safe even with cards in flight.
-function shutdown(code = 0) {
+let exitReason = null; // logged by the 'exit' handler below
+function shutdown(code = 0, reason = 'shutdown') {
+  exitReason = reason;
   runner.stopAll();
   ptylib.killAll(); // no orphan shells across a kickstart
   flush();
   singleton.release(); // the next start must not have to wait out our stale lock
   process.exit(code);
 }
-process.on('SIGTERM', () => shutdown());
-process.on('SIGINT', () => shutdown());
+// Windows adds two: SIGHUP when the console window is closed (Windows then
+// kills the process about 10 s later whatever it does), and SIGBREAK for
+// Ctrl+Break. Unhandled, both ended the board with no log line and every card
+// agent dead. A supervisor (scripts/windows/supervise.js) asks over IPC.
+for (const sig of ['SIGTERM', 'SIGINT', 'SIGHUP', 'SIGBREAK']) {
+  process.on(sig, () => shutdown(0, sig));
+}
+process.on('message', (m) => {
+  if (m && m.type === 'shutdown') shutdown(0, `supervisor: ${m.reason || 'stop'}`);
+});
+
+// Every exit leaves a line in the log with its reason, so a board that stops
+// overnight says why. A hard kill (Task Manager, SIGKILL) skips this, which is
+// itself the clue: no line means nothing inside the process saw it coming.
+process.on('exit', (code) => {
+  try {
+    console.error(`${new Date().toISOString()} board exit: ${exitReason || 'process.exit'} (code ${code})`);
+  } catch {}
+});
 
 // Last line of defence. A stray rejection (on 2026-10-20 a synchronous spawn
 // ENAMETOOLONG inside an async function) used to take the whole board down
@@ -1155,15 +1188,16 @@ process.on('uncaughtException', (err) => {
     errlog.flush();
   } catch {}
   try {
-    shutdown(1);
+    shutdown(1, `uncaught exception: ${describeError(err).split('\n')[0]}`);
   } catch {
     process.exit(1);
   }
 });
 
 app.listen(PORT, HOST, () => {
-  console.log(`kungfu-kanban running at http://localhost:${PORT}`);
-  runner.reapInterrupted(); // dev servers an interrupted card left behind
+  console.log(`${new Date().toISOString()} kungfu-kanban running at http://localhost:${PORT}`);
+  // Reap first: a resumed card must not have its new agent caught by the scan.
+  runner.reapInterrupted().finally(() => runner.resumeAfterRestart());
   if (auth.getToken()) console.log('token gate: ON (cookie or Authorization: Bearer)');
   else console.log('token gate: off (loopback only) — for Tailscale: openssl rand -hex 16 > data/auth-token, then `tailscale serve --bg 4747`');
 });

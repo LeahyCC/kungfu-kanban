@@ -125,7 +125,7 @@ does that job. See [The Sensei](docs/sensei.md).
 | [Notifications](docs/notifications.md) | macOS, phone pushes, the error tracker |
 | [Reports](docs/reports.md) | Flow numbers and shadow model routing |
 | [Phone access](docs/phone.md) | Token gate, Tailscale, install as an app |
-| [Run at login](docs/run-at-login.md) | The launchd agent |
+| [Run at login](docs/run-at-login.md) | The launchd agent on macOS, the supervisor on Windows |
 | [Configuration](docs/configuration.md) | Environment variables and the files in `data/` |
 | [Troubleshooting](docs/troubleshooting.md) | Common failures and fixes |
 | [Security notes](docs/security-notes.md) | What the board can run, and how it is locked down |

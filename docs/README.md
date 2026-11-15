@@ -29,7 +29,7 @@ lives here, one topic per file.
 | Doc | What is in it |
 | --- | --- |
 | [Phone access](phone.md) | The token gate, Tailscale, installing the board as an app |
-| [Run at login](run-at-login.md) | The launchd agent for macOS |
+| [Run at login](run-at-login.md) | The launchd agent for macOS, the supervisor for Windows |
 | [Configuration](configuration.md) | Environment variables and the files in `data/` |
 | [Troubleshooting](troubleshooting.md) | Common failures and how to fix them |
 | [Security notes](security-notes.md) | What the board can run, and how it is locked down |

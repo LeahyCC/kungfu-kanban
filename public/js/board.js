@@ -472,6 +472,8 @@ function patchCardEl(el, t, pass) {
     if (held.length) meta.push(`<span class="badge dep" title="Queued work waits on this verdict: ${esc(held.map((x) => x.title).join(' · '))} — ${t.prUrl ? 'merge its PR or approve' : 'approve or reject'} to release">🖐 blocks ${held.length}</span>`);
   }
   if (t.schedule) meta.push(`<span class="badge sched">⏱ ${esc(scheduleLabel(t.schedule))}</span>`);
+  const fq = Array.isArray(t.queuedFollowUps) ? t.queuedFollowUps.length : 0;
+  if (fq) meta.push(`<span class="badge followq" title="Follow-up${fq > 1 ? 's' : ''} queued, sent when this run ends">✉ ${fq} queued</span>`);
   if (t.skillsAuto) meta.push('<span class="badge skillauto">✦ auto</span>');
   for (const s of (t.skills || []).slice(0, 3)) meta.push(`<span class="badge">${esc(s)}</span>`);
   if ((t.skills || []).length > 3) meta.push(`<span class="badge">+${t.skills.length - 3}</span>`);

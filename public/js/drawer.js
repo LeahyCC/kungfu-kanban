@@ -179,7 +179,7 @@ export async function openDrawer(id) {
   pe.value = t.prompt || '';
   pe.disabled = !!RUNNING_LIKE[t.status];
   $('#promptSaveBtn').classList.add('hidden');
-  $('#followForm').classList.toggle('hidden', RUNNING_LIKE[t.status] || !t.sessionId);
+  syncFollowForm(t);
 
   $('#drawer').classList.remove('hidden');
   $('#drawerClose').focus();
@@ -207,7 +207,7 @@ export async function openDrawer(id) {
     // adopt the full prompt only while the user hasn't started editing
     if ($('#promptSaveBtn').classList.contains('hidden')) pe.value = full.prompt || '';
     pe.disabled = !!RUNNING_LIKE[task.status];
-    $('#followForm').classList.toggle('hidden', RUNNING_LIKE[task.status] || !task.sessionId);
+    syncFollowForm(task);
   }
 
   const list = Array.isArray(entries) ? entries : [];
@@ -245,7 +245,36 @@ $('#followForm').addEventListener('submit', async (e) => {
     appendTranscriptEntry({ kind: 'error', text: r.error }); // batched + capped like SSE output
   } else {
     input.value = '';
+    if (r.afterRun) toast('Follow-up queued, it goes when this run ends');
   }
+});
+
+const SEND_TITLE = 'Resume this card\'s session with extra instructions — the agent keeps its full context';
+const QUEUE_TITLE = 'The card is running: this waits on the card and goes to the same session when the run ends';
+
+// The follow-up box shows once the card has a session, and while it runs: a
+// follow-up sent mid-run is queued on the card (listed above the box) and the
+// server delivers it when the run ends.
+export function syncFollowForm(t) {
+  const live = !!RUNNING_LIKE[t.status];
+  $('#followForm').classList.toggle('hidden', !live && !t.sessionId);
+  const btn = $('#followForm button[type="submit"]');
+  btn.textContent = live ? '⏳ Queue' : '▶ Send';
+  btn.title = live ? QUEUE_TITLE : SEND_TITLE;
+  const q = Array.isArray(t.queuedFollowUps) ? t.queuedFollowUps : [];
+  const box = $('#followQueue');
+  box.classList.toggle('hidden', !q.length);
+  box.innerHTML = q.length
+    ? `<div class="follow-queue-head"><span>Queued for when this run ends (${q.length})</span>` +
+      '<button type="button" class="ghost mini" data-clear-queue>clear</button></div>' +
+      q.map((x) => `<div class="follow-queue-item">${esc(x.message)}</div>`).join('')
+    : '';
+}
+
+$('#followQueue').addEventListener('click', async (e) => {
+  if (!e.target.closest('[data-clear-queue]') || !state.drawerId) return;
+  const r = await api(`/api/tasks/${state.drawerId}/followup`, { method: 'DELETE', quiet: true });
+  if (r.error) appendTranscriptEntry({ kind: 'error', text: r.error });
 });
 
 // ---------- meta panel (change-gated) ----------
