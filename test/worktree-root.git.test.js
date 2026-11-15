@@ -66,8 +66,9 @@ function makeRepo(name) {
   return repo;
 }
 
-// macOS tmp lives behind /var -> /private/var; git reports the real path.
-const real = (p) => fs.realpathSync(p);
+// git reports the real path: macOS tmp sits behind /var -> /private/var, and a
+// Windows runner's tmp is an 8.3 short name (RUNNER~1). Only .native expands that.
+const real = (p) => fs.realpathSync.native(p);
 
 async function until(fn) {
   for (let i = 0; i < 300 && !fn(); i++) await new Promise((r) => setTimeout(r, 10));
