@@ -308,6 +308,19 @@ describe('HTTP contract (no auth gate)', () => {
     assert.equal(tooHigh.maxRunMinutes, 45);
   });
 
+  test('PUT /api/settings: worktreeRoot takes an absolute path, refuses a relative one, empty clears', async () => {
+    const abs = path.join(os.tmpdir(), 'kfk-wt-root');
+    const set = await (await putJson(base, '/api/settings', { worktreeRoot: abs })).json();
+    assert.equal(set.worktreeRoot, abs);
+    const bad = await putJson(base, '/api/settings', { worktreeRoot: 'relative/dir', maxConcurrent: 5 });
+    assert.equal(bad.status, 400);
+    const cfg = await (await fetch(`${base}/api/config`)).json();
+    assert.equal(cfg.settings.worktreeRoot, abs, 'a refused path changes nothing');
+    assert.notEqual(cfg.settings.maxConcurrent, 5, 'nor anything else in the same request');
+    const cleared = await (await putJson(base, '/api/settings', { worktreeRoot: '' })).json();
+    assert.equal(cleared.worktreeRoot, undefined);
+  });
+
   test('PUT /api/settings — prFooter is a plain boolean toggle', async () => {
     const off = await (await putJson(base, '/api/settings', { prFooter: false })).json();
     assert.equal(off.prFooter, false);

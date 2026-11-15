@@ -281,6 +281,17 @@ app.get('/api/config', (req, res) => {
 
 app.put('/api/settings', (req, res) => {
   const { maxConcurrent, defaultCwd, archiveDays, ntfyTopic, notifyMac, keepAwake, reposDir: rd, prWatchMin, prWatchAutoFix, maxRunMinutes } = req.body || {};
+  // Validated before anything else changes, so a bad path applies nothing.
+  if (typeof req.body?.worktreeRoot === 'string') {
+    let root;
+    try {
+      root = runner.normalizeWorktreeRoot(req.body.worktreeRoot);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+    if (root) state.settings.worktreeRoot = root;
+    else delete state.settings.worktreeRoot; // empty: back to claude --worktree
+  }
   // an empty string clears the setting (falls back to the default scan dir)
   if (typeof rd === 'string') {
     if (rd.trim()) state.settings.reposDir = rd.trim();
@@ -1185,7 +1196,8 @@ process.on('uncaughtException', (err) => {
 
 app.listen(PORT, HOST, () => {
   console.log(`${new Date().toISOString()} kungfu-kanban running at http://localhost:${PORT}`);
-  runner.resumeAfterRestart(); // queued follow-ups, and resumeInterrupted if it is on
+  // Reap first: a resumed card must not have its new agent caught by the scan.
+  runner.reapInterrupted().finally(() => runner.resumeAfterRestart());
   if (auth.getToken()) console.log('token gate: ON (cookie or Authorization: Bearer)');
   else console.log('token gate: off (loopback only) — for Tailscale: openssl rand -hex 16 > data/auth-token, then `tailscale serve --bg 4747`');
 });

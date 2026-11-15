@@ -509,19 +509,50 @@ Give a card a working directory that's a git repo with an `origin` remote, check
 
 1. The worktree is located by asking git (`git worktree list`) for the branch
    named `kanban-<card-id>` — wherever the CLI put it.
-2. Anything the agent left uncommitted is committed (`<card title>` / "via Kungfu
-   Kanban").
+2. Changes the agent left in tracked files are committed with the card title as
+   the message (`git add -u`, so untracked files are never swept in; they are
+   listed on the card instead). The repo's hooks always run. A hook that fails,
+   or a commit that fails for any other reason, is logged with git's own output
+   and the changes stay in the worktree; the flow carries on with the agent's
+   own commits.
 3. If the branch has no commits beyond the base (the branch your main checkout is
-   on), the flow stops — no empty PRs.
-4. The branch is pushed to `origin` and `gh pr create` opens a PR: title = card
-   title, body = prompt + acceptance criteria.
+   on), the flow stops, so there are no empty PRs.
+4. The branch is pushed to `origin` (hooks run here too). If the agent already
+   opened a PR on the branch, that PR is attached to the card. Otherwise
+   `gh pr create` opens one: title = card title, body = the agent's final
+   report plus the acceptance criteria as a checklist.
 5. The **PR link** lands on the card, in the drawer, and in your phone notification.
 
 Every step logs to the card transcript (`⇡` lines). Failures (no remote, `gh` not
-authed, push rejected…) log an `✕` line and leave the card in Review — the work is
+authed, push rejected…) log an `✕` line and leave the card in Review. The work is
 still in the worktree, nothing is lost.
 
 **One-time setup:** `gh auth login` (with push scope to the repos you'll use).
+
+**Where worktrees live.** By default the card runs `claude --worktree
+kanban-<id>`, which puts the worktree inside the repo at
+`<repo>/.claude/worktrees/kanban-<id>` (the flag takes a name, not a path). To
+keep them in one shared folder instead, set `worktreeRoot`:
+
+```bash
+curl -s -X PUT -H "Content-Type: application/json" \
+  -d '{"worktreeRoot": "H:\\Git\\.worktrees"}' http://localhost:4747/api/settings
+```
+
+The board then makes each card's worktree itself at
+`<worktreeRoot>/<repo folder>/kanban-<id>` on branch `worktree-kanban-<id>`
+(forked from the local default branch) and runs claude inside it. The folder is
+named for the card because the agent picks its branch later. Untracked files
+listed in the repo's `.worktreeinclude` are copied in, as `claude --worktree`
+does. A card that already has a worktree keeps using it. `~` is accepted; an
+empty string goes back to the default.
+
+**Processes left running.** When a worktree card's run ends (finished, failed or
+stopped), the board kills whatever is still running inside its worktree, such as
+a `next dev` the agent never stopped, and names each process on the card. A
+board terminal open in that worktree keeps its processes. Cards cut off by a
+board restart or crash are reaped when the board starts again. Cards without a
+worktree run in your own checkout and are never reaped.
 
 ### PR watch: merged PRs ship, conflicted PRs self-heal
 
@@ -533,7 +564,11 @@ card's PR via `gh`:
   running inside the card's worktree, removes the worktree, and deletes the local
   and remote branch. It checks the branch tip landed on the base first; for a
   squash or rebase merge it trusts GitHub's MERGED state but keeps the local
-  branch. Any cleanup failure is logged on the card and in the error tracker.
+  branch. The `worktree-kanban-<id>` branch the worktree started on goes too,
+  when it has no commits beyond the base. If the folder survives the removal
+  (Windows, with `node_modules` or `.next` briefly locked) and git no longer owns
+  it, the board deletes it. Any cleanup failure is logged on the card and in the
+  error tracker.
 - **Closed without merge** → noted once on the card transcript.
 - **Conflicting** (main moved under the branch) → with auto-fix on (default), the
   board spawns a **fix card**: a fresh agent run _inside the original worktree_

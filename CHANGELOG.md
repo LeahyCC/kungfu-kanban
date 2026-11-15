@@ -16,7 +16,30 @@ compares your clone against `origin/main` and offers a one-click update.
 - The board handles `SIGHUP` (Windows sends it when the console window is closed) and `SIGBREAK` (Ctrl+Break) like `SIGINT`: running cards are marked "interrupted by server restart" and state is flushed. Unhandled, they ended the board with no log line and killed every card agent.
 - Every exit logs `board exit: <reason> (code N)` with a timestamp, so an overnight stop says why.
 - A second follow-up sent to a card already waiting for a slot used to overwrite the first. Both are kept now.
+
+## [1.28.0] - 2026-11-15
+
+### Added
+- `worktreeRoot` setting (`PUT /api/settings`). When set, the board makes each worktree card's worktree itself at `<worktreeRoot>/<repo folder>/kanban-<id>` and runs claude inside it, instead of `claude --worktree`, which only takes a name and always nests the worktree inside the repo at `.claude/worktrees/`. The branch is still `worktree-kanban-<id>`, files listed in `.worktreeinclude` are still copied in, and a card that already has a worktree keeps it. Unset keeps today's behaviour.
+- When a worktree card's run ends (finished, failed or stopped), the board kills what is still running inside its worktree, such as a `next dev` or `next start -p 3123` the agent left up, and names each process on the card. A board terminal open in the worktree is left alone. Cards a restart or crash interrupted are reaped when the board starts again.
+
+### Fixed
+- Merge cleanup now deletes the `worktree-kanban-<id>` branch `claude --worktree` creates, when it has no commits beyond the base. The agent switches to its own feature branch, and only that one was deleted, so one stale branch piled up per merged card.
+- On Windows, a worktree folder that survived `git worktree remove` (pnpm's `node_modules` and `.next`, briefly locked) is deleted when git no longer owns it, with retries. A failure is reported on the card.
+- On Windows the process finder never matched anything: git prints worktree paths with forward slashes and Windows command lines carry backslashes, so merge cleanup killed nothing and dev servers kept the folder locked. Both spellings are searched now.
+
+## [1.27.0] - 2026-11-15
+
+### Fixed
+- A failed fallback commit no longer stops the PR flow. When the agent had already committed, pushed and opened its own PR, the board's commit found nothing to commit, logged only the command line (git puts that reason on stdout, which the log dropped) and returned before the push and the duplicate-PR check. Six cards in one batch sat in Review with no PR attached. Now a failed or empty commit is logged with git's real output and the flow carries on: it pushes, then attaches an open PR the agent already made on the branch (`gh pr list --head`) instead of creating one.
+- The `kungfu-todo` skill told sessions to read `manager.enabled` from `GET /api/config`, which has no such field. It now reads `config.enabled` from `GET /api/manager`.
 - The `kungfu-todo` skill no longer reads `data/auth-token`. Its API calls use plain `curl` on a board with no token gate, and send `$KFK_TOKEN` from the environment on one with the gate on. Reading the file put the token in the session's transcript, and a `Read(**/auth-token)` deny rule blocked every call, so sessions could not check their own cards (#175).
+
+### Changed
+- The fallback commit stages tracked changes only (`git add -u`). Untracked files are listed on the card and left out; `git add -A` once shipped an auto-generated `AGENTS.md` in a PR.
+- The PR flow never passes `--no-verify` to commit or push. A hook that fails is reported on the card with its output and the work stays in the worktree.
+- The fallback commit message is the card title alone, with no "via Kungfu Kanban" line.
+- The PR body is short: the agent's final report (as written when it fills in the repo's PR template, otherwise under `## Summary`, capped at 2000 characters), then the acceptance criteria as a `- [ ]` checklist. The card prompt is no longer pasted in, and em dashes are replaced with commas.
 
 ## [1.26.1] — 2026-11-09
 
