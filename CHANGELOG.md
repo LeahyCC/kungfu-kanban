@@ -5,6 +5,14 @@ All notable changes to Kungfu Kanban. Format follows
 minor bumps for features, patch bumps for fixes. The board's status line
 compares your clone against `origin/main` and offers a one-click update.
 
+## [1.27.1] - 2026-11-15
+
+### Changed
+- The README is now a short front page. It leads with why the board saves tokens: each card runs in its own fresh session on its own model, so the Claude Code session you are steering stays small. The technical sections moved, text unchanged, into one file per topic under `docs/`, with an index at `docs/README.md`.
+- New `docs/token-savings.md` explains the mechanism and says where a card is not worth it. There is no benchmark behind it and it claims none.
+- The homepage leads with the same point: a new hero, a "where the tokens go" section, and feature and FAQ copy about context, per-card models and resumed follow-ups. `llms.txt` matches.
+- The homepage no longer describes the Sensei as always on. The four forms, the feature grid, the Sensei band and three manual lines now say it is optional and off by default, as it has been since 1.26.0 (#179).
+
 ## [1.27.0] - 2026-11-15
 
 ### Fixed

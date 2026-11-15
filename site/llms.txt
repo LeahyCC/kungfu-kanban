@@ -1,56 +1,67 @@
 # Kungfu Kanban
 
-> A local-first kanban board for macOS where every card runs a Claude Code
-> agent on your existing Claude subscription — no API keys, no token billing,
-> no cloud. Cards create, route, run, and review themselves; repo cards open
-> real GitHub pull requests. Free, MIT-licensed open source.
+> A local-first kanban board for Claude Code. You hand work out as cards from
+> one Claude Code session. Each card runs as its own fresh session on the model
+> it needs and comes back as a GitHub pull request, so your main session stays
+> small and the backlog costs fewer tokens. Runs on your existing Claude
+> subscription with no API keys. Free, MIT-licensed open source.
 
 Key facts:
 
+- The main session stays small. A bundled `kungfu-todo` skill lets any Claude
+  Code session write cards and hand them to the board. The file reads, test
+  output and retries happen inside each card's session. The session you are
+  steering holds the plan, the card statuses and the PRs that come back.
+- Every card is a fresh Claude Code session that starts with only its own
+  prompt, so no session re-reads the history of earlier tasks.
+- Model and effort are set per card (fable, opus, sonnet, haiku), so easy work
+  runs on a cheap model.
+- Follow-ups and CI fixes resume the card's own session. They do not start
+  over.
 - Runs entirely on your machine: one Express server, plain JSON files in
   `data/`; no accounts, no telemetry from the board app.
 - Uses the Claude Code CLI with your subscription login; the runner strips
   `ANTHROPIC_API_KEY` from the environment so it can never bill per token.
-- An LLM manager (the "Sensei") triages cards — model, effort, priority,
-  skills — dispatches runs, and reviews results against acceptance criteria
-  and the actual PR diff, with three autonomy levels (suggest / semi / auto).
-  It can merge a card's PR itself once CI is green, send precise same-session
-  follow-up fixes instead of always restarting, and chain multi-card plans
-  with dependencies.
 - Repo cards run in isolated git worktrees and open pull requests via the
   GitHub CLI, gated by CI; merged PRs file themselves into Done; conflicted
   PRs spawn self-healing fix agents.
 - Cards can depend on each other ("runs after"): a dependent waits until its
-  prerequisite is actually done — an open, unmerged PR still counts as
+  prerequisite is actually done, and an open, unmerged PR still counts as
   blocking. Cards can also share a group, which clusters them under one
   header, runs one card per group at a time, and sends a single
   group-complete notification.
 - Subscription rate limits are absorbed: cards requeue, a countdown shows, and
   everything resumes when the window resets. Model-specific caps step launches
   down the fable → opus → sonnet → haiku ladder automatically.
+- An optional LLM manager (the "Sensei") is off by default, because the Claude
+  Code session driving the board does that job. Turned on, it triages cards,
+  dispatches runs, reviews results against acceptance criteria and the actual
+  PR diff, and can merge a PR once CI is green, with three autonomy levels
+  (suggest / semi / auto).
 - Phone access via token gate + Tailscale serve (tailnet-only), installable as
   a PWA, with ntfy push notifications.
 - Import work from pasted markdown, dropped `.md` files, or open GitHub
-  issues; a bundled `kungfu-todo` skill lets any Claude Code session queue
-  cards onto the board.
+  issues.
 - Ships with the ponytail skill (vendored, MIT): agents default to the
-  laziest working solution — less code, fewer output tokens per card, so a
-  subscription rate-limit window goes further. Auto-installed at boot and
-  pre-selected on new cards.
+  smallest working solution, which means less code and fewer output tokens per
+  card. Auto-installed at boot and pre-selected on new cards.
 
 ## Docs
 
+- [How the board saves tokens](https://github.com/LeahyCC/kungfu-kanban/blob/main/docs/token-savings.md):
+  the mechanism, and the cases where a card is not worth it.
 - [The manual](https://kungfu-kanban.com/#manual): complete setup and feature
-  reference — requirements, install, PR flow, the Manager, phone access,
+  reference: requirements, install, PR flow, the Manager, phone access,
   limits, security.
-- [Docs](https://kungfu-kanban.com/docs): linkable reference sections — the
+- [Docs](https://kungfu-kanban.com/docs): linkable reference sections: the
   markdown import format, the Sensei's actions and autonomy levels,
   dependency/merge-gate semantics, and groups & lanes.
 - [Compare](https://kungfu-kanban.com/compare): an honest comparison against
-  Vibe Kanban, Conductor, and Crystal/Nimbalyst — the other tools people
+  Vibe Kanban, Conductor, and Crystal/Nimbalyst, the other tools people
   evaluate for running coding agents.
-- [README](https://github.com/LeahyCC/kungfu-kanban#readme): the same manual
-  on GitHub.
+- [README](https://github.com/LeahyCC/kungfu-kanban#readme): the short
+  version, with per-topic docs in
+  [docs/](https://github.com/LeahyCC/kungfu-kanban/tree/main/docs).
 
 ## Source
 
