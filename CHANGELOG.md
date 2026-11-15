@@ -16,11 +16,7 @@ compares your clone against `origin/main` and offers a one-click update.
 - The board handles `SIGHUP` (Windows sends it when the console window is closed) and `SIGBREAK` (Ctrl+Break) like `SIGINT`: running cards are marked "interrupted by server restart" and state is flushed. Unhandled, they ended the board with no log line and killed every card agent.
 - Every exit logs `board exit: <reason> (code N)` with a timestamp, so an overnight stop says why.
 - A second follow-up sent to a card already waiting for a slot used to overwrite the first. Both are kept now.
-
-## [Unreleased]
-
-### Fixed
-- The `kungfu-todo` skill no longer reads `data/auth-token`. Its API calls use plain `curl` on a board with no token gate, and send `$KFK_TOKEN` from the environment on one with the gate on. Reading the file put the token in the session's transcript, and a `Read(**/auth-token)` deny rule blocked every call, so sessions could not check their own cards.
+- The `kungfu-todo` skill no longer reads `data/auth-token`. Its API calls use plain `curl` on a board with no token gate, and send `$KFK_TOKEN` from the environment on one with the gate on. Reading the file put the token in the session's transcript, and a `Read(**/auth-token)` deny rule blocked every call, so sessions could not check their own cards (#175).
 
 ## [1.26.1] — 2026-11-09
 
