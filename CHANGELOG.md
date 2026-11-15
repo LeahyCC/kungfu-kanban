@@ -15,11 +15,7 @@ compares your clone against `origin/main` and offers a one-click update.
 - Merge cleanup now deletes the `worktree-kanban-<id>` branch `claude --worktree` creates, when it has no commits beyond the base. The agent switches to its own feature branch, and only that one was deleted, so one stale branch piled up per merged card.
 - On Windows, a worktree folder that survived `git worktree remove` (pnpm's `node_modules` and `.next`, briefly locked) is deleted when git no longer owns it, with retries. A failure is reported on the card.
 - On Windows the process finder never matched anything: git prints worktree paths with forward slashes and Windows command lines carry backslashes, so merge cleanup killed nothing and dev servers kept the folder locked. Both spellings are searched now.
-
-## [Unreleased]
-
-### Fixed
-- The `kungfu-todo` skill no longer reads `data/auth-token`. Its API calls use plain `curl` on a board with no token gate, and send `$KFK_TOKEN` from the environment on one with the gate on. Reading the file put the token in the session's transcript, and a `Read(**/auth-token)` deny rule blocked every call, so sessions could not check their own cards.
+- The `kungfu-todo` skill no longer reads `data/auth-token`. Its API calls use plain `curl` on a board with no token gate, and send `$KFK_TOKEN` from the environment on one with the gate on. Reading the file put the token in the session's transcript, and a `Read(**/auth-token)` deny rule blocked every call, so sessions could not check their own cards (#175).
 
 ## [1.26.1] — 2026-11-09
 

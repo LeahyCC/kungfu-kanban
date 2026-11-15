@@ -66,6 +66,9 @@ function makeRepo(name) {
   return repo;
 }
 
+// macOS tmp lives behind /var -> /private/var; git reports the real path.
+const real = (p) => fs.realpathSync(p);
+
 async function until(fn) {
   for (let i = 0; i < 300 && !fn(); i++) await new Promise((r) => setTimeout(r, 10));
   assert.ok(fn(), 'condition never became true');
@@ -85,7 +88,7 @@ test('a worktree card launches in <root>/<repo>/kanban-<id>, not inside the repo
   await until(() => spawns.length === 1);
 
   const want = path.join(ROOT, 'ACE', 'kanban-r00t0001');
-  assert.equal(path.resolve(spawns[0].cwd), path.resolve(want), 'claude runs inside the shared-folder worktree');
+  assert.equal(real(spawns[0].cwd), real(want), 'claude runs inside the shared-folder worktree');
   assert.ok(!spawns[0].args.includes('--worktree'), 'no claude --worktree');
   assert.ok(spawns[0].args.includes('--add-dir'), 'the repo stays readable');
   assert.ok(!fs.existsSync(path.join(repo, '.claude', 'worktrees')), 'nothing inside the repo');
@@ -109,7 +112,7 @@ test('a retry reuses the card\'s worktree instead of making a second one', async
 
   runner.startTask(t.id);
   await until(() => spawns.length === 2);
-  assert.equal(path.resolve(spawns[1].cwd), path.resolve(spawns[0].cwd));
+  assert.equal(real(spawns[1].cwd), real(spawns[0].cwd));
   spawns[1].child.emit('close', 0);
   await until(() => t.status === 'review');
 });
