@@ -5,10 +5,18 @@ All notable changes to Kungfu Kanban. Format follows
 minor bumps for features, patch bumps for fixes. The board's status line
 compares your clone against `origin/main` and offers a one-click update.
 
-## [Unreleased]
+## [1.27.0] - 2026-11-15
 
 ### Fixed
-- The `kungfu-todo` skill no longer reads `data/auth-token`. Its API calls use plain `curl` on a board with no token gate, and send `$KFK_TOKEN` from the environment on one with the gate on. Reading the file put the token in the session's transcript, and a `Read(**/auth-token)` deny rule blocked every call, so sessions could not check their own cards.
+- A failed fallback commit no longer stops the PR flow. When the agent had already committed, pushed and opened its own PR, the board's commit found nothing to commit, logged only the command line (git puts that reason on stdout, which the log dropped) and returned before the push and the duplicate-PR check. Six cards in one batch sat in Review with no PR attached. Now a failed or empty commit is logged with git's real output and the flow carries on: it pushes, then attaches an open PR the agent already made on the branch (`gh pr list --head`) instead of creating one.
+- The `kungfu-todo` skill told sessions to read `manager.enabled` from `GET /api/config`, which has no such field. It now reads `config.enabled` from `GET /api/manager`.
+- The `kungfu-todo` skill no longer reads `data/auth-token`. Its API calls use plain `curl` on a board with no token gate, and send `$KFK_TOKEN` from the environment on one with the gate on. Reading the file put the token in the session's transcript, and a `Read(**/auth-token)` deny rule blocked every call, so sessions could not check their own cards (#175).
+
+### Changed
+- The fallback commit stages tracked changes only (`git add -u`). Untracked files are listed on the card and left out; `git add -A` once shipped an auto-generated `AGENTS.md` in a PR.
+- The PR flow never passes `--no-verify` to commit or push. A hook that fails is reported on the card with its output and the work stays in the worktree.
+- The fallback commit message is the card title alone, with no "via Kungfu Kanban" line.
+- The PR body is short: the agent's final report (as written when it fills in the repo's PR template, otherwise under `## Summary`, capped at 2000 characters), then the acceptance criteria as a `- [ ]` checklist. The card prompt is no longer pasted in, and em dashes are replaced with commas.
 
 ## [1.26.1] — 2026-11-09
 

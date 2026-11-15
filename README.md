@@ -501,16 +501,22 @@ Give a card a working directory that's a git repo with an `origin` remote, check
 
 1. The worktree is located by asking git (`git worktree list`) for the branch
    named `kanban-<card-id>` — wherever the CLI put it.
-2. Anything the agent left uncommitted is committed (`<card title>` / "via Kungfu
-   Kanban").
+2. Changes the agent left in tracked files are committed with the card title as
+   the message (`git add -u`, so untracked files are never swept in; they are
+   listed on the card instead). The repo's hooks always run. A hook that fails,
+   or a commit that fails for any other reason, is logged with git's own output
+   and the changes stay in the worktree; the flow carries on with the agent's
+   own commits.
 3. If the branch has no commits beyond the base (the branch your main checkout is
-   on), the flow stops — no empty PRs.
-4. The branch is pushed to `origin` and `gh pr create` opens a PR: title = card
-   title, body = prompt + acceptance criteria.
+   on), the flow stops, so there are no empty PRs.
+4. The branch is pushed to `origin` (hooks run here too). If the agent already
+   opened a PR on the branch, that PR is attached to the card. Otherwise
+   `gh pr create` opens one: title = card title, body = the agent's final
+   report plus the acceptance criteria as a checklist.
 5. The **PR link** lands on the card, in the drawer, and in your phone notification.
 
 Every step logs to the card transcript (`⇡` lines). Failures (no remote, `gh` not
-authed, push rejected…) log an `✕` line and leave the card in Review — the work is
+authed, push rejected…) log an `✕` line and leave the card in Review. The work is
 still in the worktree, nothing is lost.
 
 **One-time setup:** `gh auth login` (with push scope to the repos you'll use).

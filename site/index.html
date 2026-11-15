@@ -722,10 +722,12 @@ npm start          <span class="c"># → http://localhost:4747</span></code></pr
                 <ol>
                   <li>The worktree is located by asking git for the branch named <code>kanban-&lt;card-id&gt;</code> —
                     wherever the CLI put it.</li>
-                  <li>Anything the agent left uncommitted is committed.</li>
-                  <li>If the branch has no commits beyond the base, the flow stops — no empty PRs.</li>
-                  <li>The branch is pushed to <code>origin</code> and <code>gh pr create</code> opens a PR: title = card
-                    title, body = prompt + acceptance criteria.</li>
+                  <li>Changes the agent left in tracked files are committed, with the repo's hooks. Untracked
+                    files are never swept in.</li>
+                  <li>If the branch has no commits beyond the base, the flow stops, so there are no empty PRs.</li>
+                  <li>The branch is pushed to <code>origin</code>. A PR the agent already opened is attached;
+                    otherwise <code>gh pr create</code> opens one: title = card title, body = the agent's report
+                    plus the acceptance checklist.</li>
                   <li>The <strong>PR link</strong> lands on the card, in the drawer, and in your phone notification.
                   </li>
                 </ol>
