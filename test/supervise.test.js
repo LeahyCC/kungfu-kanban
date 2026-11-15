@@ -61,21 +61,36 @@ test('--install writes the Startup script and keeps a different old one as .bak'
   fs.rmSync(appdata, { recursive: true, force: true });
 });
 
-test('supervisor restarts a killed server and stops it cleanly over IPC', { timeout: 90_000 }, async () => {
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kfk-sup-'));
-  const log = path.join(dataDir, 'server.log');
-  const read = () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '');
-  const p = port();
-  const sup = spawn(process.execPath, [SUPERVISE, '--run'], { cwd: ROOT, env: env(dataDir, p), stdio: 'ignore' });
-  const supExit = new Promise((r) => sup.once('exit', (code) => r(code)));
+// A Windows CI runner with coverage on can take well over 20 s to boot the
+// server, and a random port can clash. Up to three tries, each on a fresh data
+// dir and port; a failure reports the server log instead of just "false".
+async function bootSupervised() {
+  let last = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kfk-sup-'));
+    const log = path.join(dataDir, 'server.log');
+    const read = () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '');
+    const p = port();
+    const sup = spawn(process.execPath, [SUPERVISE, '--run'], { cwd: ROOT, env: env(dataDir, p), stdio: 'ignore' });
+    const supExit = new Promise((r) => sup.once('exit', (code) => r(code)));
+    if (await waitFor(() => up(p), 45_000)) return { dataDir, read, p, sup, supExit };
+    last = read();
+    sup.kill('SIGKILL'); // its server is in the same job object and goes with it
+    await supExit;
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  }
+  assert.fail(`server never came up under the supervisor; last log:\n${last.slice(-2000)}`);
+}
+
+test('supervisor restarts a killed server and stops it cleanly over IPC', { timeout: 240_000 }, async () => {
+  const { dataDir, read, p, sup, supExit } = await bootSupervised();
   try {
-    assert.ok(await waitFor(() => up(p)), 'server came up under the supervisor');
     const first = parseInt((read().match(/started server\.js \(pid (\d+)\)/) || [])[1], 10);
     assert.ok(first > 0);
 
     process.kill(first, 'SIGKILL'); // a hard kill, like Task Manager
-    assert.ok(await waitFor(() => (read().match(/started server\.js/g) || []).length === 2), 'supervisor started a second server');
-    assert.ok(await waitFor(() => up(p)), 'and it answers');
+    assert.ok(await waitFor(() => (read().match(/started server\.js/g) || []).length === 2, 45_000), 'supervisor started a second server');
+    assert.ok(await waitFor(() => up(p), 45_000), `and it answers; log:\n${read().slice(-1500)}`);
 
     fs.writeFileSync(path.join(dataDir, 'supervisor.stop'), 'now');
     assert.equal(await supExit, 0);
